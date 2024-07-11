@@ -1,0 +1,631 @@
+game_id,player_name,agent
+0,mazin,Omen
+0,artzin,Yoru
+0,ShahZaM,Sova
+0,liazzi,Killjoy
+0,Pa1nt,Iso
+0,tex,Killjoy
+0,Mazino,Kayo
+0,kiNgg,Omen
+0,C0M,Sova
+0,aspas,Jett
+1,mazin,Viper
+1,artzin,Gekko
+1,ShahZaM,Sova
+1,Pa1nt,Jett
+1,liazzi,Killjoy
+1,kiNgg,Viper
+1,aspas,Jett
+1,C0M,Sova
+1,Mazino,Harbor
+1,tex,Killjoy
+2,zekken,Raze
+2,Sacy,Fade
+2,Zellsis,Cypher
+2,TenZ,Omen
+2,johnqt,Deadlock
+2,s0m,Clove
+2,Ethan,Breach
+2,Victor,Neon
+2,FiNESSE,Cypher
+2,crashies,Gekko
+3,TenZ,Omen
+3,zekken,Raze
+3,Zellsis,Breach
+3,Sacy,Gekko
+3,johnqt,Cypher
+3,Ethan,Kayo
+3,s0m,Omen
+3,Victor,Neon
+3,crashies,Sova
+3,FiNESSE,Cypher
+4,Khalil,Viper
+4,nzr,Sova
+4,havoc,Killjoy
+4,mwzera,Jett
+4,xand,Sage
+4,eeiu,Sova
+4,Cryocells,Jett
+4,Asuna,Gekko
+4,bang,Viper
+4,Boostio,Killjoy
+5,Khalil,Omen
+5,nzr,Breach
+5,havoc,Killjoy
+5,mwzera,Neon
+5,xand,Gekko
+5,Asuna,Kayo
+5,Boostio,Killjoy
+5,eeiu,Sova
+5,bang,Omen
+5,Cryocells,Jett
+6,Less,Cypher
+6,saadhak,Neon
+6,cauanzin,Fade
+6,tuyz,Gekko
+6,pANcada,Omen
+6,jawgemo,Iso
+6,supamen,Omen
+6,NaturE,Breach
+6,Derrek,Fade
+6,Apoth,Cypher
+7,pANcada,Omen
+7,Less,Cypher
+7,cauanzin,Breach
+7,saadhak,Neon
+7,tuyz,Gekko
+7,jawgemo,Neon
+7,Derrek,Fade
+7,Apoth,Cypher
+7,NaturE,Breach
+7,supamen,Omen
+8,tuyz,Omen
+8,cauanzin,Kayo
+8,Less,Killjoy
+8,saadhak,Gekko
+8,pANcada,Viper
+8,Derrek,Sova
+8,jawgemo,Iso
+8,NaturE,Killjoy
+8,supamen,Clove
+8,Apoth,Harbor
+9,leaf,Killjoy
+9,valyn,Omen
+9,trent,Sova
+9,JonahP,Kayo
+9,icy,Neon
+9,Xeppaa,Kayo
+9,runi,Sova
+9,OXY,Jett
+9,moose,Killjoy
+9,vanity,Omen
+10,valyn,Harbor
+10,trent,Sova
+10,leaf,Killjoy
+10,JonahP,Viper
+10,icy,Gekko
+10,runi,Sova
+10,moose,Killjoy
+10,OXY,Reyna
+10,Xeppaa,Gekko
+10,vanity,Viper
+11,leaf,Killjoy
+11,trent,Fade
+11,JonahP,Viper
+11,icy,Raze
+11,valyn,Omen
+11,vanity,Omen
+11,OXY,Raze
+11,runi,Breach
+11,moose,Cypher
+11,Xeppaa,Gekko
+12,supamen,Omen
+12,Apoth,Brimstone
+12,jawgemo,Raze
+12,Derrek,Gekko
+12,NaturE,Skye
+12,nzr,Gekko
+12,Khalil,Brimstone
+12,xand,Fade
+12,mwzera,Raze
+12,havoc,Viper
+13,jawgemo,Neon
+13,Derrek,Fade
+13,NaturE,Breach
+13,supamen,Omen
+13,Apoth,Cypher
+13,havoc,Cypher
+13,nzr,Breach
+13,Khalil,Omen
+13,mwzera,Neon
+13,xand,Kayo
+14,zekken,Raze
+14,Zellsis,Breach
+14,TenZ,Omen
+14,johnqt,Cypher
+14,Sacy,Fade
+14,Melser,Omen
+14,heat,Fade
+14,keznit,Raze
+14,Klaus,Viper
+14,Shyy,Killjoy
+15,TenZ,Omen
+15,zekken,Raze
+15,Sacy,Skye
+15,Zellsis,Viper
+15,johnqt,Cypher
+15,keznit,Raze
+15,heat,Skye
+15,Melser,Omen
+15,Shyy,Viper
+15,Klaus,Cypher
+16,saadhak,Kayo
+16,tuyz,Jett
+16,Less,Cypher
+16,pANcada,Omen
+16,cauanzin,Sova
+16,mazin,Omen
+16,liazzi,Kayo
+16,rich,Sova
+16,artzin,Killjoy
+16,Palla,Jett
+17,cauanzin,Fade
+17,Less,Cypher
+17,pANcada,Omen
+17,tuyz,Gekko
+17,saadhak,Neon
+17,artzin,Viper
+17,rich,Fade
+17,mazin,Omen
+17,liazzi,Killjoy
+17,Palla,Raze
+18,tuyz,Gekko
+18,Less,Cypher
+18,cauanzin,Breach
+18,pANcada,Omen
+18,saadhak,Neon
+18,liazzi,Breach
+18,artzin,Cypher
+18,mazin,Omen
+18,Palla,Raze
+18,rich,Gekko
+19,aspas,Raze
+19,kiNgg,Viper
+19,tex,Gekko
+19,Mazino,Brimstone
+19,C0M,Fade
+19,Boostio,Gekko
+19,eeiu,Fade
+19,Asuna,Raze
+19,Cryocells,Brimstone
+19,bang,Viper
+20,kiNgg,Omen
+20,aspas,Neon
+20,Mazino,Breach
+20,tex,Cypher
+20,C0M,Sova
+20,Asuna,Kayo
+20,eeiu,Sova
+20,bang,Omen
+20,Boostio,Killjoy
+20,Cryocells,Jett
+21,Ethan,Yoru
+21,s0m,Omen
+21,crashies,Fade
+21,Victor,Clove
+21,FiNESSE,Deadlock
+21,leaf,Killjoy
+21,trent,Sova
+21,icy,Jett
+21,valyn,Omen
+21,JonahP,Breach
+22,Ethan,Sage
+22,crashies,Skye
+22,s0m,Brimstone
+22,Victor,Raze
+22,FiNESSE,Viper
+22,JonahP,Skye
+22,trent,Gekko
+22,valyn,Brimstone
+22,leaf,Viper
+22,icy,Raze
+23,zekken,Jett
+23,Zellsis,Breach
+23,TenZ,Omen
+23,johnqt,Killjoy
+23,Sacy,Sova
+23,moose,Killjoy
+23,Xeppaa,Gekko
+23,runi,Breach
+23,OXY,Jett
+23,vanity,Omen
+24,Zellsis,Viper
+24,zekken,Raze
+24,johnqt,Cypher
+24,Sacy,Skye
+24,TenZ,Omen
+24,Xeppaa,Skye
+24,vanity,Omen
+24,moose,Cypher
+24,runi,Viper
+24,OXY,Raze
+25,Apoth,Harbor
+25,jawgemo,Sage
+25,supamen,Clove
+25,Derrek,Sova
+25,NaturE,Killjoy
+25,aspas,Jett
+25,Mazino,Harbor
+25,kiNgg,Viper
+25,C0M,Sova
+25,tex,Killjoy
+26,Derrek,Fade
+26,supamen,Omen
+26,NaturE,Breach
+26,jawgemo,Neon
+26,Apoth,Cypher
+26,aspas,Neon
+26,Mazino,Breach
+26,kiNgg,Omen
+26,C0M,Sova
+26,tex,Cypher
+27,pANcada,Viper
+27,cauanzin,Skye
+27,saadhak,Neon
+27,tuyz,Omen
+27,Less,Cypher
+27,mwzera,Neon
+27,Khalil,Omen
+27,havoc,Killjoy
+27,nzr,Breach
+27,xand,Gekko
+28,cauanzin,Kayo
+28,pANcada,Omen
+28,Less,Killjoy
+28,tuyz,Harbor
+28,saadhak,Gekko
+28,havoc,Killjoy
+28,nzr,Sova
+28,Khalil,Viper
+28,xand,Sage
+28,mwzera,Jett
+29,saadhak,Neon
+29,Less,Omen
+29,tuyz,Gekko
+29,pANcada,Brimstone
+29,cauanzin,Skye
+29,mwzera,Raze
+29,Khalil,Brimstone
+29,havoc,Viper
+29,nzr,Skye
+29,xand,Sage
+30,rich,Sova
+30,Palla,Jett
+30,mazin,Viper
+30,liazzi,Gekko
+30,artzin,Killjoy
+30,Boostio,Killjoy
+30,eeiu,Sova
+30,Asuna,Gekko
+30,bang,Viper
+30,Cryocells,Jett
+31,Palla,Jett
+31,artzin,Viper
+31,liazzi,Raze
+31,mazin,Omen
+31,rich,Skye
+31,eeiu,Fade
+31,bang,Viper
+31,Boostio,Breach
+31,Asuna,Raze
+31,Cryocells,Astra
+32,Ethan,Yoru
+32,s0m,Omen
+32,Victor,Neon
+32,crashies,Breach
+32,FiNESSE,Cypher
+32,Melser,Omen
+32,Shyy,Viper
+32,heat,Skye
+32,keznit,Raze
+32,mta,Cypher
+33,s0m,Omen
+33,FiNESSE,Cypher
+33,crashies,Sova
+33,Victor,Jett
+33,Ethan,Kayo
+33,Shyy,Killjoy
+33,Melser,Omen
+33,heat,Kayo
+33,mta,Sova
+33,keznit,Jett
+34,crashies,Fade
+34,s0m,Omen
+34,Victor,Neon
+34,Ethan,Breach
+34,FiNESSE,Cypher
+34,keznit,Raze
+34,heat,Kayo
+34,Shyy,Cypher
+34,Melser,Omen
+34,mta,Sova
+35,valyn,Omen
+35,JonahP,Viper
+35,icy,Raze
+35,leaf,Killjoy
+35,trent,Fade
+35,keznit,Raze
+35,Melser,Omen
+35,heat,Fade
+35,mta,Viper
+35,Shyy,Killjoy
+36,JonahP,Kayo
+36,trent,Sova
+36,leaf,Killjoy
+36,valyn,Omen
+36,icy,Jett
+36,keznit,Jett
+36,Melser,Omen
+36,heat,Kayo
+36,Shyy,Killjoy
+36,mta,Sova
+37,JonahP,Breach
+37,valyn,Omen
+37,icy,Raze
+37,trent,Fade
+37,leaf,Viper
+37,Shyy,Viper
+37,Melser,Omen
+37,keznit,Raze
+37,mta,Cypher
+37,heat,Skye
+38,pANcada,Omen
+38,Less,Cypher
+38,cauanzin,Fade
+38,tuyz,Raze
+38,saadhak,Breach
+38,C0M,Fade
+38,tex,Cypher
+38,kiNgg,Omen
+38,Mazino,Breach
+38,aspas,Neon
+39,cauanzin,Sova
+39,tuyz,Harbor
+39,Less,Killjoy
+39,saadhak,Kayo
+39,pANcada,Omen
+39,aspas,Jett
+39,tex,Killjoy
+39,kiNgg,Viper
+39,Mazino,Harbor
+39,C0M,Sova
+40,artzin,Cypher
+40,liazzi,Breach
+40,rich,Gekko
+40,Palla,Raze
+40,mazin,Omen
+40,Khalil,Omen
+40,havoc,Cypher
+40,xand,Kayo
+40,mwzera,Jett
+40,nzr,Sova
+41,artzin,Killjoy
+41,rich,Sova
+41,Palla,Jett
+41,mazin,Viper
+41,liazzi,Gekko
+41,Khalil,Viper
+41,mwzera,Jett
+41,nzr,Sova
+41,havoc,Killjoy
+41,xand,Sage
+42,Ethan,Kayo
+42,Victor,Jett
+42,s0m,Omen
+42,FiNESSE,Cypher
+42,crashies,Sova
+42,Xeppaa,Kayo
+42,runi,Sova
+42,vanity,Omen
+42,moose,Killjoy
+42,OXY,Jett
+43,s0m,Viper
+43,FiNESSE,Killjoy
+43,Ethan,Kayo
+43,crashies,Sova
+43,Victor,Jett
+43,OXY,Reyna
+43,vanity,Viper
+43,moose,Killjoy
+43,Xeppaa,Gekko
+43,runi,Sova
+44,s0m,Omen
+44,Ethan,Breach
+44,FiNESSE,Cypher
+44,Victor,Neon
+44,crashies,Fade
+44,vanity,Omen
+44,OXY,Raze
+44,moose,Cypher
+44,runi,Clove
+44,Xeppaa,Skye
+45,Derrek,Fade
+45,jawgemo,Neon
+45,supamen,Omen
+45,NaturE,Breach
+45,Apoth,Cypher
+45,eeiu,Fade
+45,Asuna,Raze
+45,Boostio,Killjoy
+45,bang,Viper
+45,Cryocells,Omen
+46,NaturE,Skye
+46,supamen,Omen
+46,Derrek,Gekko
+46,Apoth,Brimstone
+46,jawgemo,Raze
+46,eeiu,Fade
+46,bang,Viper
+46,Cryocells,Brimstone
+46,Asuna,Raze
+46,Boostio,Gekko
+47,Derrek,Sova
+47,supamen,Omen
+47,NaturE,Kayo
+47,Apoth,Cypher
+47,jawgemo,Jett
+47,Cryocells,Jett
+47,eeiu,Sova
+47,Asuna,Kayo
+47,bang,Omen
+47,Boostio,Killjoy
+48,Xeppaa,Unknown Agent
+48,vanity,Unknown Agent
+48,OXY,Unknown Agent
+48,runi,Unknown Agent
+48,moose,Unknown Agent
+48,Melser,Unknown Agent
+48,keznit,Unknown Agent
+48,mta,Unknown Agent
+48,Shyy,Unknown Agent
+48,heat,Unknown Agent
+49,Xeppaa,Unknown Agent
+49,vanity,Unknown Agent
+49,OXY,Unknown Agent
+49,runi,Unknown Agent
+49,moose,Unknown Agent
+49,Melser,Unknown Agent
+49,keznit,Unknown Agent
+49,mta,Unknown Agent
+49,Shyy,Unknown Agent
+49,heat,Unknown Agent
+50,Xeppaa,Unknown Agent
+50,vanity,Unknown Agent
+50,OXY,Unknown Agent
+50,runi,Unknown Agent
+50,moose,Unknown Agent
+50,Melser,Unknown Agent
+50,keznit,Unknown Agent
+50,mta,Unknown Agent
+50,Shyy,Unknown Agent
+50,heat,Unknown Agent
+51,jawgemo,Unknown Agent
+51,Derrek,Unknown Agent
+51,NaturE,Unknown Agent
+51,supamen,Unknown Agent
+51,Apoth,Unknown Agent
+51,mazin,Unknown Agent
+51,artzin,Unknown Agent
+51,Palla,Unknown Agent
+51,rich,Unknown Agent
+51,liazzi,Unknown Agent
+52,jawgemo,Unknown Agent
+52,Derrek,Unknown Agent
+52,NaturE,Unknown Agent
+52,supamen,Unknown Agent
+52,Apoth,Unknown Agent
+52,mazin,Unknown Agent
+52,artzin,Unknown Agent
+52,Palla,Unknown Agent
+52,rich,Unknown Agent
+52,liazzi,Unknown Agent
+53,jawgemo,Unknown Agent
+53,Derrek,Unknown Agent
+53,NaturE,Unknown Agent
+53,supamen,Unknown Agent
+53,Apoth,Unknown Agent
+53,mazin,Unknown Agent
+53,artzin,Unknown Agent
+53,Palla,Unknown Agent
+53,rich,Unknown Agent
+53,liazzi,Unknown Agent
+54,kiNgg,Unknown Agent
+54,Mazino,Unknown Agent
+54,aspas,Unknown Agent
+54,tex,Unknown Agent
+54,C0M,Unknown Agent
+54,Khalil,Unknown Agent
+54,mwzera,Unknown Agent
+54,havoc,Unknown Agent
+54,nzr,Unknown Agent
+54,xand,Unknown Agent
+55,kiNgg,Unknown Agent
+55,Mazino,Unknown Agent
+55,aspas,Unknown Agent
+55,tex,Unknown Agent
+55,C0M,Unknown Agent
+55,Khalil,Unknown Agent
+55,mwzera,Unknown Agent
+55,havoc,Unknown Agent
+55,nzr,Unknown Agent
+55,xand,Unknown Agent
+56,kiNgg,Unknown Agent
+56,Mazino,Unknown Agent
+56,aspas,Unknown Agent
+56,tex,Unknown Agent
+56,C0M,Unknown Agent
+56,Khalil,Unknown Agent
+56,mwzera,Unknown Agent
+56,havoc,Unknown Agent
+56,nzr,Unknown Agent
+56,xand,Unknown Agent
+57,saadhak,Unknown Agent
+57,Less,Unknown Agent
+57,tuyz,Unknown Agent
+57,cauanzin,Unknown Agent
+57,pANcada,Unknown Agent
+57,Asuna,Unknown Agent
+57,bang,Unknown Agent
+57,Cryocells,Unknown Agent
+57,eeiu,Unknown Agent
+57,Boostio,Unknown Agent
+58,saadhak,Unknown Agent
+58,Less,Unknown Agent
+58,tuyz,Unknown Agent
+58,cauanzin,Unknown Agent
+58,pANcada,Unknown Agent
+58,Asuna,Unknown Agent
+58,bang,Unknown Agent
+58,Cryocells,Unknown Agent
+58,eeiu,Unknown Agent
+58,Boostio,Unknown Agent
+59,saadhak,Unknown Agent
+59,Less,Unknown Agent
+59,tuyz,Unknown Agent
+59,cauanzin,Unknown Agent
+59,pANcada,Unknown Agent
+59,Asuna,Unknown Agent
+59,bang,Unknown Agent
+59,Cryocells,Unknown Agent
+59,eeiu,Unknown Agent
+59,Boostio,Unknown Agent
+60,TenZ,Unknown Agent
+60,zekken,Unknown Agent
+60,Sacy,Unknown Agent
+60,johnqt,Unknown Agent
+60,Zellsis,Unknown Agent
+60,trent,Unknown Agent
+60,valyn,Unknown Agent
+60,JonahP,Unknown Agent
+60,leaf,Unknown Agent
+60,icy,Unknown Agent
+61,TenZ,Unknown Agent
+61,zekken,Unknown Agent
+61,Sacy,Unknown Agent
+61,johnqt,Unknown Agent
+61,Zellsis,Unknown Agent
+61,trent,Unknown Agent
+61,valyn,Unknown Agent
+61,JonahP,Unknown Agent
+61,leaf,Unknown Agent
+61,icy,Unknown Agent
+62,TenZ,Unknown Agent
+62,zekken,Unknown Agent
+62,Sacy,Unknown Agent
+62,johnqt,Unknown Agent
+62,Zellsis,Unknown Agent
+62,trent,Unknown Agent
+62,valyn,Unknown Agent
+62,JonahP,Unknown Agent
+62,leaf,Unknown Agent
+62,icy,Unknown Agent
