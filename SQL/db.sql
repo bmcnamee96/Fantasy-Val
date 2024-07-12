@@ -1,18 +1,21 @@
 -- Database: fan_val
 
 -- DROP DATABASE IF EXISTS fan_val;
-	
+
+-------------- USER TABLES --------------
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY,
+    user_id SERIAL PRIMARY KEY,
     username TEXT NOT NULL,
     password TEXT NOT NULL,
-    email TEXT NOT NULL
+    email TEXT NOT NULL,
+	CONSTRAINT unique_user UNIQUE(username, email)
 );
 
 -- Leagues table
 CREATE TABLE IF NOT EXISTS leagues (
-    league_id INTEGER PRIMARY KEY,
+    league_id SERIAL PRIMARY KEY,
     league_name TEXT NOT NULL,
     commissioner_id INTEGER,
     FOREIGN KEY (commissioner_id) REFERENCES users(user_id)
@@ -20,7 +23,7 @@ CREATE TABLE IF NOT EXISTS leagues (
 
 -- Teams table
 CREATE TABLE IF NOT EXISTS teams (
-    team_id INTEGER PRIMARY KEY,
+    team_id SERIAL PRIMARY KEY,
     team_name TEXT NOT NULL,
     owner_id INTEGER,
     league_id INTEGER,
@@ -28,16 +31,32 @@ CREATE TABLE IF NOT EXISTS teams (
     FOREIGN KEY (league_id) REFERENCES leagues(league_id)
 );
 
+
+-------------- VALORANT TABLES --------------
+
 -- Players table
 CREATE TABLE IF NOT EXISTS players (
-    player_id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    team TEXT NOT NULL
+    player_id SERIAL PRIMARY KEY,
+    player_name TEXT NOT NULL,
+    team TEXT NOT NULL,
+	CONSTRAINT unique_player UNIQUE(player_name, team)
+);
+
+-- Games table
+CREATE TABLE IF NOT EXISTS games (
+	game_id SERIAL PRIMARY KEY,
+	map_name TEXT,
+	home_team TEXT NOT NULL,
+	away_team TEXT NOT NULL,
+	map_duration TEXT,
+	home_score INTEGER, 
+	away_score INTEGER,
+	CONSTRAINT unique_game UNIQUE (map_name, home_team, away_team)
 );
 
 -- PlayerStats table
 CREATE TABLE IF NOT EXISTS player_stats (
-    player_stat_id INTEGER PRIMARY KEY,
+    player_stat_id SERIAL PRIMARY KEY,
     player_id INTEGER,
     game_id INTEGER,
     kills INTEGER,
@@ -47,23 +66,15 @@ CREATE TABLE IF NOT EXISTS player_stats (
     fk INTEGER,
     fd INTEGER,
     clutches INTEGER,
-    date TEXT,
-    FOREIGN KEY (player_id) REFERENCES players(player_id)
+	aces INTEGER,
+    FOREIGN KEY (player_id) REFERENCES players(player_id),
+	FOREIGN KEY (game_id) REFERENCES games(game_id),
+	CONSTRAINT unique_stat UNIQUE(player_id, game_id)
 );
 
--- Games table
-CREATE TABLE IF NOT EXISTS games (
-	game_id SERIAL PRIMARY KEY,
-	map_name TEXT,
-	home_team TEXT NOT NULL,
-	away_team TEXT NOT NULL,
-	map_duration TIME,
-	home_score INTEGER, 
-	away_score INTEGER
+CREATE TABLE IF NOT EXISTS player_mapping (
+    player_name TEXT PRIMARY KEY,
+    player_id INTEGER
 );
-
-ALTER TABLE games
-ALTER COLUMN map_duration TYPE TEXT;
-
 
 

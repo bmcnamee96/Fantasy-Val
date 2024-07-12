@@ -7,4 +7,15 @@
 -- -- password
 -- ALTER USER postgres WITH PASSWORD 'pgadmin'
 
-SELECT * from games;
+DROP TABLE teams;
+
+DROP TABLE player_stats;
+
+DROP TABLE games;
+
+DROP TABLE players;
+
+DROP TABLE leagues;
+
+DROP TABLE users;
+
