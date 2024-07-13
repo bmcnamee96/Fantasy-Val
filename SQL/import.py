@@ -1,8 +1,6 @@
 import psycopg2
 import csv
 
-########################################################################################
-
 # Connect to the database
 conn = psycopg2.connect(
     dbname='fan_val',
@@ -10,6 +8,9 @@ conn = psycopg2.connect(
     password='pgadmin',
     host='localhost'
 )
+
+########################################################################################
+
 cursor = conn.cursor()
 
 # TABLE games
@@ -33,13 +34,6 @@ conn.close()
 
 ########################################################################################
 
-# Connect to the database
-conn = psycopg2.connect(
-    dbname='fan_val',
-    user='postgres',
-    password='pgadmin',
-    host='localhost'
-)
 cursor = conn.cursor()
 
 # TABLE players
@@ -63,13 +57,6 @@ conn.close()
 
 ########################################################################################
 
-# Connect to the database
-conn = psycopg2.connect(
-    dbname='fan_val',
-    user='postgres',
-    password='pgadmin',
-    host='localhost'
-)
 cursor = conn.cursor()
 
 # TABLE users
@@ -99,13 +86,6 @@ conn.close()
 
 ########################################################################################
 
-# Connect to the database
-conn = psycopg2.connect(
-    dbname='fan_val',
-    user='postgres',
-    password='pgadmin',
-    host='localhost'
-)
 cursor = conn.cursor()
 
 # TABLE player_stats
@@ -162,13 +142,6 @@ conn.close()
 
 ########################################################################################
 
-# Connect to the database
-conn = psycopg2.connect(
-    dbname='fan_val',
-    user='postgres',
-    password='pgadmin',
-    host='localhost'
-)
 cursor = conn.cursor()
 
 

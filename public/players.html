@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Valorant - Players</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="left-nav">
+        <div class="container">
+            <div class="logo">
+                <a href="index.html">Fantasy Valorant</a>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="players.html">Players</a></li>
+                <li><a href="index.html#teams">Teams</a></li>
+                <li><a href="index.html#stats">Stats</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+        
+        <div class="nav-right">
+            <div class="signin-signup">
+                <!-- Signup and Signin forms or links go here -->
+                <a href="signup.html">Sign Up</a>
+                <a href="signin.html">Sign In</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Sign Up Modal -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="signupClose">&times;</span>
+            <h2>Sign Up</h2>
+            <form id="signupForm">
+                <label for="signupUsername">Username:</label>
+                <input type="text" id="signupUsername" name="username" required>
+                <label for="signupEmail">Email:</label>
+                <input type="email" id="signupEmail" name="email" required>
+                <label for="signupPassword">Password:</label>
+                <input type="password" id="signupPassword" name="password" required>
+                <button type="submit">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+
+
+
+    <!-- Main Content -->
+    <main>
+        <div class="container">
+            <section class="players">
+                <h2>Content</h2>
+                <!-- Players table -->
+                <table id="players-table">
+                    <thead>
+                        <tr>
+                            <th>Player Name</th>
+                            <th>Kills</th>
+                            <th>Deaths</th>
+                            <th>Assists</th>
+                            <th>ADR</th>
+                            <th>First Kills</th>
+                            <th>First Deaths</th>
+                            <th>Clutches</th>
+                            <th>Aces</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Fantasy Valorant. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
