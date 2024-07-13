@@ -1,8 +1,13 @@
 const express = require('express');
 const { Pool } = require('pg');
+const bcrypt = require('bcrypt');
+const bodyParser = require('body-parser');
 
 const app = express();
 const port = 3000;
+
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
 
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
@@ -15,6 +20,52 @@ const pool = new Pool({
   password: 'pgadmin',
   port: 5432,
 });
+
+// Endpoint to register a new user
+app.post('/api/signup', async (req, res) => {
+  const { username, password, email } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  try {
+    await pool.query(
+      `INSERT INTO users (username, password, email) VALUES ($1, $2, $3) RETURNING user_id`,
+      [username, hashedPassword, email]
+    );
+    res.status(201).send('User registered successfully');
+  } catch (err) {
+    console.error('Error registering user:', err.message, err.stack);
+    res.status(500).send('Error registering user');
+  }
+});
+
+// Endpoint to sign in a user
+app.post('/api/signin', async (req, res) => {
+  const { username, password } = req.body;
+  
+  try {
+    const result = await pool.query(
+      `SELECT user_id, username, password FROM users WHERE username = $1`,
+      [username]
+    );
+
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const isValidPassword = await bcrypt.compare(password, user.password);
+
+      if (isValidPassword) {
+        res.status(200).json({username: user.username});
+      } else {
+        res.status(401).send('Invalid username or password');
+      }
+    } else {
+      res.status(401).send('Invalid username or password');
+    }
+  } catch (err) {
+    console.error('Error signing in user:', err.message, err.stack);
+    res.status(500).send('Error signing in user');
+  }
+});
+
 
 // API endpoint to get top players
 app.get('/api/top-players', async (req, res) => {

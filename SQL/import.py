@@ -28,13 +28,7 @@ with open('Data/scores_data.csv', 'r', newline='') as csvfile:
 # Commit the transaction
 conn.commit()
 
-# Close cursor and connection
-cursor.close()
-conn.close()
-
 ########################################################################################
-
-cursor = conn.cursor()
 
 # TABLE players
 
@@ -51,42 +45,7 @@ with open('Data/player_data.csv', 'r', newline='') as csvfile:
 # Commit the transaction
 conn.commit()
 
-# Close cursor and connection
-cursor.close()
-conn.close()
-
 ########################################################################################
-
-cursor = conn.cursor()
-
-# TABLE users
-
-# Define the user data
-username = '6macb'
-password = 'pass1'
-email = 'bmac965@gmail.com'
-
-# Execute the INSERT statement
-cursor.execute("INSERT INTO Users (username, password, email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;", (username, password, email))
-
-# Define the user data
-username = 'TravyPG'
-password = 'pass2'
-email = 'travis.marnell1@gmail.com'
-
-# Execute the INSERT statement
-cursor.execute("INSERT INTO Users (username, password, email) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;", (username, password, email))
-
-# Commit the transaction
-conn.commit()
-
-# Close cursor and connection
-cursor.close()
-conn.close()
-
-########################################################################################
-
-cursor = conn.cursor()
 
 # TABLE player_stats
 
@@ -136,13 +95,8 @@ with open(csv_file, 'r', newline='') as file:
 # Commit the transaction
 conn.commit()
 
-# Close cursor and connection
-cursor.close()
-conn.close()
 
 ########################################################################################
-
-cursor = conn.cursor()
 
 
 # Close cursor and connection

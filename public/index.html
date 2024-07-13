@@ -22,11 +22,14 @@
             </ul>
             
             <div class="nav-right">
-                <div class="signin-signup">
-                    <!-- Signup and Signin forms or links go here -->
-                    <a href="signup.html">Sign Up</a>
-                    <a href="signin.html">Sign In</a>
+                <div id="authLinks" class="auth-buttons">
+                    <button id="signupBtn">Sign Up</button>
+                    <button id="signinBtn">Sign In</button>
                 </div>
+                <div id="welcomeMessage" class="welcome-message" style="display: none;">
+                    Welcome, <span id="usernameSpan" class="username"></span>
+                </div>
+                <button id="signoutBtn" style="display: none;">Sign Out</button>
             </div>
         </div>
     </nav>
@@ -45,6 +48,22 @@
                 <input type="password" id="signupPassword" name="password" required>
                 <button type="submit">Sign Up</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Sign In Modal -->
+    <div id="signinModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="signinClose">&times;</span>
+            <h2>Sign In</h2>
+            <form id="signinForm">
+                <label for="signinUsername">Username:</label>
+                <input type="text" id="signinUsername" name="username" required>
+                <label for="signinPassword">Password:</label>
+                <input type="password" id="signinPassword" name="password" required>
+                <button type="submit">Sign In</button>
+            </form>
+            <a href="#" id="forgotPassword">Forgot Password?</a>
         </div>
     </div>
 

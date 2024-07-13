@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL,
     password TEXT NOT NULL,
     email TEXT NOT NULL,
-	CONSTRAINT unique_user UNIQUE(username, email)
+	CONSTRAINT unique_user UNIQUE(username, email),
+	CONSTRAINT user_email UNIQUE(email),
+	CONSTRAINT unique_username UNIQUE(username)
 );
 
 -- Leagues table

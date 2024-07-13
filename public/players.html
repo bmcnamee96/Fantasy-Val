@@ -21,13 +21,14 @@
                 <li><a href="index.html#contact">Contact</a></li>
             </ul>
         
-        <div class="nav-right">
-            <div class="signin-signup">
-                <!-- Signup and Signin forms or links go here -->
-                <a href="signup.html">Sign Up</a>
-                <a href="signin.html">Sign In</a>
+            <div class="nav-right">
+                <div id="authLinks" class="auth-buttons">
+                    <button id="signupBtn">Sign Up</button>
+                    <button id="signinBtn">Sign In</button>
+                </div>
+                <div id="welcomeMessage" class="welcome-message" style="display: none;"></div>
+                <button id="signoutBtn" style="display: none;">Sign Out</button>
             </div>
-        </div>
     </nav>
     
     <!-- Sign Up Modal -->
@@ -47,34 +48,28 @@
         </div>
     </div>
 
-
-
+    <!-- Sign In Modal -->
+    <div id="signinModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="signinClose">&times;</span>
+            <h2>Sign In</h2>
+            <form id="signinForm">
+                <label for="signinUsername">Username:</label>
+                <input type="text" id="signinUsername" name="username" required>
+                <label for="signinPassword">Password:</label>
+                <input type="password" id="signinPassword" name="password" required>
+                <button type="submit">Sign In</button>
+            </form>
+            <a href="#" id="forgotPassword">Forgot Password?</a>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main>
         <div class="container">
             <section class="players">
                 <h2>Content</h2>
-                <!-- Players table -->
-                <table id="players-table">
-                    <thead>
-                        <tr>
-                            <th>Player Name</th>
-                            <th>Kills</th>
-                            <th>Deaths</th>
-                            <th>Assists</th>
-                            <th>ADR</th>
-                            <th>First Kills</th>
-                            <th>First Deaths</th>
-                            <th>Clutches</th>
-                            <th>Aces</th>
-                            <th>Points</th>
-                        </tr>
-                    </thead>
-                    <tbody>
 
-                    </tbody>
-                </table>
             </section>
         </div>
     </main>
@@ -85,5 +80,6 @@
             <p>&copy; 2024 Fantasy Valorant. All rights reserved.</p>
         </div>
     </footer>
+    <script src="scripts.js"></script>
 </body>
 </html>

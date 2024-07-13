@@ -81,6 +81,38 @@ nav .nav-links a:hover {
     border-radius: 5px;
 }
 
+#authLinks {
+    display: flex;
+    gap: 20px;
+}
+
+#welcomeMessage {
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    color: #fff;
+    font-size: 1em;
+    margin-left: 20px;
+    display: flex; /* Use flexbox */
+    align-items: center; /* Center items vertically */
+}
+
+.username {
+    margin-left: 5px; /* Adjust as needed for spacing */
+}
+
+#signoutBtn {
+    background-color: #ff6347; /* Or any other color that fits your design */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-left: 10px; /* Adjust as needed */
+}
+
+.welcome-message {
+    margin-right: 10px; /* Adjust spacing between welcome message and signout button */
+}
+
 /* Main Content */
 main {
     padding: 20px 0;
@@ -114,6 +146,108 @@ thead {
     background-color: #f2f2f2;
 }
 
+/* Modal styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #333; /* Changed to black */
+    color: #fff; /* Text color changed to white for readability */
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 40px; /* Increased padding */
+    border: 1px solid #888;
+    width: 50%; /* Increased width */
+    max-width: 600px; /* Increased maximum width */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border-radius: 10px;
+    text-align: center; /* Center the text */
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.auth-buttons button {
+    background-color: #555; /* Adjusted color for better contrast */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.auth-buttons button:hover {
+    background-color: #777; /* Adjusted color for better contrast */
+}
+
+form label {
+    display: block;
+    margin: 15px 0 5px;
+}
+
+form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    color: #000; /* Input text color black for readability */
+    background-color: #fff; /* Background color white for readability */
+}
+
+form button {
+    background-color: #555; /* Adjusted color for better contrast */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+form button:hover {
+    background-color: #777; /* Adjusted color for better contrast */
+}
+
+/* Forgot Password link */
+#forgotPassword {
+    display: block;
+    margin-top: 15px;
+    color: #fff;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+#forgotPassword:hover {
+    color: #aaa;
+}
+
 /* Footer */
 footer {
     background-color: #333;
@@ -123,6 +257,4 @@ footer {
     margin-top: 20px;
 }
 
-/* New CSS */
-/* Add your new styles below */
 
