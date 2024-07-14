@@ -3,34 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fantasy Valorant - Players</title>
+    <title>Fantasy Valorant</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="left-nav">
+    <nav>
         <div class="container">
-            <div class="logo">
-                <a href="index.html">Fantasy Valorant</a>
-            </div>
+            <a href="index.html" class="logo">Home</a>
             <ul class="nav-links">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="players.html">Players</a></li>
-                <li><a href="index.html#teams">Teams</a></li>
-                <li><a href="index.html#stats">Stats</a></li>
-                <li><a href="index.html#contact">Contact</a></li>
+                <li><a href="my-dashboard.html">My Dashboard</a></li>
+                <li><a href="#teams">Teams</a></li>
+                <li><a href="#stats">Stats</a></li>
+                <li><a href="#contact">Contact</a></li>
             </ul>
-        
+            
             <div class="nav-right">
                 <div id="authLinks" class="auth-buttons">
                     <button id="signupBtn">Sign Up</button>
                     <button id="signinBtn">Sign In</button>
                 </div>
-                <div id="welcomeMessage" class="welcome-message" style="display: none;"></div>
+                <div id="welcomeMessage" class="welcome-message" style="display: none;">
+                    Welcome, <span id="usernameSpan" class="username"></span>
+                </div>
                 <button id="signoutBtn" style="display: none;">Sign Out</button>
             </div>
+        </div>
     </nav>
-    
+
     <!-- Sign Up Modal -->
     <div id="signupModal" class="modal">
         <div class="modal-content">
@@ -61,16 +61,26 @@
                 <button type="submit">Sign In</button>
             </form>
             <a href="#" id="forgotPassword">Forgot Password?</a>
+            
+            <div id="passwordRecoveryForm" class="modal">
+                <div class="modal-content">
+                    <span class="close" id="passwordRecoveryClose">&times;</span>
+                    <h2>Forgot Password</h2>
+                    <form id="passwordRecoveryInnerForm">
+                        <label for="recoveryEmail">Enter your email:</label>
+                        <input type="email" id="recoveryEmail" name="recoveryEmail" required>
+                        <button type="submit">Submit</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
+
 
     <!-- Main Content -->
     <main>
         <div class="container">
-            <section class="players">
-                <h2>Content</h2>
-
-            </section>
+           
         </div>
     </main>
 

@@ -2,6 +2,9 @@ const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const { sendPasswordResetEmail } = require('./services/emailService');
 
 const app = express();
 const port = 3000;
@@ -19,6 +22,14 @@ const pool = new Pool({
   database: 'fan_val',
   password: 'pgadmin',
   port: 5432,
+});
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'bmac965@gmail.com',
+    pass: 'Thunder#2',
+  },
 });
 
 // Endpoint to register a new user
@@ -53,7 +64,7 @@ app.post('/api/signin', async (req, res) => {
       const isValidPassword = await bcrypt.compare(password, user.password);
 
       if (isValidPassword) {
-        res.status(200).json({username: user.username});
+        res.status(200).json({ username: user.username });
       } else {
         res.status(401).send('Invalid username or password');
       }
@@ -66,32 +77,131 @@ app.post('/api/signin', async (req, res) => {
   }
 });
 
+// POST endpoint for password recovery initiation
+app.post('/api/recover-password', async (req, res) => {
+  const { email } = req.body;
+  console.log('Email:', email); // Log the extracted email
+  console.log('Password recovery request received:', req.body); // Log the request body
+  try {
+    const client = await pool.connect();
+
+    // Check if the email exists in the database
+    const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userResult.rowCount === 0) {
+      client.release();
+      return res.status(400).json({ message: 'Email not found' });
+    }
+
+    // Generate a token
+    const token = crypto.randomBytes(20).toString('hex');
+
+    // Insert token into the database
+    await client.query(
+      'INSERT INTO password_reset_tokens (email, token) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET token = $2, created_at = NOW()',
+      [email, token]
+    );
+
+    client.release();
+
+    // Send email with the token
+    const resetLink = `http://your-frontend-url/reset-password?token=${token}`;
+    const mailOptions = {
+      from: 'bmac965@gmail.com',
+      to: email,
+      subject: 'Password Reset Request',
+      text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log('Error sending email:', error);
+        return res.status(500).json({ message: 'Error sending email' });
+      } else {
+        console.log('Email sent:', info.response);
+        return res.status(200).json({ message: 'Password recovery email sent' });
+      }
+    });
+  } catch (error) {
+    console.error('Error handling password recovery:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // API endpoint to get top players
 app.get('/api/top-players', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
+      WITH PlayerStats AS (
+        SELECT 
           p.player_name, 
-          SUM(ps.kills) AS kills, 
-          SUM(ps.deaths) AS deaths, 
-          SUM(ps.assists) AS assists, 
-          ROUND(CAST(AVG(ps.adr) AS numeric), 2) AS adr, 
-          SUM(ps.fk) AS fk, 
-          SUM(ps.fd) AS fd, 
-          SUM(ps.clutches) AS clutches, 
-          SUM(ps.aces) AS aces,
-          ROUND(CAST(SUM(ps.kills * 1 + ps.assists * 0.5 - ps.deaths * 0.5 + ps.adr * 0.1 + ps.fk * 2 - ps.fd * 1 + ps.clutches * 2 + ps.aces * 3) AS numeric), 2) AS points
-      FROM 
+          ROUND(CAST(
+            (SUM(ps.kills) * 1) +
+            (SUM(ps.assists) * 0.5) - 
+            (SUM(ps.deaths) * 0.5) + 
+            (SUM(ps.fk) * 2) - 
+            (SUM(ps.fd) * 1) + 
+            (SUM(ps.clutches) * 2) + 
+            (SUM(ps.aces) * 3) + 
+            (ROUND(CAST(AVG(ps.adr) AS numeric), 2) * 0.1)
+          AS numeric), 2) AS points
+        FROM 
           players p
-      JOIN 
+        JOIN 
           player_stats ps 
-      ON 
+        ON 
           p.player_id = ps.player_id
-      GROUP BY 
+        GROUP BY 
           p.player_name
+      )
+      SELECT 
+        player_name,
+        points
+      FROM 
+        PlayerStats
       ORDER BY 
-          points DESC
+        points DESC
+      LIMIT 5;
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error executing query:', err.message, err.stack);
+    res.status(500).send('Error executing query');
+  }
+});
+
+// API endpoint to get worst players
+app.get('/api/worst-players', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      WITH PlayerStats AS (
+        SELECT 
+          p.player_name, 
+          ROUND(CAST(
+            (SUM(ps.kills) * 1) +
+            (SUM(ps.assists) * 0.5) - 
+            (SUM(ps.deaths) * 0.5) + 
+            (SUM(ps.fk) * 2) - 
+            (SUM(ps.fd) * 1) + 
+            (SUM(ps.clutches) * 2) + 
+            (SUM(ps.aces) * 3) + 
+            (ROUND(CAST(AVG(ps.adr) AS numeric), 2) * 0.1)
+          AS numeric), 2) AS points
+        FROM 
+          players p
+        JOIN 
+          player_stats ps 
+        ON 
+          p.player_id = ps.player_id
+        GROUP BY 
+          p.player_name
+      )
+      SELECT 
+        player_name,
+        points
+      FROM 
+        PlayerStats
+      ORDER BY 
+        points ASC
       LIMIT 5;
     `);
     res.json(result.rows);

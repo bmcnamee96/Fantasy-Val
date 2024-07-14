@@ -79,4 +79,10 @@ CREATE TABLE IF NOT EXISTS player_mapping (
     player_id INTEGER
 );
 
-
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token_id SERIAL PRIMARY KEY,
+    email TEXT NOT NULL,
+    token TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_token UNIQUE(token)
+);
