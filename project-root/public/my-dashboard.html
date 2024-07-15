@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Heading -->
+<head>
+    <!-- Basic -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+      <!-- Mobile Metas -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <!-- Site Metas -->
+    <meta name="keywords" content="" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+
+    <title>Fantasy Valorant</title>
+
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<!-- Body -->
+<body>
+    <!--#region ALL HTML -->
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="container">
+            <a href="index.html" class="logo-section">
+                <img src="images/logo.png" alt="FV Logo">
+            </a>
+            <ul class="nav-links">
+                <li><a href="my-dashboard.html">My Dashboard</a></li>
+                <li><a href="leagues.html">Leagues</a></li>
+                <li><a href="player-stats.html">Player Stats</a></li>
+                <li><a href="discussion.html">Discussion</a></li>
+            </ul>
+            
+            <div class="nav-right">
+                <div id="authLinks" class="auth-buttons">
+                    <button id="signupBtn">Sign Up</button>
+                    <button id="signinBtn">Sign In</button>
+                </div>
+                <div id="welcomeMessage" class="welcome-message" style="display: none;">
+                    WELCOME&nbsp;&nbsp;<span id="usernameSpan" class="username"></span>!
+                </div>
+                <button id="signoutBtn" style="display: none;">Sign Out</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sign Up Modal -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="signupClose">&times;</span>
+            <h2>Sign Up</h2>
+            <form id="signupForm">
+                <label for="signupUsername">Username:</label>
+                <input type="text" id="signupUsername" name="username" required>
+                <label for="signupEmail">Email:</label>
+                <input type="email" id="signupEmail" name="email" required>
+                <label for="signupPassword">Password:</label>
+                <input type="password" id="signupPassword" name="password" required>
+                <button type="submit">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sign In Modal -->
+    <div id="signinModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="signinClose">&times;</span>
+            <h2>Sign In</h2>
+            <form id="signinForm">
+                <label for="signinUsername">Username:</label>
+                <input type="text" id="signinUsername" name="username" required>
+                <label for="signinPassword">Password:</label>
+                <input type="password" id="signinPassword" name="password" required>
+                <button type="submit">Sign In</button>
+            </form>
+            <a href="#" id="forgotPassword">Forgot Password?</a>
+            
+            <div id="passwordRecoveryForm" class="modal">
+                <div class="modal-content">
+                    <span class="close" id="passwordRecoveryClose">&times;</span>
+                    <h2>Forgot Password</h2>
+                    <form id="passwordRecoveryInnerForm">
+                        <label for="recoveryEmail">Enter your email:</label>
+                        <input type="email" id="recoveryEmail" name="recoveryEmail" required>
+                        <button type="submit">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logo Section -->
+    <section class="logo">
+        <div class="container">
+            <img src="images.png" alt="Fantasy Valorant Logo">
+        </div>
+    </section>
+    <!--#endregion -->
+
+    <!-- Main Content -->
+    <main>
+        <div class="container">
+            
+        </div>
+    </main>
+
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Fantasy Valorant. All rights reserved.</p>
+        </div>
+    </footer>
+    <script src="js/scripts.js"></script>
+</body>
+</html>

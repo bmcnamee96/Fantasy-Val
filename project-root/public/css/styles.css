@@ -1,0 +1,413 @@
+/* #region DEFAULT SETTINGS */
+/* Reset default margins and paddings */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Basic styling */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #000000;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: auto;
+}
+/* #endregion */
+
+/* #region Navigation */
+nav {
+    background-color: #440000; /* Dark background */
+    color: #ffffff; /* White text */
+    padding: 10px 0;
+}
+
+nav .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo-section {
+    display: flex;
+    align-items: center;
+}
+
+.logo-section img {
+    max-width: 75px; /* Adjust the maximum width of the logo */
+    height: auto; /* Maintain aspect ratio */
+    margin-right: 10px; /* Add some spacing between logo and links */
+}
+
+.nav-links {
+    list-style: none;
+    display: flex; /* Display navigation links as flex items */
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links li {
+    display: inline;
+}
+
+.nav-links a {
+    color: #ffffff;
+    text-decoration: none;
+    padding: 10px 15px;
+    transition: background-color 0.3s;
+}
+
+.nav-links a:hover {
+    background-color: #7e1416; /* Highlight on hover */
+    border-radius: 5px;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+}
+
+.auth-buttons button {
+    color: #ffffff;
+    background-color: transparent;
+    border: none;
+    padding: 10px 15px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.auth-buttons button:hover {
+    background-color: #7e1416; /* Highlight on hover */
+    border-radius: 5px;
+}
+
+#welcomeMessage {
+    margin-left: auto;
+    margin-right: 30px;
+    display: flex; /* Hide welcome message initially */
+    color: #1ad8a9;
+    font-size: 1em;
+    align-items: center;
+}
+
+.welcome-message {
+    padding-right: 10px;
+}
+
+.username {
+    margin-left: auto; /* Adjust as needed for spacing */
+}
+
+#signoutBtn {
+    background-color: #000000; /* Sign out button color */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-left: 10px; /* Adjust as needed */
+}
+/* #endregion */
+
+/* #region Sign-In / Sign-Up*/
+/* #region Modal styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0, 0, 0); /* Fallback color */
+    background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #333; /* Changed to black */
+    color: #fff; /* Text color changed to white for readability */
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 40px; /* Increased padding */
+    border: 1px solid #888;
+    width: 50%; /* Increased width */
+    max-width: 600px; /* Increased maximum width */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    text-align: center; /* Center the text */
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.auth-buttons button {
+    background-color: #555; /* Adjusted color for better contrast */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.auth-buttons button:hover {
+    background-color: #777; /* Adjusted color for better contrast */
+}
+/* #endregion */
+
+/* #region Forms */
+form label {
+    display: block;
+    margin: 15px 0 5px;
+}
+
+form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    color: #000; /* Input text color black for readability */
+    background-color: #fff; /* Background color white for readability */
+}
+
+form button {
+    background-color: #555; /* Adjusted color for better contrast */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+form button:hover {
+    background-color: #777; /* Adjusted color for better contrast */
+}
+
+/* Forgot Password link */
+.forgot-password-link {
+    display: block;
+    margin-top: 10px;
+    color: #ffffff;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9em; /* Adjust font size as needed */
+}
+
+.forgot-password-link:hover {
+    color: #f8f8f8;
+}
+
+/* Password recovery form or reset process UI */
+#passwordRecoveryForm {
+    display: none;
+    margin-top: 15px;
+}
+
+#passwordRecoveryForm label,
+#passwordRecoveryForm input {
+    display: block;
+    margin-bottom: 10px;
+}
+
+#passwordRecoveryForm button {
+    background-color: #555; /* Adjusted color for better contrast */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+#passwordRecoveryForm button:hover {
+    background-color: #777; /* Adjusted color for better contrast */
+}
+/* #endregion */
+/* #endregion*/
+
+/* #region How to Play */
+.how_to_section {
+    background-color: #7f7f7f; /* White background */
+    color: #ffffff; /* Dark text */
+    padding: 50px 0; /* Adjust padding as needed */
+    text-align: center; /* Center align content */
+}
+
+.how_to_section .container {
+    max-width: 1200px; /* Limit width of content */
+    margin: 0 auto; /* Center align content */
+}
+
+.how_to_section .heading_container {
+    margin-bottom: 30px;
+}
+
+.how_to_section h2 {
+    color: #ff1e00; /* Heading color */
+}
+
+.how_to_section p {
+    font-size: 1.1em; /* Adjust font size */
+    line-height: 1.6; /* Adjust line height */
+}
+
+.how_to_section ol {
+    list-style-type: none;
+    padding: 0;
+}
+
+.how_to_section ol li {
+    background-color: #ff0000; /* Light background for sections */
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
+}
+
+.how_to_section ol li strong {
+    color: #000000; /* Strong text color */
+}
+
+@media (max-width: 768px) {
+    /* Responsive adjustments */
+    .container {
+        flex-direction: column;
+    }
+
+    .how_to_section .container {
+        padding: 0 20px; /* Adjust padding */
+    }
+}
+/* #endregion */
+
+/* #region Tables */
+main {
+    padding: 20px 0;
+    display: flex;
+    justify-content: center;
+}
+
+main .container {
+    display: flex;
+}
+
+.left-table,
+.right-table {
+    width: 48%; /* Adjust width for both tables */
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.left-table {
+    background-color: rgb(255, 255, 255); /* Example background color */
+}
+
+.right-table {
+    background-color: rgb(255, 255, 255); /* Example background color */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 1em;
+    font-family: Arial, sans-serif;
+}
+
+th,
+td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+th {
+    background-color: #0b0b0b;
+    color: #d51111;
+    text-transform: uppercase;
+}
+
+tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+tr:nth-of-type(odd) {
+    background-color: #ffffff;
+}
+
+.table-heading {
+    text-align: center;
+    margin-bottom: 10px; /* Add some bottom margin for separation */
+    color: #ffffff; /* Text color */
+    background-color: #ff0000; /* Background color */
+    padding: 10px; /* Padding for spacing */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Box shadow */
+}
+
+@media screen and (max-width: 768px) {
+    .left-table,
+    .right-table {
+        width: 100%; /* Full width on small screens */
+        margin-right: 0; /* Remove right margin on small screens */
+        margin-left: 0; /* Remove left margin on small screens */
+        margin-bottom: 20px; /* Add bottom margin between tables */
+    }
+}
+/* #endregion */
+
+/* #region Discussion */
+#discussion header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#discussion main {
+    display: flex;
+    flex-direction: column;
+}
+
+#discussion section {
+    background-color: #ffffff;
+    margin-bottom: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+/* #endregion */
+
+/* #region Footer */
+footer {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 10px 0;
+    margin-top: 20px;
+}
+/* #endregion */
+
