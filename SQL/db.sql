@@ -39,12 +39,9 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     email TEXT NOT NULL,
     token TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT unique_token UNIQUE(token)
+    CONSTRAINT unique_token UNIQUE(token),
+	CONSTRAINT unique_email UNIQUE (email)
 );
-
-ALTER TABLE password_reset_tokens
-ADD CONSTRAINT unique_email
-UNIQUE (email);
 
 -------------- VALORANT TABLES --------------
 
@@ -65,6 +62,7 @@ CREATE TABLE IF NOT EXISTS games (
 	map_duration TEXT,
 	home_score INTEGER, 
 	away_score INTEGER,
+	COLUMN series_id INTEGER
 	CONSTRAINT unique_game UNIQUE (map_name, home_team, away_team)
 );
 
@@ -90,4 +88,30 @@ CREATE TABLE IF NOT EXISTS player_mapping (
     player_name TEXT PRIMARY KEY,
     player_id INTEGER
 );
+
+-- Series table
+CREATE TABLE IF NOT EXISTS series (
+    series_id SERIAL PRIMARY KEY,
+    home_round_difference INTEGER,
+	away_round_difference INTEGER,
+    num_maps INTEGER
+);
+
+-- Series Player Stats
+CREATE TABLE IF NOT EXISTS series_player_stats (
+    series_id INTEGER,
+    player_id INTEGER,
+    avg_adr_per_series REAL,
+	total_kills INTEGER,
+	total_deaths INTEGER,
+	total_assists INTEGER,
+	total_fk INTEGER,
+	total_fd INTEGER,
+	total_clutches INTEGER, 
+	total_aces INTEGER,
+    PRIMARY KEY (series_id, player_id),
+    FOREIGN KEY (series_id) REFERENCES series(series_id),
+    FOREIGN KEY (player_id) REFERENCES players(player_id)
+);
+
 
