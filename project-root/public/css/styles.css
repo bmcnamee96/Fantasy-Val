@@ -249,17 +249,146 @@ form button:hover {
 /* #endregion */
 /* #endregion*/
 
+/* #region Slider */
+.slider_section {
+    position: relative;
+    padding: 50px 0;
+    background: #f8f9fa;
+    flex: 1
+}
+
+.carousel-inner {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+.carousel-item {
+    text-align: center;
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slider-detail-box {
+    text-align: left;
+}
+
+.slider-detail-box h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+    margin-bottom: 20px;
+}
+
+.slider-detail-box p {
+    font-size: 1rem;
+    color: #6c757d;
+    margin-bottom: 30px;
+}
+
+.img-box img {
+    max-width: 100%;
+}
+
+/* Styles for the container holding the carousel buttons */
+.slider_section {
+    position: relative;
+    padding: 50px 0;
+    background: #f8f9fa;
+}
+
+.carousel-inner {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+.carousel-item {
+    text-align: center;
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.img-box img {
+    max-width: 100%;
+}
+
+.carousel_btn-container {
+    display: flex;
+    top: 50%;
+    width: 100%;
+    position: absolute; /* Positions the container absolutely within its parent */
+    bottom: 0; /* Positions the container at the bottom of its parent */
+    display: flex; /* Uses flexbox for layout */
+    justify-content: space-evenly; /* Distributes space evenly between buttons */
+    z-index: 999; /* Ensures the container is above other elements */
+    transform: translateY(-30px); /* Moves the container up by 25% of its own height */
+}
+
+/* Styles for both previous and next buttons */
+.carousel-control-prev,
+.carousel-control-next {
+    position: center; /* Positions the buttons relative to their normal position */
+    width: 55px; /* Sets the width of the buttons */
+    height: 55px; /* Sets the height of the buttons */
+    border: none; /* Removes the default border */
+    border-radius: 100%; /* Makes the buttons circular */
+    opacity: 1; /* Sets the opacity to fully visible */
+    background-repeat: no-repeat; /* Prevents background image from repeating */
+    background-size: 30px; /* Sets the size of the background image */
+    background-position: center; /* Centers the background image */
+    background-color: rgb(0, 0, 0); /* Sets the background color to black */
+    margin: 2px; /* Adds a small margin around the buttons */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Adds a shadow to the buttons */
+}
+
+/* Styles for the previous button */
+.carousel-control-prev {
+    background-image: url(../images/prev.png); /* Sets the background image for the previous button */
+}
+
+/* Styles for the next button */
+.carousel-control-next {
+    background-image: url(../images/next.png); /* Sets the background image for the next button */
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-indicators li {
+    background-color: #007bff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    color: #fff;
+    font-size: 0.8rem;
+}
+
+/* #endregion */
+
 /* #region How to Play */
 .how_to_section {
-    background-color: #7f7f7f; /* White background */
-    color: #ffffff; /* Dark text */
+    background-color: #7f7f7f; /* Background color */
+    color: #ffffff; /* Text color */
     padding: 50px 0; /* Adjust padding as needed */
-    text-align: center; /* Center align content */
+    text-align: center; /* Center align text */
 }
 
 .how_to_section .container {
     max-width: 1200px; /* Limit width of content */
-    margin: 0 auto; /* Center align content */
+    margin: 0 auto; /* Center align container */
+    display: flex; /* Use flexbox for layout */
+    flex-direction: column; /* Stack items vertically */
+    align-items: center; /* Center align items horizontally */
 }
 
 .how_to_section .heading_container {
@@ -281,11 +410,13 @@ form button:hover {
 }
 
 .how_to_section ol li {
-    background-color: #ff0000; /* Light background for sections */
+    background-color: #ff0000; /* Background color for sections */
     padding: 20px;
     margin-bottom: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
+    width: 100%; /* Make boxes take full width of container */
+    max-width: 600px; /* Optional: limit max width */
 }
 
 .how_to_section ol li strong {
@@ -294,10 +425,6 @@ form button:hover {
 
 @media (max-width: 768px) {
     /* Responsive adjustments */
-    .container {
-        flex-direction: column;
-    }
-
     .how_to_section .container {
         padding: 0 20px; /* Adjust padding */
     }
