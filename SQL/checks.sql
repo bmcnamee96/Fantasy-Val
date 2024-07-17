@@ -17,8 +17,7 @@ FROM series_player_stats
 ORDER BY series_id ASC;
 
 SELECT * 
-FROM series
-ORDER BY series ASC;
+FROM series;
 
 
 

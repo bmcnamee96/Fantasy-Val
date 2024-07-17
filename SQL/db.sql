@@ -55,14 +55,14 @@ CREATE TABLE IF NOT EXISTS players (
 
 -- Games table
 CREATE TABLE IF NOT EXISTS games (
+	series_id INTEGER,
 	game_id SERIAL PRIMARY KEY,
 	map_name TEXT,
 	home_team TEXT NOT NULL,
 	away_team TEXT NOT NULL,
 	map_duration TEXT,
 	home_score INTEGER, 
-	away_score INTEGER,
-	COLUMN series_id INTEGER
+	away_score INTEGER
 	CONSTRAINT unique_game UNIQUE (map_name, home_team, away_team)
 );
 
@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS player_mapping (
 -- Series table
 CREATE TABLE IF NOT EXISTS series (
     series_id SERIAL PRIMARY KEY,
+	home_team VARCHAR,
+	away_team VARCHAR,
     home_round_difference INTEGER,
 	away_round_difference INTEGER,
     num_maps INTEGER
