@@ -7,17 +7,17 @@
 -- -- password
 -- ALTER USER postgres WITH PASSWORD 'pgadmin'
 
-DROP TABLE player_mapping;
+DROP TABLE total_stats;
 
-DROP TABLE teams;
+DROP TABLE series_player_stats;
 
 DROP TABLE player_stats;
 
 DROP TABLE games;
 
-DROP TABLE players;
+DROP TABLE series;
 
-DROP TABLE leagues;
+DROP TABLE player;
 
-DROP TABLE users;
+
 
