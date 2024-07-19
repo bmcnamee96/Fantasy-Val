@@ -442,23 +442,6 @@ main .container {
     display: flex;
 }
 
-.left-table,
-.right-table {
-    width: 48%; /* Adjust width for both tables */
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    padding: 10px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-}
-
-.left-table {
-    background-color: rgb(255, 255, 255); /* Example background color */
-}
-
-.right-table {
-    background-color: rgb(255, 255, 255); /* Example background color */
-}
-
 table {
     width: 100%;
     border-collapse: collapse;

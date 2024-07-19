@@ -91,45 +91,52 @@
         </div>
     </div>
 
-    <!-- Logo Section -->
-    <section class="logo">
-        <div class="container">
-            <img src="images.png" alt="Fantasy Valorant Logo">
-        </div>
-    </section>
-    <!--#endregion -->
-
     <!-- Main Content -->
     <main>
         <!-- Tables -->
         <div class="container">
-            <div class="left-table">
-                <h2 class="table-heading">Top Players from Week 4</h2>
+            <div class="table">
+                <form id="filter-form">
+                    <label for="team-filter">Filter by Team:</label>
+                    <select id="team-filter">
+                      <option value="">All Teams</option>
+                      <!-- Add options dynamically or manually -->
+                      <option value="100T">100T</option>
+                      <option value="SEN">SEN</option>
+                      <option value="NRG">NRG</option>
+                      <option value="EG">EG</option>
+                      <option value="KRU">KRU</option>
+                      <option value="c9">C9</option>
+                      <option value="MIBR">MIBR</option>
+                      <option value="LOUD">LOUD</option>
+                      <option value="FUR">FUR</option>
+                      <option value="LEV">LEV</option>
+                      <option value="G2">G2</option>
+                    </select>
+                  
+                    <button id="apply-filters">Apply Filters</button>
+                  </form>
+                <h2 class="table-heading">Player Stats</h2>
                 <!-- Players table -->
-                <table id="top-players-table">
+                <table id="player-stats-table">
                     <thead>
-                        <tr>
-                            <th>Player Name</th>
-                            <th>Points</th>
+                      <tr>
+                        <th data-column="player_name" data-sort="asc">Player Name</th>
+                        <th data-column="team_abrev" data-sort="asc">Team</th>
+                        <th data-column="total_maps_played" data-sort="asc">Total Maps</th>
+                        <th data-column="total_kills" data-sort="asc">Kills</th>
+                        <th data-column="total_deaths" data-sort="asc">Deaths</th>
+                        <th data-column="total_assists" data-sort="asc">Assists</th>
+                        <th data-column="total_fk" data-sort="asc">First Kills</th>
+                        <th data-column="total_fd" data-sort="asc">First Deaths</th>
+                        <th data-column="total_clutches" data-sort="asc">Clutches</th>
+                        <th data-column="total_aces" data-sort="asc">Aces</th>
+                        <th data-column="total_adr" data-sort="asc">ADR</th>
+                        <th data-column="total_points" data-sort="asc">Points</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!--Top 5 Players Table Goes Here-->
-                    </tbody>
-                </table>
-            </div>
-            <div class="right-table">
-                <h2 class="table-heading">Worst Players from Week 4</h2>
-                <!-- Worst Players table -->
-                <table id="worst-players-table">
-                    <thead>
-                        <tr>
-                            <th>Player Name</th>
-                            <th>Points</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!--Worst 5 Players Table Goes Here-->
+                        <!--Player Stats Table Goes Here-->
                     </tbody>
                 </table>
             </div>

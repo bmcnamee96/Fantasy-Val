@@ -19,5 +19,5 @@ DROP TABLE series;
 
 DROP TABLE player;
 
-
+DROP TABLE teams;
 

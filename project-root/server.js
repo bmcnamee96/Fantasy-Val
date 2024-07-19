@@ -111,41 +111,39 @@ app.post('/api/recover-password', async (req, res) => {
   }
 });
 
-// API endpoint to get top players
-app.get('/api/top-players', async (req, res) => {
+// API endpoint to get player stats
+app.get('/api/player-stats', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const { team_abrev } = req.query;
+    console.log('Received team_abrev:', team_abrev); // Debug log
+    let query = `
       WITH PlayerStats AS (
         SELECT 
-          p.player_name, 
-          ROUND(CAST(
-            (SUM(ps.kills) * 1) +
-            (SUM(ps.assists) * 0.5) - 
-            (SUM(ps.deaths) * 0.5) + 
-            (SUM(ps.fk) * 2) - 
-            (SUM(ps.fd) * 1) + 
-            (SUM(ps.clutches) * 2) + 
-            (SUM(ps.aces) * 3) + 
-            (ROUND(CAST(AVG(ps.adr) AS numeric), 2) * 0.1)
-          AS numeric), 2) AS points
-        FROM 
-          players p
-        JOIN 
-          player_stats ps 
-        ON 
-          p.player_id = ps.player_id
-        GROUP BY 
-          p.player_name
+          p.player_name,
+          t.team_abrev,
+          ts.total_maps_played,
+          ts.total_kills,
+          ts.total_deaths,
+          ts.total_assists,
+          ts.total_fk,
+          ts.total_fd,
+          ts.total_clutches,
+          ts.total_aces,
+          ts.total_adr,
+          ROUND(CAST(ts.total_points AS NUMERIC), 2) AS total_points
+        FROM total_stats ts
+        JOIN player p ON ts.player_id = p.player_id
+        JOIN teams t ON p.team_abrev = t.team_abrev
       )
-      SELECT 
-        player_name,
-        points
-      FROM 
-        PlayerStats
-      ORDER BY 
-        points DESC
-      LIMIT 5;
-    `);
+      SELECT * FROM PlayerStats
+    `;
+    if (team_abrev) {
+      query += ` WHERE team_abrev = $1 ORDER BY total_points DESC`;
+      result = await pool.query(query, [team_abrev]);
+    } else {
+      query += ` ORDER BY total_points DESC`;
+      result = await pool.query(query);
+    }
     res.json(result.rows);
   } catch (err) {
     console.error('Error executing query:', err.message, err.stack);
