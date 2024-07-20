@@ -406,24 +406,29 @@ main .container {
 .filter-section {
     margin-bottom: 20px; /* Space between filters and table */
     text-align: left; /* Center filter section text */
-    padding: 10%;
+    padding: 10px; /* Adjust padding for better spacing */
+    width: 100%; /* Ensure filter section uses full container width */
+    box-sizing: border-box; /* Include padding in the width */
 }
 
-/* Align the filter form to the left */
 #filter-form {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start; /* Align form items to the left */
-    width: 125px; /* Set width of the form */
-    margin-left: 0; /* Ensure there is no margin-left to keep it aligned to the left */
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding-right: 0;
 }
 
 #team-filter {
-    width: 100%; /* Full width of the select element */
+    margin-right: 15px; /* Adjust as needed */
 }
 
 #apply-filters {
-    margin-top: 10px; /* Space above the button */
+    padding: 0.375rem 0.75rem; /* Default Bootstrap padding */
+    margin-left: auto; /* Pushes the button to the far right */
+    box-sizing: border-box; /* Ensures padding and border are included in the button's width */
+    width: auto; /* Adjust button width */
+    min-width: 120px; /* Set minimum width for the button */
 }
 
 .table-heading {
@@ -444,6 +449,11 @@ table {
     border: 2px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+table tbody tr:hover {
+    background-color: #40e0d0; /* Turquoise color */
+    transition: background-color 0.3s ease; /* Smooth transition */
 }
 
 th, td {
@@ -504,92 +514,6 @@ th[data-sort="desc"]::after {
         margin-right: 0;
         margin-left: 0;
         margin-bottom: 20px;
-    }
-}
-
-/* #endregion */
-
-main {
-    padding: 20px 0;
-    display: flex;
-    justify-content: center;
-}
-
-main .container {
-    display: flex;
-    justify-content: center; /* Center the table horizontally */
-    align-items: center; /* Center the table vertically if needed */
-}
-
-table {
-    width: 80%;
-    border-collapse: collapse;
-    margin-bottom: 10px;
-    font-family: Arial, sans-serif;
-    border: 2px solid #ddd; /* Add a border around the table */
-    border-radius: 8px; /* Add rounded corners to the border */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for depth */
-}
-
-th,
-td {
-    padding: 12px 15px;
-    border: 1px solid #ddd;
-    text-align: center;
-}
-
-th {
-    background-color: #0b0b0b;
-    color: #d51111;
-    text-transform: uppercase;
-    font-size: 12px; /* Smaller text for table headings */
-    position: relative; /* Make the th element a positioned container */
-    vertical-align: bottom; /* Align text to the top */
-}
-
-tr:nth-of-type(even) {
-    background-color: #f3f3f3;
-}
-
-tr:nth-of-type(odd) {
-    background-color: #ffffff;
-}
-
-.table-heading {
-    text-align: center;
-    margin-bottom: 10px; /* Add some bottom margin for separation */
-    color: #ffffff; /* Text color */
-    background-color: #ff0000; /* Background color */
-    padding: 10px; /* Padding for spacing */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Box shadow */
-    font-size: 20px; /* Font size for heading */
-}
-
-th[data-sort="asc"]::after,
-th[data-sort="desc"]::after {
-    position: absolute; /* Position relative to the th element */
-    right: 10px; /* Adjust to position near the right edge */
-    font-size: 8px; /* Adjust the size of the arrow */
-}
-
-th[data-sort="asc"]::after {
-    content: ' ▲';
-    font-size: 10px; /* Adjust the size of the arrow */
-    top: 5px
-}
-
-th[data-sort="desc"]::after {
-    content: ' ▼';
-    font-size: 10px; /* Adjust the size of the arrow */
-    top: 5px
-}
-
-@media screen and (max-width: 768px) {
-    .table {
-        width: 100%; /* Full width on small screens */
-        margin-right: 0; /* Remove right margin on small screens */
-        margin-left: 0; /* Remove left margin on small screens */
-        margin-bottom: 20px; /* Add bottom margin between tables */
     }
 }
 

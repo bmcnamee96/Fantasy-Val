@@ -5,6 +5,14 @@ const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const { sendPasswordResetEmail } = require('./services/emailService.js');
+const path = require('path');
+const { expressjwt: expressJwt } = require('express-jwt');
+const { JWT_SECRET } = require('./utils/auth'); // Import your JWT secret
+const League = require('./models/leagues.js');
+const leagueRoutes = require('./routes/leagueRoutes.js');
+const jwt = require('jsonwebtoken');
+const authenticateToken = require('./middleware/authMiddleware'); // Adjust path if necessary
+
 
 const app = express();
 const port = 3000;
@@ -14,6 +22,35 @@ app.use(bodyParser.json());
 
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
+
+// JWT Middleware - Apply only to specific routes
+app.use(expressJwt({
+  secret: JWT_SECRET,
+  algorithms: ['HS256']
+}).unless({
+  path: [
+    '/',
+    '/index.html', // Exclude index.html
+    '/api/signup', 
+    '/api/signin',
+    '/api/recover-password', // Assuming you want this to be public as well
+    '/api/player-stats', // Assuming you want this to be public as well
+    '/api/match-stats'  // Assuming you want this to be public as well
+  ]
+}));
+
+// Add this middleware to extract userId from JWT
+app.use((req, res, next) => {
+  if (req.user) {
+    req.userId = req.user.userId; // Ensure this matches the JWT payload
+  } else {
+    req.userId = null;
+  }
+  next();
+});
+
+// Routes
+app.use('/', leagueRoutes);
 
 // Example route for serving index.html
 app.get('/', (req, res) => {
@@ -29,17 +66,30 @@ const pool = new Pool({
   port: 5432,
 });
 
+// Error handling middleware for JWT
+app.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).send('Invalid or missing token');
+  } else {
+    next(err);
+  }
+});
+
 // Endpoint to register a new user
 app.post('/api/signup', async (req, res) => {
   const { username, password, email } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
   
   try {
-    await pool.query(
+    const result = await pool.query(
       `INSERT INTO users (username, password, email) VALUES ($1, $2, $3) RETURNING user_id`,
       [username, hashedPassword, email]
     );
-    res.status(201).send('User registered successfully');
+
+    const user = result.rows[0];
+    const token = jwt.sign({ userId: user.user_id }, JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(201).json({ token });
   } catch (err) {
     console.error('Error registering user:', err.message, err.stack);
     res.status(500).send('Error registering user');
@@ -61,7 +111,8 @@ app.post('/api/signin', async (req, res) => {
       const isValidPassword = await bcrypt.compare(password, user.password);
 
       if (isValidPassword) {
-        res.status(200).json({ username: user.username });
+        const token = jwt.sign({ userId: user.user_id }, JWT_SECRET, { expiresIn: '1h' });
+        res.status(200).json({ token, username: user.username });
       } else {
         res.status(401).send('Invalid username or password');
       }
@@ -82,7 +133,6 @@ app.post('/api/recover-password', async (req, res) => {
   try {
       const client = await pool.connect();
 
-      // Check if the email exists in the database
       const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
       if (userResult.rowCount === 0) {
           client.release();
@@ -90,10 +140,8 @@ app.post('/api/recover-password', async (req, res) => {
           return res.status(400).json({ message: 'Email not found' });
       }
 
-      // Generate a token
       const token = crypto.randomBytes(20).toString('hex');
 
-      // Insert token into the database
       await client.query(
         'INSERT INTO password_reset_tokens (email, token) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET token = $2, created_at = NOW()',
         [email, token]
@@ -101,7 +149,6 @@ app.post('/api/recover-password', async (req, res) => {
       
       client.release();
 
-    // Call the email service function to send the password reset email
     await sendPasswordResetEmail(email, token);
 
     res.status(200).json({ message: 'Password recovery email sent' });
@@ -139,12 +186,13 @@ app.get('/api/player-stats', async (req, res) => {
     `;
     if (team_abrev) {
       query += ` WHERE team_abrev = $1 ORDER BY total_points DESC`;
-      result = await pool.query(query, [team_abrev]);
+      const result = await pool.query(query, [team_abrev]);
+      res.json(result.rows);
     } else {
       query += ` ORDER BY total_points DESC`;
-      result = await pool.query(query);
+      const result = await pool.query(query);
+      res.json(result.rows);
     }
-    res.json(result.rows);
   } catch (err) {
     console.error('Error executing query:', err.message, err.stack);
     res.status(500).send('Error executing query');
@@ -186,15 +234,68 @@ app.get('/api/match-stats', async (req, res) => {
       query += ` WHERE team_abrev = $1`;
       const result = await pool.query(query, [team_abrev]);
       res.json(result.rows);
-  } else {
+    } else {
       const result = await pool.query(query);
       res.json(result.rows);
+    }
+  } catch (err) {
+    console.error('Error executing query:', err.message, err.stack);
+    res.status(500).json({ error: 'Error executing query' }); // Send JSON error response
   }
-} catch (err) {
-  console.error('Error executing query:', err.message, err.stack);
-  res.status(500).json({ error: 'Error executing query' }); // Send JSON error response
-}
 });
+
+// #region Dashboard Endpoint
+app.post('/api/leagues', async (req, res) => {
+  console.log('API request received'); // Log when the API request is received
+  const { league_name, description, owner_id } = req.body;
+
+  console.log('Received data:', { league_name, description });
+  
+  try {
+    // Ensure all required fields are provided
+    if (!league_name || !description || !owner_id) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Create the new league
+    const newLeague = await League.create({
+      league_name,
+      description,
+      owner_id
+    });
+
+    res.status(201).json({ success: true, league: newLeague });
+  } catch (error) {
+    console.error('Error creating league:', error);
+    res.status(500).json({ success: false, message: 'Failed to create league', error: error.message });
+  }
+});
+
+// Endpoint to get leagues for a user
+app.get('/api/user-leagues', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+
+  if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: No user ID found' });
+  }
+
+  try {
+      const result = await pool.query(
+          `SELECT l.league_name, l.description
+           FROM leagues l
+           JOIN user_leagues ul ON l.league_id = ul.league_id
+           WHERE ul.user_id = $1`,
+          [userId]
+      );
+
+      res.json(result.rows);
+  } catch (error) {
+      console.error('Error fetching user leagues:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// #endregion
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
