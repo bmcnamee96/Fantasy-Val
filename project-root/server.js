@@ -151,46 +151,49 @@ app.get('/api/player-stats', async (req, res) => {
   }
 });
 
-// API endpoint to get worst players
-app.get('/api/worst-players', async (req, res) => {
+// API endpoint to get match stats
+app.get('/api/match-stats', async (req, res) => {
   try {
-    const result = await pool.query(`
-      WITH PlayerStats AS (
+    const { team_abrev } = req.query;
+    console.log('Received team_abrev:', team_abrev); // Debug log
+
+    let query = `
+      WITH SeriesStats AS (
         SELECT 
-          p.player_name, 
-          ROUND(CAST(
-            (SUM(ps.kills) * 1) +
-            (SUM(ps.assists) * 0.5) - 
-            (SUM(ps.deaths) * 0.5) + 
-            (SUM(ps.fk) * 2) - 
-            (SUM(ps.fd) * 1) + 
-            (SUM(ps.clutches) * 2) + 
-            (SUM(ps.aces) * 3) + 
-            (ROUND(CAST(AVG(ps.adr) AS numeric), 2) * 0.1)
-          AS numeric), 2) AS points
-        FROM 
-          players p
-        JOIN 
-          player_stats ps 
-        ON 
-          p.player_id = ps.player_id
-        GROUP BY 
-          p.player_name
+          s.week,
+          s.split,
+          p.player_name,
+          p.team_abrev,
+          sps.series_maps,
+          sps.series_kills,
+          sps.series_deaths,
+          sps.series_assists,
+          sps.series_fk,
+          sps.series_fd,
+          sps.series_clutches,
+          sps.series_aces,
+          sps.avg_adr_per_series,
+          sps.adjusted_points
+        FROM series_player_stats AS sps
+        JOIN series s ON sps.series_id = s.series_id
+        JOIN player p ON sps.player_id = p.player_id
+        ORDER BY s.week ASC, sps.series_id ASC, p.team_abrev ASC
       )
-      SELECT 
-        player_name,
-        points
-      FROM 
-        PlayerStats
-      ORDER BY 
-        points ASC
-      LIMIT 5;
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error executing query:', err.message, err.stack);
-    res.status(500).send('Error executing query');
+      SELECT * FROM SeriesStats
+    `;
+
+    if (team_abrev) {
+      query += ` WHERE team_abrev = $1`;
+      const result = await pool.query(query, [team_abrev]);
+      res.json(result.rows);
+  } else {
+      const result = await pool.query(query);
+      res.json(result.rows);
   }
+} catch (err) {
+  console.error('Error executing query:', err.message, err.stack);
+  res.status(500).json({ error: 'Error executing query' }); // Send JSON error response
+}
 });
 
 const PORT = process.env.PORT || 3000;

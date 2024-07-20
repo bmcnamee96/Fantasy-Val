@@ -1496,15 +1496,16 @@ pre code {
   }
 }
 
+/* #region Table */
 .table {
-  width: 100%;
-  margin-bottom: 1rem;
+  width: 80%;
+  margin-bottom: 1rem auto;
   color: #212529;
 }
 
 .table th,
 .table td {
-  padding: 0.75rem;
+  padding: 12px 15px;
   vertical-align: top;
   border-top: 1px solid #dee2e6;
 }

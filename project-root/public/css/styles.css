@@ -132,7 +132,7 @@ nav .container {
 
 .modal-content {
     background-color: #333; /* Changed to black */
-    color: #fff; /* Text color changed to white for readability */
+    color: #000000; /* Text color changed to white for readability */
     margin: 10% auto; /* 10% from the top and centered */
     padding: 40px; /* Increased padding */
     border: 1px solid #888;
@@ -211,7 +211,7 @@ form button:hover {
 .forgot-password-link {
     display: block;
     margin-top: 10px;
-    color: #ffffff;
+    color: #000000;
     text-decoration: underline;
     cursor: pointer;
     font-size: 0.9em; /* Adjust font size as needed */
@@ -250,48 +250,6 @@ form button:hover {
 /* #endregion*/
 
 /* #region Slider */
-.slider_section {
-    position: relative;
-    padding: 50px 0;
-    background: #f8f9fa;
-    flex: 1
-}
-
-.carousel-inner {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
-}
-
-.carousel-item {
-    text-align: center;
-    min-height: 500px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.slider-detail-box {
-    text-align: left;
-}
-
-.slider-detail-box h1 {
-    font-size: 2.5rem;
-    line-height: 1.2;
-    margin-bottom: 20px;
-}
-
-.slider-detail-box p {
-    font-size: 1rem;
-    color: #6c757d;
-    margin-bottom: 30px;
-}
-
-.img-box img {
-    max-width: 100%;
-}
-
-/* Styles for the container holding the carousel buttons */
 .slider_section {
     position: relative;
     padding: 50px 0;
@@ -384,8 +342,6 @@ form button:hover {
 }
 
 .how_to_section .container {
-    max-width: 1200px; /* Limit width of content */
-    margin: 0 auto; /* Center align container */
     display: flex; /* Use flexbox for layout */
     flex-direction: column; /* Stack items vertically */
     align-items: center; /* Center align items horizontally */
@@ -416,7 +372,6 @@ form button:hover {
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
     width: 100%; /* Make boxes take full width of container */
-    max-width: 600px; /* Optional: limit max width */
 }
 
 .how_to_section ol li strong {
@@ -436,18 +391,144 @@ main {
     padding: 20px 0;
     display: flex;
     justify-content: center;
+    flex-direction: column; /* Ensure filters and table stack vertically */
+    align-items: center; /* Center contents horizontally */
+}
+
+main .container {
+    width: 100%; /* Ensure container takes full width */
+    max-width: 1200px; /* Adjust as needed for your layout */
+    display: flex;
+    flex-direction: column; /* Stack filters and table vertically */
+    align-items: center; /* Center contents horizontally */
+}
+
+.filter-section {
+    margin-bottom: 20px; /* Space between filters and table */
+    text-align: left; /* Center filter section text */
+    padding: 10%;
+}
+
+/* Align the filter form to the left */
+#filter-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align form items to the left */
+    width: 125px; /* Set width of the form */
+    margin-left: 0; /* Ensure there is no margin-left to keep it aligned to the left */
+}
+
+#team-filter {
+    width: 100%; /* Full width of the select element */
+}
+
+#apply-filters {
+    margin-top: 10px; /* Space above the button */
+}
+
+.table-heading {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #ffffff;
+    background-color: #ff0000;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 20px;
+}
+
+table {
+    width: 80%; /* Adjust as needed */
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-family: Arial, sans-serif;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+th {
+    background-color: #0b0b0b;
+    color: #d51111;
+    text-transform: uppercase;
+    font-size: 12px;
+    position: relative;
+    vertical-align: bottom;
+}
+
+tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+tr:nth-of-type(odd) {
+    background-color: #ffffff;
+}
+
+.table-heading {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #ffffff;
+    background-color: #ff0000;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 20px;
+}
+
+th[data-sort="asc"]::after,
+th[data-sort="desc"]::after {
+    position: absolute;
+    right: 10px;
+    font-size: 8px;
+}
+
+th[data-sort="asc"]::after {
+    content: ' ▲';
+    font-size: 10px;
+    top: 5px;
+}
+
+th[data-sort="desc"]::after {
+    content: ' ▼';
+    font-size: 10px;
+    top: 5px;
+}
+
+@media screen and (max-width: 768px) {
+    table {
+        width: 100%;
+        margin-right: 0;
+        margin-left: 0;
+        margin-bottom: 20px;
+    }
+}
+
+/* #endregion */
+
+main {
+    padding: 20px 0;
+    display: flex;
+    justify-content: center;
 }
 
 main .container {
     display: flex;
+    justify-content: center; /* Center the table horizontally */
+    align-items: center; /* Center the table vertically if needed */
 }
 
 table {
-    width: 100%;
+    width: 80%;
     border-collapse: collapse;
     margin-bottom: 10px;
-    font-size: 1em;
     font-family: Arial, sans-serif;
+    border: 2px solid #ddd; /* Add a border around the table */
+    border-radius: 8px; /* Add rounded corners to the border */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for depth */
 }
 
 th,
@@ -461,6 +542,9 @@ th {
     background-color: #0b0b0b;
     color: #d51111;
     text-transform: uppercase;
+    font-size: 12px; /* Smaller text for table headings */
+    position: relative; /* Make the th element a positioned container */
+    vertical-align: bottom; /* Align text to the top */
 }
 
 tr:nth-of-type(even) {
@@ -478,17 +562,37 @@ tr:nth-of-type(odd) {
     background-color: #ff0000; /* Background color */
     padding: 10px; /* Padding for spacing */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Box shadow */
+    font-size: 20px; /* Font size for heading */
+}
+
+th[data-sort="asc"]::after,
+th[data-sort="desc"]::after {
+    position: absolute; /* Position relative to the th element */
+    right: 10px; /* Adjust to position near the right edge */
+    font-size: 8px; /* Adjust the size of the arrow */
+}
+
+th[data-sort="asc"]::after {
+    content: ' ▲';
+    font-size: 10px; /* Adjust the size of the arrow */
+    top: 5px
+}
+
+th[data-sort="desc"]::after {
+    content: ' ▼';
+    font-size: 10px; /* Adjust the size of the arrow */
+    top: 5px
 }
 
 @media screen and (max-width: 768px) {
-    .left-table,
-    .right-table {
+    .table {
         width: 100%; /* Full width on small screens */
         margin-right: 0; /* Remove right margin on small screens */
         margin-left: 0; /* Remove left margin on small screens */
         margin-bottom: 20px; /* Add bottom margin between tables */
     }
 }
+
 /* #endregion */
 
 /* #region Discussion */

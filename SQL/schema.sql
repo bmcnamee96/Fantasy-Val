@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS series_player_stats (
     series_aces NUMERIC DEFAULT 0,
     avg_adr_per_series FLOAT DEFAULT 0.0,
     series_points FLOAT DEFAULT 0.0,
+	adjusted_series_points FLOAT DEFAULT 0.0,
     FOREIGN KEY (series_id) REFERENCES series(series_id),
     FOREIGN KEY (player_id) REFERENCES player(player_id),
     CONSTRAINT unique_player_series UNIQUE (series_id, player_id)

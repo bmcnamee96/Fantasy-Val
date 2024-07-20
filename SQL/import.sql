@@ -41,6 +41,30 @@ SELECT
     SUM(points) as series_points
 FROM player_stats
 GROUP BY series_id, player_id;
+-- Do some math to get the adjusted_points
+WITH SeriesStats AS (
+    SELECT 
+        sps.player_id,
+        sps.series_id,
+        CASE 
+            WHEN sps.series_maps = 2 THEN 
+                CASE 
+                    WHEN p.team_abrev = s.home_team THEN sps.series_points + s.home_round_difference
+                    WHEN p.team_abrev = s.away_team THEN sps.series_points + s.away_round_difference
+                    ELSE sps.series_points
+                END
+            WHEN sps.series_maps = 3 THEN sps.series_points
+            ELSE sps.series_points
+        END AS adjusted_series_points
+    FROM series_player_stats AS sps
+    JOIN series s ON sps.series_id = s.series_id
+    JOIN player p ON sps.player_id = p.player_id
+)
+UPDATE series_player_stats sps
+SET adjusted_points = ss.adjusted_series_points
+FROM SeriesStats ss
+WHERE sps.player_id = ss.player_id AND sps.series_id = ss.series_id;
+
 
 -- Populate total_stats using data from player_stats
 INSERT INTO total_stats (player_id, total_maps_played, total_kills, total_deaths, total_assists, total_fk, total_fd, total_clutches, total_aces, total_adr, total_points)
@@ -55,6 +79,6 @@ SELECT
     SUM(sps.series_clutches) as total_clutches,
     SUM(sps.series_aces) as total_aces,
     AVG(sps.avg_adr_per_series) as total_adr,
-    SUM(sps.series_points) as total_points
+    SUM(sps.adjusted_series_points) as total_points
 FROM series_player_stats as sps
 GROUP BY player_id;
