@@ -127,3 +127,5 @@ WHERE table_name = 'series_player_stats';
 
 SELECT adjusted_points FROM series_player_stats;
 
+SELECT * FROM users;
+
