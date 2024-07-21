@@ -95,23 +95,26 @@
 
 
     <!-- Main Content -->
-    <main>
-
+    <main class="container mt-5">
         <!-- Create League Section -->
-        <section id="create-league-section" class="container">
+        <section id="create-league-section" class="mb-4">
             <h2>Create a New League</h2>
-            <form id="create-league-form">
-                <input type="text" id="league_name" name="league_name" placeholder="League Name" required>
-                <textarea id="description" name="description" placeholder="Description"></textarea>
-                <button type="submit">Create League</button>
+            <form id="create-league-form" class="form">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="league_name" name="league_name" placeholder="League Name" required>
+                </div>
+                <div class="form-group">
+                    <textarea class="form-control" id="description" name="description" placeholder="Description"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Create League</button>
             </form>
         </section>
 
-        <div class="container">
+        <div>
             <h1>Dashboard</h1>
             <div id="dashboard-content">
                 <h2>Your Teams and Leagues</h2>
-                <div id="teams-container" class="teams-container">
+                <div id="teams-container" class="row">
                     <!-- Teams and leagues will be inserted here -->
                 </div>
             </div>
