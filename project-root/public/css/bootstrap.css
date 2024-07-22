@@ -4,6 +4,8 @@
  * Copyright 2011-2019 Twitter, Inc.
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
  */
+
+ /* #region General Styling */
 :root {
   --blue: #007bff;
   --indigo: #6610f2;
@@ -6223,7 +6225,6 @@ a.close.disabled {
 .carousel-item {
   position: relative;
   display: none;
-  float: left;
   width: 100%;
   margin-right: -100%;
   -webkit-backface-visibility: hidden;
@@ -6314,7 +6315,7 @@ a.close.disabled {
 .carousel-control-prev:hover, .carousel-control-prev:focus,
 .carousel-control-next:hover,
 .carousel-control-next:focus {
-  color: #fff;
+  color: grey;
   text-decoration: none;
   outline: 0;
   opacity: 0.9;
@@ -6385,7 +6386,7 @@ a.close.disabled {
 }
 
 .carousel-indicators .active {
-  opacity: 1;
+  opacity: 0;
 }
 
 .carousel-caption {

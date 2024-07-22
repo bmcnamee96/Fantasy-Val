@@ -15,12 +15,13 @@ CREATE TABLE IF NOT EXISTS users (
 	CONSTRAINT unique_username UNIQUE(username)
 );
 
-CREATE TABLE leagues (
+CREATE TABLE IF NOT EXISTS leagues (
     league_id SERIAL PRIMARY KEY,
-    league_name VARCHAR(255) NOT NULL,
+    league_name VARCHAR(50) NOT NULL,
     description TEXT,
-    owner_id VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    owner_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT unique_league UNIQUE(league_name)
 );
 
 -- user_leagues table

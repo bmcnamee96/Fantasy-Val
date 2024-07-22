@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const League = require('../models/leagues.js'); // Adjust the path as necessary
 
-// Example route to create a league
-router.post('/leagues', async (req, res) => {
+// route to create a league
+router.post('/api/create-leagues', async (req, res) => {
   const { league_name, description, owner_id } = req.body;
   
   try {

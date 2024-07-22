@@ -1,24 +1,4 @@
 /* #region DEFAULT SETTINGS */
-/* Reset default margins and paddings */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* Basic styling */
-body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
-    background-color: #000000;
-}
-
-.container {
-    width: 90%;
-    max-width: 1200px;
-    margin: auto;
-}
-/* #endregion */
 
 /* #region Navigation */
 nav {
@@ -33,11 +13,6 @@ nav .container {
     justify-content: space-between;
 }
 
-.logo-section {
-    display: flex;
-    align-items: center;
-}
-
 .logo-section img {
     max-width: 75px; /* Adjust the maximum width of the logo */
     height: auto; /* Maintain aspect ratio */
@@ -46,10 +21,8 @@ nav .container {
 
 .nav-links {
     list-style: none;
-    display: flex; /* Display navigation links as flex items */
     gap: 20px;
     margin: 0;
-    padding: 0;
 }
 
 .nav-links li {
@@ -119,19 +92,17 @@ nav .container {
 /* #region Modal styles */
 .modal {
     display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
     z-index: 1; /* Sit on top */
     left: 0;
     top: 0;
     width: 100%; /* Full width */
     height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
     background-color: rgb(0, 0, 0); /* Fallback color */
     background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
 }
 
 .modal-content {
-    background-color: #333; /* Changed to black */
+    background-color: #ffffff; /* Changed to black */
     color: #000000; /* Text color changed to white for readability */
     margin: 10% auto; /* 10% from the top and centered */
     padding: 40px; /* Increased padding */
@@ -144,7 +115,7 @@ nav .container {
 }
 
 .close {
-    color: #aaa;
+    color: #000000;
     float: right;
     font-size: 28px;
     font-weight: bold;
@@ -152,7 +123,7 @@ nav .container {
 
 .close:hover,
 .close:focus {
-    color: white;
+    color: rgb(0, 0, 0);
     text-decoration: none;
     cursor: pointer;
 }
@@ -264,10 +235,6 @@ form button:hover {
 
 .carousel-item {
     text-align: center;
-    min-height: 450px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .img-box img {
@@ -279,7 +246,6 @@ form button:hover {
     top: 50%;
     width: 100%;
     position: absolute; /* Positions the container absolutely within its parent */
-    bottom: 0; /* Positions the container at the bottom of its parent */
     display: flex; /* Uses flexbox for layout */
     justify-content: space-evenly; /* Distributes space evenly between buttons */
     z-index: 999; /* Ensures the container is above other elements */
@@ -313,30 +279,12 @@ form button:hover {
     background-image: url(../images/next.png); /* Sets the background image for the next button */
 }
 
-.carousel-control-prev,
-.carousel-control-next {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.carousel-indicators li {
-    background-color: #007bff;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 30px;
-    color: #fff;
-    font-size: 0.8rem;
-}
-
 /* #endregion */
 
 /* #region How to Play */
 .how_to_section {
     background-color: #7f7f7f; /* Background color */
-    color: #ffffff; /* Text color */
+    color: #000000; /* Text color */
     padding: 50px 0; /* Adjust padding as needed */
     text-align: center; /* Center align text */
 }
@@ -366,7 +314,7 @@ form button:hover {
 }
 
 .how_to_section ol li {
-    background-color: #ff0000; /* Background color for sections */
+    background-color: #9b9b9b; /* Background color for sections */
     padding: 20px;
     margin-bottom: 20px;
     border-radius: 8px;
@@ -387,20 +335,25 @@ form button:hover {
 /* #endregion */
 
 /* #region Tables */
-main {
-    padding: 20px 0;
-    display: flex;
-    justify-content: center;
-    flex-direction: column; /* Ensure filters and table stack vertically */
-    align-items: center; /* Center contents horizontally */
-}
-
 main .container {
     width: 100%; /* Ensure container takes full width */
     max-width: 1200px; /* Adjust as needed for your layout */
     display: flex;
     flex-direction: column; /* Stack filters and table vertically */
     align-items: center; /* Center contents horizontally */
+    justify-content: center;
+}
+
+main .box{
+    width: 80%;
+    border: 2px solid #dc3a25; /* Border color */
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff; /* Background color */
+    padding: 20px; /* Space inside the box */
+    margin: 20px; /* Space outside the box */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Box shadow */
 }
 
 .filter-section {
@@ -439,16 +392,6 @@ main .container {
     padding: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-size: 20px;
-}
-
-table {
-    width: 80%; /* Adjust as needed */
-    border-collapse: collapse;
-    margin-bottom: 10px;
-    font-family: Arial, sans-serif;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 table tbody tr:hover {
@@ -539,7 +482,21 @@ th[data-sort="desc"]::after {
 }
 /* #endregion */
 
-/* Create League Section Styling */
+/* #region Create League Section Styling */
+.row{
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.box {
+    border: 2px solid #dc3a25; /* Border color */
+    background-color: #ffffff; /* Background color */
+    padding: 20px; /* Space inside the box */
+    margin: 5px; /* Space outside the box */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Box shadow */
+}
+
 #create-league-section h2 {
     color: #000000; /* Primary color */
     margin-bottom: 1rem;
@@ -557,7 +514,7 @@ th[data-sort="desc"]::after {
 }
 
 #create-league-form button:hover {
-    background-color: #dc3a25; /* Primary color */
+    background-color: #6d6d6d; /* Primary color */
     color: #ffffff; /* White text */
 }
 
@@ -566,9 +523,10 @@ th[data-sort="desc"]::after {
     margin-top: 2rem;
 }
 
-#dashboard-content h1 {
+h1 {
     color: #000000; /* Primary color */
     margin-bottom: 1rem;
+    text-align: center;
 }
 
 #dashboard-content h2 {
@@ -601,6 +559,60 @@ th[data-sort="desc"]::after {
     margin-bottom: 0.5rem;
 }
 
+/* Custom alert styles */
+.custom-alert {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #dc3a25; /* Red background */
+    color: #ffffff; /* White text */
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+    z-index: 1000;
+}
+/* #endregion */
+
+/* Add this to your styles.css */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0,0,0);
+    background-color: rgba(0,0,0,0.4);
+  }
+  
+  .modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+  }
+  
+  .close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  
+  .close-button:hover,
+  .close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  
+
+
 /* #region Footer */
 footer {
     background-color: #333;
@@ -610,4 +622,9 @@ footer {
     margin-top: 20px;
 }
 /* #endregion */
+
+
+
+
+
 

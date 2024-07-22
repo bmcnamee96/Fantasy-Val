@@ -411,41 +411,67 @@ document.addEventListener('DOMContentLoaded', () => {
     // #endregion
 
     // #region Dashboard
+
     // #region Create League
+    // Function to display a popup message
+    function showModal(message) {
+        const modal = document.getElementById('error-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const closeButton = document.querySelector('.close-button');
+    
+        modalMessage.textContent = message;
+        modal.style.display = 'block';
+    
+        closeButton.onclick = function() {
+        modal.style.display = 'none';
+        }
+    
+        window.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+        }
+    }
+    
+    // Handle the form submission
     const form = document.getElementById('create-league-form');
     if (form) {
         form.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            
-            const leagueName = document.querySelector('input[name="league_name"]').value;
-            const description = document.querySelector('textarea[name="description"]').value;
-            const userId = 'logged-in-user-id'; // Replace this with actual user ID or username
-
-            try {
-                const response = await fetch('/api/leagues', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ league_name: leagueName, description: description, owner_id: userId })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('League created successfully!');
-                    form.reset();
-                } else {
-                    alert('Failed to create league: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
+        event.preventDefault();
+        
+        const leagueName = document.querySelector('input[name="league_name"]').value;
+        const description = document.querySelector('textarea[name="description"]').value;
+        const token = localStorage.getItem('token'); // Get JWT token from local storage
+    
+        try {
+            const response = await fetch('/api/leagues', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Include token in the Authorization header
+            },
+            body: JSON.stringify({ league_name: leagueName, description: description })
+            });
+    
+            const data = await response.json();
+    
+            if (response.status === 401) { // Unauthorized
+            showModal('You are not logged in!');
+            } else if (data.success) {
+            showModal('League created successfully!');
+            form.reset();
+            fetchUserLeagues(); // Refresh the leagues list
+            } else {
+            showModal('Failed to create league: ' + data.message);
             }
+        } catch (error) {
+            console.error('Error:', error);
+            showModal('You are not logged in! Please log in and try again');
+        }
         });
-    } else {
-        console.error('Element with ID "create-league-form" not found');
     }
     // #endregion
+
     // #region View Leagues
     // Function to fetch and display user's leagues on dashboard page
     async function fetchUserLeagues() {
@@ -454,47 +480,47 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!token) {
                 throw new Error('No token found');
             }
-
+    
             const response = await fetch('/api/user-leagues', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}` // Ensure the token is valid
                 }
             });
-
+    
             if (!response.ok) {
                 const errorText = await response.text(); // Get error response text
                 console.error('Server response:', errorText); // Log server response
                 throw new Error(errorText);
             }
-
+    
             const leagues = await response.json();
             console.log('Leagues fetched:', leagues); // Log fetched leagues
-            const container = document.getElementById('teams-container');
-
+    
+            const tableBody = document.querySelector('#leagues-table tbody');
+            tableBody.innerHTML = ''; // Clear existing content
+    
             if (leagues.length === 0) {
-                container.innerHTML = '<p>No leagues found.</p>';
+                tableBody.innerHTML = '<tr><td colspan="2">No leagues found.</td></tr>';
             } else {
-                container.innerHTML = leagues.map(league => `
-                    <div class="league">
-                        <h3>${league.league_name}</h3>
-                        <p>${league.description}</p>
-                    </div>
+                tableBody.innerHTML = leagues.map(league => `
+                    <tr>
+                        <td>${league.league_name}</td>
+                        <td>${league.description || 'No description available'}</td>
+                    </tr>
                 `).join('');
             }
         } catch (error) {
             console.error('Error fetching leagues:', error);
-            document.getElementById('teams-container').innerHTML = '<p>Error loading leagues.</p>';
+            const tableBody = document.querySelector('#leagues-table tbody');
+            tableBody.innerHTML = '<tr><td colspan="2">You are not in a league! Join or create one now!</td></tr>';
         }
     }
-
+    
     // Call fetchUserLeagues when on the dashboard page
     if (window.location.pathname === '/my-dashboard.html') {
         fetchUserLeagues();
-    }
-
-
-    // #region my-leagues
+    }    
     
     // #endregion
     // #endregion

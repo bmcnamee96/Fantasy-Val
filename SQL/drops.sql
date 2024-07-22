@@ -10,6 +10,8 @@
 -- Users
 DROP TABLE user_teams;
 
+DROP TABLE user_leagues;
+
 DROP TABLE leagues;
 
 -- Stats

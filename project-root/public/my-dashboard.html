@@ -14,8 +14,12 @@
 
     <title>Fantasy Valorant</title>
 
-    <link rel="stylesheet" href="css/styles.css">
+    <!--Bootstrap Styles-->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+    <!--Custom Styles-->
+    <link rel="stylesheet" href="css/styles.css">
+
 </head>
 <!-- Body -->
 <body>
@@ -93,32 +97,79 @@
     </div>
     <!--#endregion -->
 
-
     <!-- Main Content -->
     <main class="container mt-5">
-        <!-- Create League Section -->
-        <section id="create-league-section" class="mb-4">
-            <h2>Create a New League</h2>
-            <form id="create-league-form" class="form">
-                <div class="form-group">
-                    <input type="text" class="form-control" id="league_name" name="league_name" placeholder="League Name" required>
-                </div>
-                <div class="form-group">
-                    <textarea class="form-control" id="description" name="description" placeholder="Description"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Create League</button>
-            </form>
-        </section>
-
-        <div>
-            <h1>Dashboard</h1>
-            <div id="dashboard-content">
-                <h2>Your Teams and Leagues</h2>
-                <div id="teams-container" class="row">
-                    <!-- Teams and leagues will be inserted here -->
+        <h1>My Dashboard</h1>
+        <!-- Dashboard Sections -->
+        <section id="dashboard-sections" class="row">
+            <!-- Your Leagues Section -->
+            <div class="col-md-8 mb-4">
+                <div class="box card">
+                    <div class="card-body">
+                        <h1 class="card-title text-center">Your Leagues</h1>
+                        <div id="dashboard-content">
+                            <div id="teams-container" class="table-responsive">
+                                <table id="leagues-table" class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>League Name</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Leagues will be inserted here dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Create League and Join a League Sections -->
+            <div class="col-md-4 mb-4">
+                <!-- Create League Section -->
+                <div class="box card mb-4">
+                    <div class="card-body">
+                        <h2 class="card-title">Create a New League</h2>
+                        <form id="create-league-form" class="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" id="league_name" name="league_name" placeholder="League Name" required>
+                            </div>
+                            <div class="form-group">
+                                <textarea class="form-control" id="description" name="description" placeholder="Description"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create League</button>
+                        </form>
+                    </div>
+
+                    <!--Error Message Popup for Creating Leagues!-->
+                    <div id="error-modal" class="modal">
+                        <div class="modal-content">
+                        <span class="close-button">&times;</span>
+                        <p id="modal-message"></p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Join a League Section -->
+                <div class="box card">
+                    <div class="card-body">
+                        <h2 class="card-title">Join a League</h2>
+                        <form id="join-league-form" class="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" id="join_league_name" name="join_league_name" placeholder="League Name" required>
+                            </div>
+                            <div class="form-group">
+                                <input class="form-control" id="passcode" name="passcode" placeholder="passcode"></input>
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Join League</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
 

@@ -1,3 +1,5 @@
+// server.js
+
 const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
@@ -12,6 +14,7 @@ const League = require('./models/leagues.js');
 const leagueRoutes = require('./routes/leagueRoutes.js');
 const jwt = require('jsonwebtoken');
 const authenticateToken = require('./middleware/authMiddleware'); // Adjust path if necessary
+const leaguesRouter = require('./routes/leagueRoutes');
 
 
 const app = express();
@@ -51,6 +54,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/', leagueRoutes);
+// Use the leagues routes
+app.use(leaguesRouter);
 
 // Example route for serving index.html
 app.get('/', (req, res) => {
@@ -245,9 +250,10 @@ app.get('/api/match-stats', async (req, res) => {
 });
 
 // #region Dashboard Endpoint
-app.post('/api/leagues', async (req, res) => {
+app.post('/api/leagues', authenticateToken, async (req, res) => {
   console.log('API request received'); // Log when the API request is received
-  const { league_name, description, owner_id } = req.body;
+  const { league_name, description } = req.body;
+  const owner_id = req.user.userId; // Get the user ID from the JWT token
 
   console.log('Received data:', { league_name, description });
   
@@ -257,19 +263,29 @@ app.post('/api/leagues', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // Create the new league
-    const newLeague = await League.create({
-      league_name,
-      description,
-      owner_id
-    });
+    // Start a transaction
+    await pool.query('BEGIN');
 
-    res.status(201).json({ success: true, league: newLeague });
+    // Create the new league
+    const newLeagueResult = await pool.query(
+      'INSERT INTO leagues (league_name, description, owner_id) VALUES ($1, $2, $3) RETURNING league_id',
+      [league_name, description, owner_id]
+    );
+
+    const league_id = newLeagueResult.rows[0].league_id;
+
+    // Commit the transaction
+    await pool.query('COMMIT');
+
+    res.status(201).json({ success: true, league: { league_id, league_name, description, owner_id } });
   } catch (error) {
+    // Rollback the transaction in case of error
+    await pool.query('ROLLBACK');
     console.error('Error creating league:', error);
     res.status(500).json({ success: false, message: 'Failed to create league', error: error.message });
   }
 });
+
 
 // Endpoint to get leagues for a user
 app.get('/api/user-leagues', authenticateToken, async (req, res) => {

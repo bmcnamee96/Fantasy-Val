@@ -14,8 +14,12 @@
 
     <title>Fantasy Valorant</title>
 
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <!--Bootstrap Styles-->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+        <!--Custom Styles-->
+        <link rel="stylesheet" href="css/styles.css">
+        
 </head>
 <!-- Body -->
 <body>
@@ -94,92 +98,89 @@
 
     <!-- Main Content -->
     <main>
-        <div class="container-fluid">
-            <div class="filter-section">
-                <label for="table-filter">Select Table:</label>
-                <select id="table-filter" class="col-auto">
-                    <option value="player-stats">Player Stats</option>
-                    <option value="match-stats">Match Stats</option>
-                </select>
+        <div class="box">
+            <label for="table-filter">Select Table:</label>
+            <select id="table-filter" class="col-auto">
+                <option value="player-stats">Player Stats</option>
+                <option value="match-stats">Match Stats</option>
+            </select>
 
-                <input id="search-input" class="form-control w-50" type="text" placeholder="Search for players..">
+            <input id="search-input" class="form-control w-50" type="text" placeholder="Search for players..">
 
-                <form id="filter-form" class="col">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <label for="team-filter" class="mr-2">Filter by Team:</label>
-                            <select id="team-filter" class="form-control">
-                                <!-- TEAM FILTER -->
-                                <option value="">All Teams</option>
-                                <option value="100T">100T</option>
-                                <option value="SEN">SEN</option>
-                                <option value="NRG">NRG</option>
-                                <option value="EG">EG</option>
-                                <option value="KRU">KRU</option>
-                                <option value="C9">C9</option>
-                                <option value="MIBR">MIBR</option>
-                                <option value="LOUD">LOUD</option>
-                                <option value="FUR">FUR</option>
-                                <option value="LEV">LEV</option>
-                                <option value="G2">G2</option>
-                            </select>
-                        </div>
-                        <button id="apply-filters" class="col-auto">Apply Filters</button>
+            <form id="filter-form" class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <label for="team-filter" class="mr-2">Filter by Team:</label>
+                        <select id="team-filter" class="form-control">
+                            <!-- TEAM FILTER -->
+                            <option value="">All Teams</option>
+                            <option value="100T">100T</option>
+                            <option value="SEN">SEN</option>
+                            <option value="NRG">NRG</option>
+                            <option value="EG">EG</option>
+                            <option value="KRU">KRU</option>
+                            <option value="C9">C9</option>
+                            <option value="MIBR">MIBR</option>
+                            <option value="LOUD">LOUD</option>
+                            <option value="FUR">FUR</option>
+                            <option value="LEV">LEV</option>
+                            <option value="G2">G2</option>
+                        </select>
                     </div>
-                </form>
-
-                <div class="container">
-                    <h1 id="table-heading">Player Stats</h1>
-                    <!-- Players table -->
-                    <table id="player-stats-table">
-                        <thead>
-                        <tr>
-                            <th data-column="player_name" data-sort="asc">Player Name</th>
-                            <th data-column="team_abrev" data-sort="asc">Team</th>
-                            <th data-column="total_maps_played" data-sort="asc">Total Maps</th>
-                            <th data-column="total_kills" data-sort="asc">Kills</th>
-                            <th data-column="total_deaths" data-sort="asc">Deaths</th>
-                            <th data-column="total_assists" data-sort="asc">Assists</th>
-                            <th data-column="total_fk" data-sort="asc">First Kills</th>
-                            <th data-column="total_fd" data-sort="asc">First Deaths</th>
-                            <th data-column="total_clutches" data-sort="asc">Clutches</th>
-                            <th data-column="total_aces" data-sort="asc">Aces</th>
-                            <th data-column="total_adr" data-sort="asc">ADR</th>
-                            <th data-column="total_points" data-sort="asc">Points</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!--Player Stats Table Goes Here-->
-                        </tbody>
-                    </table>
-
-                    <!-- Match Stats table -->
-                    <table id="match-stats-table">
-                        <thead>
-                        <tr>
-                            <th data-column="split" data-sort="asc">Week</th>
-                            <th data-column="week" data-sort="asc">Split</th>
-                            <th data-column="player_name" data-sort="asc">Player Name</th>
-                            <th data-column="team_abrev" data-sort="asc">Team</th>
-                            <th data-column="num_maps_played" data-sort="asc">Total Maps</th>
-                            <th data-column="series_kills" data-sort="asc">Kills</th>
-                            <th data-column="series_deaths" data-sort="asc">Deaths</th>
-                            <th data-column="series_assists" data-sort="asc">Assists</th>
-                            <th data-column="series_fk" data-sort="asc">First Kills</th>
-                            <th data-column="series_fd" data-sort="asc">First Deaths</th>
-                            <th data-column="series_clutches" data-sort="asc">Clutches</th>
-                            <th data-column="series_aces" data-sort="asc">Aces</th>
-                            <th data-column="avg_adr_per_series" data-sort="asc">ADR</th>
-                            <th data-column="adjusted_points" data-sort="asc">Points</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!--Match Stats Table Goes Here-->
-                        </tbody>
-                    </table>
+                    <button id="apply-filters" class="col-auto">Apply Filters</button>
                 </div>
-            </div>
+            </form>
         </div>
+            <div class="container">
+                <h1 id="table-heading">Player Stats</h1>
+                <!-- Players table -->
+                <table id="player-stats-table">
+                    <thead>
+                    <tr>
+                        <th data-column="player_name" data-sort="asc">Player Name</th>
+                        <th data-column="team_abrev" data-sort="asc">Team</th>
+                        <th data-column="total_maps_played" data-sort="asc">Total Maps</th>
+                        <th data-column="total_kills" data-sort="asc">Kills</th>
+                        <th data-column="total_deaths" data-sort="asc">Deaths</th>
+                        <th data-column="total_assists" data-sort="asc">Assists</th>
+                        <th data-column="total_fk" data-sort="asc">First Kills</th>
+                        <th data-column="total_fd" data-sort="asc">First Deaths</th>
+                        <th data-column="total_clutches" data-sort="asc">Clutches</th>
+                        <th data-column="total_aces" data-sort="asc">Aces</th>
+                        <th data-column="total_adr" data-sort="asc">ADR</th>
+                        <th data-column="total_points" data-sort="asc">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!--Player Stats Table Goes Here-->
+                    </tbody>
+                </table>
+
+                <!-- Match Stats table -->
+                <table id="match-stats-table">
+                    <thead>
+                    <tr>
+                        <th data-column="split" data-sort="asc">Week</th>
+                        <th data-column="week" data-sort="asc">Split</th>
+                        <th data-column="player_name" data-sort="asc">Player Name</th>
+                        <th data-column="team_abrev" data-sort="asc">Team</th>
+                        <th data-column="num_maps_played" data-sort="asc">Total Maps</th>
+                        <th data-column="series_kills" data-sort="asc">Kills</th>
+                        <th data-column="series_deaths" data-sort="asc">Deaths</th>
+                        <th data-column="series_assists" data-sort="asc">Assists</th>
+                        <th data-column="series_fk" data-sort="asc">First Kills</th>
+                        <th data-column="series_fd" data-sort="asc">First Deaths</th>
+                        <th data-column="series_clutches" data-sort="asc">Clutches</th>
+                        <th data-column="series_aces" data-sort="asc">Aces</th>
+                        <th data-column="avg_adr_per_series" data-sort="asc">ADR</th>
+                        <th data-column="adjusted_points" data-sort="asc">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!--Match Stats Table Goes Here-->
+                    </tbody>
+                </table>
+            </div>
     </main>
 
 
