@@ -98,52 +98,38 @@
     <!--#endregion -->
 
     <!-- Main Content -->
-    <main class="container mt-5">
-        <h1>My Dashboard</h1>
-        <!-- Dashboard Sections -->
-        <section id="dashboard-sections" class="row">
-            <!-- Your Leagues Section -->
-            <div class="col-md-8 mb-4">
-                <div class="box card">
-                    <div class="card-body">
-                        <h1 class="card-title text-center">Your Leagues</h1>
-                        <div id="dashboard-content">
-                            <div id="teams-container" class="table-responsive">
-                                <table id="leagues-table" class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>League Name</th>
-                                            <th>Description</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Leagues will be inserted here dynamically -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+    <main class="container">
+        <h1>Create a League</h1>
+
+        <!-- Create League and Join a League Sections -->
+        <div class="col">
+            <form id="create-league-form" class="form">
+                <div class="form-group row">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="league_name" name="league_name" placeholder="League Name" required>
                     </div>
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="league-pass" name="league-pass" placeholder="League Password" required>
+                    </div>
+                    <div class="col-md-12">
+                        <textarea class="form-control" id="description" name="description" placeholder="Description" rows="4" maxlength="250"></textarea>
+                        <small id="charCount" class="form-text text-muted">0/250</small>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Create League</button>
+            </form>
+
+            <!--Error Message Popup for Creating Leagues!-->
+            <div id="error-modal" class="modal">
+                <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <p id="modal-message"></p>
                 </div>
             </div>
 
-            <!-- Create League and Join a League Sections -->
-            <div class="col-md-4 mb-4">
-                <!-- Create League Section -->
-                <div id="create-league-btn" class="box card mb-4">
-                    <div class="card-body">
-                        <a href="create-league.html" class="btn btn-block">Create New League</a>
-                    </div>
-                </div>
-
-                <!-- Join a League Section -->
-                <div id="join-league-btn" class="box card">
-                    <div class="card-body">
-                        <a href="join-league.html" class="btn btn-block">Join New League</a>
-                    </div>
-                </div>
-            </div>
-        </section>
+        </div>
     </main>
+
 
     <!-- Footer -->
     <footer>
@@ -159,3 +145,4 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
+
