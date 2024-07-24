@@ -13,17 +13,34 @@
             <div class="table-container">
                 <div class="box">
                     <div class="filter-container">
-                        <label for="filter" class="filter-label">Filter by Team</label>
-                        <select id="filter" class="dropdown-filter">
-                            <option value="">Select team</option>
+                        <div class="filter-item">
+                            <select id="filter-table" class="dropdown-filter">
+                                <option value="">Select table</option>
+                                <option value="table1">Table 1</option>
+                                <option value="table2">Table 2</option>
+                            </select>
+                        </div>
+                        <input type="text" placeholder="Enter text here" class="text-box">
+                    </div>
+                    <div class="filter-item-bottom">
+                        <select id="filter-team" class="dropdown-filter">
+                            <option value="">Select Team</option>
                             <option value="team1">Team 1</option>
                             <option value="team2">Team 2</option>
                         </select>
-                        <input type="text" placeholder="Enter text here" class="text-box">
+                        <select id="filter-player" class="dropdown-filter">
+                            <option value="">Select Player</option>
+                            <option value="player1">Player 1</option>
+                            <option value="player2">Player 2</option>
+                        </select>
+                        <select id="filter-week" class="dropdown-filter">
+                            <option value="">Select Week</option>
+                            <option value="week1">Week 1</option>
+                            <option value="week2">Week 2</option>
+                        </select>
                     </div>
                     <div class="button-container">
-                        <button class="primary-button">Button 1</button>
-                        <button class="secondary-button">Button 2</button>
+                        <button class="primary-button">Apply Filters</button>
                     </div>
                 </div>
             </div>
@@ -31,7 +48,7 @@
 
         <section id="about">
             <div class="table-container">
-                <h2>About Us</h2>
+                <h2>Stats</h2>
                 <table>
                     <thead>
                         <tr>
