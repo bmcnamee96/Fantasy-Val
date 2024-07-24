@@ -1,0 +1,164 @@
+/* Reset some default browser styling */
+body, h1, h2, p, ul, li {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Set a base font for the body */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f4f4f4;
+    color: #333;
+    padding: 0 20px;
+}
+
+/* Style the main content */
+main {
+    margin: 20px 0;
+}
+
+main section {
+    margin-bottom: 20px;
+}
+
+main h1 {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+main section p {
+    margin-bottom: 15px;
+}
+
+/* Style the footer */
+footer {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 10px 0;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}
+
+/* Style the box */
+.box {
+    background-color: #e7e7e7;
+    padding: 20px;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column; /* Stack children vertically */
+    align-items: flex-start; /* Align items to the left */
+    box-sizing: border-box; /* Include padding in width/height calculation */
+    position: relative; /* For absolute positioning of buttons */
+    width: 100%;
+    height: auto; /* Allow height to adjust based on content */
+}
+
+.filter-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align items to the left */
+}
+
+.filter-label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.dropdown-filter {
+    padding: 10px;
+    width: 100%;
+    max-width: 200px; /* Adjusted to fit within the box */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.text-box {
+    padding: 10px;
+    width: 100%;
+    max-width: 200px; /* Adjusted to fit within the box */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 10px; /* Space between filter and text box */
+}
+
+.button-container {
+    display: flex;
+    flex-direction: row; /* Align buttons side by side */
+    position: absolute; /* Positioning buttons at the bottom right */
+    bottom: 20px; /* Adjust spacing from the bottom */
+    right: 20px; /* Adjust spacing from the right */
+}
+
+.primary-button, .secondary-button {
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    margin-left: 10px; /* Space between buttons */
+}
+
+.primary-button {
+    background-color: #333;
+    color: #fff;
+}
+
+.primary-button:hover {
+    background-color: #555;
+}
+
+.secondary-button {
+    background-color: #e7e7e7;
+    color: #333;
+}
+
+.secondary-button:hover {
+    background-color: #ddd;
+}
+
+/* Style the table and container */
+.table-container {
+    width: 80%;
+    margin: 20px auto; /* Center the container */
+}
+
+.table-container h1 {
+    margin-bottom: 20px;
+    text-align: center; /* Center the heading text */
+}
+
+table {
+    width: 100%;
+    margin: 20px auto; /* Center the table */
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #f4f4f4;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Responsive table styling */
+@media (max-width: 768px) {
+    table {
+        width: 100%; /* Make table full width on smaller screens */
+    }
+
+    th, td {
+        padding: 10px;
+    }
+}
