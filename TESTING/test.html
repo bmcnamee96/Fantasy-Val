@@ -3,77 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Basic HTML Template</title>
+    <title>My Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <main>
-        <h1>Player Stats</h1>
-        <section>
-            <div class="table-container">
-                <div class="box">
-                    <div class="filter-container">
-                        <div class="filter-item">
-                            <select id="filter-table" class="dropdown-filter">
-                                <option value="">Select table</option>
-                                <option value="table1">Table 1</option>
-                                <option value="table2">Table 2</option>
-                            </select>
+        <h1>My Dashboard</h1>
+        <div class="container mt-4">
+            <div class="row">
+                <!-- My Leagues Box -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            My Leagues
                         </div>
-                        <input type="text" placeholder="Enter text here" class="text-box">
+                        <ul class="list-group list-group-flush" id="leagues-list">
+                            <li class="list-group-item">
+                                <a href="#" class="league-link">league_1</a>
+                            </li>
+                            <li class="list-group-item">
+                                <a href="#" class="league-link">league_2</a>
+                            </li>
+                            <li class="list-group-item">
+                                <a href="#" class="league-link">league_3_league_3_league_3_league_3_league_3_league_3_league_3_league_3_</a>
+                            </li>
+                            <li class="list-group-item">
+                                <a href="#" class="league-link">league_4</a>
+                            </li>
+                        </ul>
                     </div>
-                    <div class="filter-item-bottom">
-                        <select id="filter-team" class="dropdown-filter">
-                            <option value="">Select Team</option>
-                            <option value="team1">Team 1</option>
-                            <option value="team2">Team 2</option>
-                        </select>
-                        <select id="filter-player" class="dropdown-filter">
-                            <option value="">Select Player</option>
-                            <option value="player1">Player 1</option>
-                            <option value="player2">Player 2</option>
-                        </select>
-                        <select id="filter-week" class="dropdown-filter">
-                            <option value="">Select Week</option>
-                            <option value="week1">Week 1</option>
-                            <option value="week2">Week 2</option>
-                        </select>
-                    </div>
-                    <div class="button-container">
-                        <button class="primary-button">Apply Filters</button>
+                </div>
+                <!-- Buttons Box -->
+                <div class="col-md-4">
+                    <div class="d-flex flex-column align-items-end">
+                        <button class="btn btn-primary mb-2 btn-square" id="create-league-btn">Create a League</button>
+                        <button class="btn btn-secondary btn-square" id="join-league-btn">Join a League</button>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <section id="about">
-            <div class="table-container">
-                <h2>Stats</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>col1</th>
-                            <th>col2</th>
-                            <th>col3</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Data 1</td>
-                            <td>Data 2</td>
-                            <td>Data 3</td>
-                        </tr>
-                        <tr>
-                            <td>Data 4</td>
-                            <td>Data 5</td>
-                            <td>Data 6</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    <footer>
-        <p>&copy; 2024 Your Name. All rights reserved.</p>
-    </footer>
+        </div>
+    </main>
 </body>
+<footer>
+    <p>&copy; 2024 Your Name. All rights reserved.</p>
+</footer>
 </html>

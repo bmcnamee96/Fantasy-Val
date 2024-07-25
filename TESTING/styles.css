@@ -43,7 +43,7 @@ footer {
     bottom: 0;
 }
 
-/* Style the box */
+/* Player Stats */
 .box {
     background-color: #e7e7e7;
     padding: 20px;
@@ -120,15 +120,6 @@ footer {
     background-color: #555;
 }
 
-.secondary-button {
-    background-color: #e7e7e7;
-    color: #333;
-}
-
-.secondary-button:hover {
-    background-color: #ddd;
-}
-
 /* Style the table and container */
 .table-container {
     width: 80%;
@@ -172,4 +163,61 @@ tbody tr:nth-child(even) {
     th, td {
         padding: 10px;
     }
+}
+
+/* My Dashboard */
+.card {
+    border: 1px solid #e7e7e7;
+}
+
+.card-header {
+    background-color: #e7e7e7;
+    color: #000000;
+    font-size: large;
+}
+
+#leagues-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.league-link {
+    color: #000000;
+    text-decoration: none;
+    font-size: 1.25rem;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.league-link:hover {
+    text-decoration: underline;
+}
+
+.btn-primary {
+    background-color: green;
+    border-color: green;
+}
+
+.btn-primary:hover {
+    background-color: #555;
+}
+
+.btn-secondary {
+    background-color: green;
+    border-color: green;
+}
+
+.btn-secondary:hover {
+    background-color: #555;
+}
+
+.btn-square {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }

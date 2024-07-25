@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stats</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main>
+        <h1>Stats</h1>
+        <section>
+            <div class="table-container">
+                <div class="box">
+                    <div class="filter-container">
+                        <div class="filter-item">
+                            <select id="table-filter" class="dropdown-filter">
+                                <option value="player-stats">Player Stats</option>
+                                <option value="match-stats">Match Stats</option>
+                                <option value="2023-stats">2023 Stats</option>
+                            </select>
+                        </div>
+                        <input id="search-input" type="text" placeholder="Search for players.." class="text-box">
+                    </div>
+                    <div class="filter-item-bottom">
+                        <select id="filter-team" class="dropdown-filter">
+                            <!-- TEAM FILTER -->
+                            <option value="">All Teams</option>
+                            <option value="100T">100T</option>
+                            <option value="SEN">SEN</option>
+                            <option value="NRG">NRG</option>
+                            <option value="EG">EG</option>
+                            <option value="KRU">KRU</option>
+                            <option value="C9">C9</option>
+                            <option value="MIBR">MIBR</option>
+                            <option value="LOUD">LOUD</option>
+                            <option value="FUR">FUR</option>
+                            <option value="LEV">LEV</option>
+                            <option value="G2">G2</option>
+                        </select>
+                        <select id="filter-split" class="dropdown-filter">
+                            <option value="">Select Split</option>
+                            <option value="split1">Split 1</option>
+                            <option value="split2">Split 2</option>
+                        </select>
+                        <select id="filter-week" class="dropdown-filter">
+                            <option value="">Select Week</option>
+                            <option value="week1">Week 1</option>
+                            <option value="week2">Week 2</option>
+                            <option value="week3">Week 3</option>
+                            <option value="week4">Week 4</option>
+                        </select>
+                    </div>
+                    <div class="button-container">
+                        <button id="apply-filters" class="primary-button">Apply Filters</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about">
+            <div class="table-container">
+                <!-- Players table -->
+                <h2>Player Stats</h2>
+                <table id="player-stats-table">
+                    <thead>
+                    <tr>
+                        <th data-column="player_name" data-sort="asc">Player Name</th>
+                        <th data-column="team_abrev" data-sort="asc">Team</th>
+                        <th data-column="total_maps_played" data-sort="asc">Total Maps</th>
+                        <th data-column="total_kills" data-sort="asc">Kills</th>
+                        <th data-column="total_deaths" data-sort="asc">Deaths</th>
+                        <th data-column="total_assists" data-sort="asc">Assists</th>
+                        <th data-column="total_fk" data-sort="asc">First Kills</th>
+                        <th data-column="total_fd" data-sort="asc">First Deaths</th>
+                        <th data-column="total_clutches" data-sort="asc">Clutches</th>
+                        <th data-column="total_aces" data-sort="asc">Aces</th>
+                        <th data-column="total_adr" data-sort="asc">ADR</th>
+                        <th data-column="total_points" data-sort="asc">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!--Player Stats Table Goes Here-->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    <footer>
+        <p>&copy; 2024 Your Name. All rights reserved.</p>
+    </footer>
+</body>
+</html>
