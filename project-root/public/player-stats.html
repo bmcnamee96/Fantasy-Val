@@ -98,19 +98,22 @@
 
     <!-- Main Content -->
     <main>
-        <div class="statbox">
-            <label for="table-filter">Select Table:</label>
-            <select id="table-filter" class="col-auto">
-                <option value="player-stats">Player Stats</option>
-                <option value="match-stats">Match Stats</option>
-            </select>
-
-            <form id="filter-form" class="col-auto">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <label for="team-filter" class="mr-2">Team:</label>
-                        <select id="team-filter" class="form-control">
-                            <!-- TEAM FILTER -->
+        <section>
+            <div class="table-container">
+                <div class="box" id="filters">
+                    <div class="filter-container">
+                        <div class="filter-item">
+                            <select id="table-filter" class="dropdown-filter">
+                                <option value="player-stats">Player Stats</option>
+                                <option value="match-stats">Match Stats</option>
+                                <option value="2023-stats">2023 Stats</option>
+                            </select>
+                        </div>
+                        <input id="search-input" type="text" placeholder="Search for players.." class="text-box">
+                    </div>
+                    <div class="filter-item-bottom">
+                        <!-- TEAM FILTER -->
+                        <select id="team-filter" class="dropdown-filter">
                             <option value="">All Teams</option>
                             <option value="100T">100T</option>
                             <option value="SEN">SEN</option>
@@ -124,14 +127,22 @@
                             <option value="LEV">LEV</option>
                             <option value="G2">G2</option>
                         </select>
+                        <!-- Split Filter -->
+                        <select id="split-filter" class="dropdown-filter">
+                            <option value="">All Splits</option>
+                            <option value="split1">Split 1</option>
+                            <option value="split2">Split 2</option>
+                        </select>
                     </div>
-                    <button id="apply-filters" class="col-auto">Apply Filters</button>
+                    <div class="button-container">
+                        <button id="apply-filters" class="col-auto">Apply Filters</button>
+                    </div>
                 </div>
-            </form>
+            </div>  
+        </section>
 
-            <input id="search-input" class="form-control w-50" type="text" placeholder="Search for players..">
-
-            <div class="container">
+        <section id="player-stats">
+            <div class="table-container">
                 <h1 id="table-heading">Player Stats</h1>
                 <!-- Players table -->
                 <table id="player-stats-table">
@@ -181,6 +192,7 @@
                     </tbody>
                 </table>
             </div>
+        </section>
     </main>
 
 

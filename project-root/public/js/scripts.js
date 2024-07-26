@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded and parsed');
 
-     // #region sign-in / sign-up / fogot password / recover password
+    // #region sign-in / sign-up / fogot password / recover password
     // Get modals, buttons, and form elements
     const signupModal = document.getElementById("signupModal");
     const signinModal = document.getElementById("signinModal");
@@ -413,61 +413,133 @@ document.addEventListener('DOMContentLoaded', () => {
     // #region Dashboard
 
     // #region Create League
-    // Function to display a popup message
     function showModal(message) {
         const modal = document.getElementById('error-modal');
         const modalMessage = document.getElementById('modal-message');
         const closeButton = document.querySelector('.close-button');
-    
+
         modalMessage.textContent = message;
         modal.style.display = 'block';
-    
+
         closeButton.onclick = function() {
-        modal.style.display = 'none';
-        }
-    
-        window.onclick = function(event) {
-        if (event.target === modal) {
             modal.style.display = 'none';
         }
+
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
         }
     }
-    
-    // Handle the form submission
-    const form = document.getElementById('create-league-form');
-    if (form) {
-        form.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        
-        const leagueName = document.querySelector('input[name="league_name"]').value;
-        const description = document.querySelector('textarea[name="description"]').value;
-        const token = localStorage.getItem('token'); // Get JWT token from local storage
-    
-        try {
-            const response = await fetch('/api/leagues', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Include token in the Authorization header
-            },
-            body: JSON.stringify({ league_name: leagueName, description: description })
-            });
-    
-            const data = await response.json();
-    
-            if (response.status === 401) { // Unauthorized
-            showModal('You are not logged in!');
-            } else if (data.success) {
-            showModal('League created successfully!');
-            form.reset();
-            fetchUserLeagues(); // Refresh the leagues list
-            } else {
-            showModal('Failed to create league: ' + data.message);
+
+    // Handle the create league form submission
+    const createLeagueForm = document.getElementById('create-league-form');
+    if (createLeagueForm) {
+        createLeagueForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const leagueName = document.querySelector('input[name="league_name"]').value;
+            const leaguePass = document.querySelector('input[name="league-pass"]').value;
+            const description = document.querySelector('textarea[name="description"]').value;
+            const token = localStorage.getItem('token'); // Get JWT token from local storage
+
+            try {
+                const response = await fetch('/api/leagues', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // Include token in the Authorization header
+                    },
+                    body: JSON.stringify({ league_name: leagueName, league_pass: leaguePass, description: description })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 401) { // Unauthorized
+                    showModal('You are not logged in!');
+                } else if (data.success) {
+                    showModal('League created successfully!');
+                    createLeagueForm.reset();
+                    fetchUserLeagues(); // Refresh the leagues list
+                } else {
+                    showModal('Failed to create league: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showModal('You are not logged in! Please log in and try again');
             }
-        } catch (error) {
-            console.error('Error:', error);
-            showModal('You are not logged in! Please log in and try again');
+        });
+    }
+    // #endregion
+
+    // #region Join League
+    function showModal(message, isSuccess = false) {
+        const modal = document.getElementById('error-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const closeButton = document.querySelector('.close-button');
+        
+        // Set message and style based on success or error
+        modalMessage.textContent = message;
+        modal.style.display = 'block';
+        
+        if (isSuccess) {
+            modal.classList.remove('error');
+            modal.classList.add('success');
+        } else {
+            modal.classList.remove('success');
+            modal.classList.add('error');
         }
+
+        closeButton.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    }
+
+    // Handle the form submission
+    const joinForm = document.getElementById('join-league-form');
+    if (joinForm) {
+        joinForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const leagueName = document.querySelector('input[name="join_league_name"]').value;
+            const passcode = document.querySelector('input[name="passcode"]').value;
+            const token = localStorage.getItem('token'); // Get JWT token from local storage
+
+            try {
+                const response = await fetch('/api/join-league', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // Include token in the Authorization header
+                    },
+                    body: JSON.stringify({ league_name: leagueName, passcode: passcode })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 401) { // Unauthorized
+                    showModal('You are not logged in!');
+                } else if (response.status === 404) { // League not found
+                    showModal('League not found');
+                } else if (response.status === 400) { // Incorrect passcode or already a member
+                    showModal(data.message);
+                } else if (data.success) {
+                    showModal('Successfully joined the league!', true);
+                    joinForm.reset();
+                    fetchUserLeagues(); // Refresh the leagues list if needed
+                } else {
+                    showModal('Failed to join league: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showModal('An error occurred while joining the league. Please try again.');
+            }
         });
     }
     // #endregion
@@ -480,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!token) {
                 throw new Error('No token found');
             }
+            console.log('Token:', token);
     
             const response = await fetch('/api/user-leagues', {
                 method: 'GET',
@@ -487,6 +560,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Authorization': `Bearer ${token}` // Ensure the token is valid
                 }
             });
+    
+            console.log('Response Status:', response.status);
     
             if (!response.ok) {
                 const errorText = await response.text(); // Get error response text
@@ -497,23 +572,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const leagues = await response.json();
             console.log('Leagues fetched:', leagues); // Log fetched leagues
     
-            const tableBody = document.querySelector('#leagues-table tbody');
-            tableBody.innerHTML = ''; // Clear existing content
+            const leaguesList = document.querySelector('#leagues-list');
+            leaguesList.innerHTML = ''; // Clear existing content
     
             if (leagues.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="2">No leagues found.</td></tr>';
+                leaguesList.innerHTML = '<li class="list-group-item">No leagues found.</li>';
             } else {
-                tableBody.innerHTML = leagues.map(league => `
-                    <tr>
-                        <td>${league.league_name}</td>
-                        <td>${league.description || 'No description available'}</td>
-                    </tr>
+                leaguesList.innerHTML = leagues.map(league => `
+                    <li class="list-group-item">
+                        <a href="league-dashboard.html?leagueId=${league.league_id}" class="league-link">${league.league_name}</a>
+                    </li>
                 `).join('');
             }
         } catch (error) {
             console.error('Error fetching leagues:', error);
-            const tableBody = document.querySelector('#leagues-table tbody');
-            tableBody.innerHTML = '<tr><td colspan="2">You are not in a league! Join or create one now!</td></tr>';
+            const leaguesList = document.querySelector('#leagues-list');
+            leaguesList.innerHTML = '<li class="list-group-item">You are not in a league! Join or create one now!</li>';
         }
     }
     
@@ -521,12 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname === '/my-dashboard.html') {
         fetchUserLeagues();
     }    
-    
     // #endregion
-    // #endregion
-
-
-    
 
     // Call updateUI on page load to handle existing login state
     updateUI();

@@ -98,51 +98,31 @@
     <!--#endregion -->
 
     <!-- Main Content -->
-    <main class="container mt-5">
+    <main>
         <h1>My Dashboard</h1>
-        <!-- Dashboard Sections -->
-        <section id="dashboard-sections" class="row">
-            <!-- Your Leagues Section -->
-            <div class="col-md-8 mb-4">
-                <div class="box card">
-                    <div class="card-body">
-                        <h1 class="card-title text-center">Your Leagues</h1>
-                        <div id="dashboard-content">
-                            <div id="teams-container" class="table-responsive">
-                                <table id="leagues-table" class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>League Name</th>
-                                            <th>Description</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Leagues will be inserted here dynamically -->
-                                    </tbody>
-                                </table>
-                            </div>
+        <div class="container mt-4">
+            <div class="row">
+                <!-- My Leagues Box -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            My Leagues
                         </div>
+                        <ul class="list-group list-group-flush" id="leagues-list">
+                            <!-- Placeholder items will be dynamically replaced by JavaScript -->
+                            <li class="list-group-item">Loading leagues...</li>
+                        </ul>
+                    </div>
+                </div>
+                 <!-- Buttons Box -->
+                <div class="col-md-4">
+                    <div class="d-flex flex-column align-items-end">
+                        <button class="btn btn-primary mb-2 btn-square" id="create-league-btn" onclick="location.href='create-league.html'">Create a League</button>
+                        <button class="btn btn-secondary btn-square" id="join-league-btn" onclick="location.href='join-league.html'">Join a League</button>
                     </div>
                 </div>
             </div>
-
-            <!-- Create League and Join a League Sections -->
-            <div class="col-md-4 mb-4">
-                <!-- Create League Section -->
-                <div id="create-league-btn" class="box card mb-4">
-                    <div class="card-body">
-                        <a href="create-league.html" class="btn btn-block">Create New League</a>
-                    </div>
-                </div>
-
-                <!-- Join a League Section -->
-                <div id="join-league-btn" class="box card">
-                    <div class="card-body">
-                        <a href="join-league.html" class="btn btn-block">Join New League</a>
-                    </div>
-                </div>
-            </div>
-        </section>
+        </div>
     </main>
 
     <!-- Footer -->

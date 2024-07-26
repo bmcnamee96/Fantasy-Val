@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS leagues (
     league_id SERIAL PRIMARY KEY,
     league_name VARCHAR(50) NOT NULL,
+	league_pass VARCHAR(255) NOT NULL,
     description TEXT,
     owner_id INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -30,7 +31,8 @@ CREATE TABLE IF NOT EXISTS user_leagues (
     user_id INTEGER,
     league_id INTEGER,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (league_id) REFERENCES leagues(league_id)
+    FOREIGN KEY (league_id) REFERENCES leagues(league_id),
+	UNIQUE(user_id, league_id)
 );
 
 -- user_teams table

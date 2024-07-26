@@ -99,30 +99,41 @@
 
     <!-- Main Content -->
     <main class="container mt-5">
-        <h1>Join a League</h1>
-        <div class="box card">
+        <h1>League Dashboard</h1>
+        
+        <div id="league-info" class="box card mb-4">
             <div class="card-body">
-                <form id="join-league-form" class="form">
-                    <div class="form-group">
-                        <input type="text" class="form-control" id="join_league_name" name="join_league_name" placeholder="League Name" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="password" class="form-control" id="passcode" name="passcode" placeholder="League Password" required>
-                    </div>
-                    <button type="submit" class="btn btn-secondary">Join League</button>
-                </form>
+                <h2 id="league-name">League Name</h2>
+                <p id="league-description">League Description</p>
             </div>
         </div>
-
-        <!--Error Message Popup for Creating Leagues!-->
+        
+        <div id="teams-section" class="box card mb-4">
+            <div class="card-body">
+                <h3>Teams</h3>
+                <ul id="teams-list" class="list-group list-group-flush">
+                    <!-- Teams will be dynamically added here -->
+                </ul>
+            </div>
+        </div>
+        
+        <div id="users-section" class="box card mb-4">
+            <div class="card-body">
+                <h3>League Members</h3>
+                <ul id="users-list" class="list-group list-group-flush">
+                    <!-- Users will be dynamically added here -->
+                </ul>
+            </div>
+        </div>
+        
+        <!--Error Message Popup for League Dashboard-->
         <div id="error-modal" class="modal">
             <div class="modal-content">
                 <span class="close-button">&times;</span>
                 <p id="modal-message"></p>
             </div>
         </div>
-
-    </main>
+        </main>
 
     <!-- Footer -->
     <footer>
@@ -133,6 +144,7 @@
 
     <!-- Scripts -->
     <script src="js/scripts.js"></script>
+    <script src="js/league-dashboard.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

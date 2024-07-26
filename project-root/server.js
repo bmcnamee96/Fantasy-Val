@@ -3,6 +3,7 @@
 const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const saltRounds = 10; // Define the salt rounds for bcrypt
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
@@ -249,27 +250,30 @@ app.get('/api/match-stats', async (req, res) => {
   }
 });
 
-// #region Dashboard Endpoint
+// API endpoint to create a league
 app.post('/api/leagues', authenticateToken, async (req, res) => {
   console.log('API request received'); // Log when the API request is received
-  const { league_name, description } = req.body;
+  const { league_name, league_pass, description } = req.body;
   const owner_id = req.user.userId; // Get the user ID from the JWT token
 
-  console.log('Received data:', { league_name, description });
-  
+  console.log('Received data:', { league_name, league_pass, description });
+
   try {
     // Ensure all required fields are provided
-    if (!league_name || !description || !owner_id) {
+    if (!league_name || !league_pass || !description || !owner_id) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
+
+    // Hash the league password
+    const hashedPass = await bcrypt.hash(league_pass, saltRounds);
 
     // Start a transaction
     await pool.query('BEGIN');
 
     // Create the new league
     const newLeagueResult = await pool.query(
-      'INSERT INTO leagues (league_name, description, owner_id) VALUES ($1, $2, $3) RETURNING league_id',
-      [league_name, description, owner_id]
+      'INSERT INTO leagues (league_name, league_pass, description, owner_id) VALUES ($1, $2, $3, $4) RETURNING league_id',
+      [league_name, hashedPass, description, owner_id]
     );
 
     const league_id = newLeagueResult.rows[0].league_id;
@@ -286,6 +290,72 @@ app.post('/api/leagues', authenticateToken, async (req, res) => {
   }
 });
 
+// Join League Endpoint
+app.post('/api/join-league', authenticateToken, async (req, res) => {
+  console.log('API request received'); // Log when the API request is received
+  const { league_name, passcode } = req.body;
+  const user_id = req.user.userId; // Get the user ID from the JWT token
+
+  console.log('Received data:', { league_name, passcode });
+
+  try {
+      // Ensure all required fields are provided
+      if (!league_name || !passcode || !user_id) {
+          return res.status(400).json({ success: false, message: 'Missing required fields' });
+      }
+
+      // Start a transaction
+      await pool.query('BEGIN');
+
+      // Check if the league exists and get its ID
+      const leagueResult = await pool.query(
+          'SELECT league_id, league_pass FROM leagues WHERE league_name = $1',
+          [league_name]
+      );
+
+      if (leagueResult.rows.length === 0) {
+          await pool.query('ROLLBACK');
+          return res.status(404).json({ success: false, message: 'League not found' });
+      }
+
+      const league = leagueResult.rows[0];
+
+      // Verify the passcode
+      const isPasscodeValid = await bcrypt.compare(passcode, league.league_pass);
+
+      if (!isPasscodeValid) {
+          await pool.query('ROLLBACK');
+          return res.status(400).json({ success: false, message: 'Incorrect passcode' });
+      }
+
+      // Check if the user is already a member of the league
+      const membershipCheck = await pool.query(
+          'SELECT * FROM user_leagues WHERE league_id = $1 AND user_id = $2',
+          [league.league_id, user_id]
+      );
+
+      if (membershipCheck.rows.length > 0) {
+          await pool.query('ROLLBACK');
+          return res.status(400).json({ success: false, message: 'You are already a member of this league' });
+      }
+
+      // Add the user to the league
+      await pool.query(
+          'INSERT INTO user_leagues (user_id, league_id) VALUES ($1, $2)',
+          [user_id, league.league_id]
+      );
+
+      // Commit the transaction
+      await pool.query('COMMIT');
+
+      res.status(200).json({ success: true, message: 'Successfully joined the league' });
+  } catch (error) {
+      // Rollback the transaction in case of error
+      await pool.query('ROLLBACK');
+      console.error('Error joining league:', error);
+      res.status(500).json({ success: false, message: 'Failed to join league', error: error.message });
+  }
+});
 
 // Endpoint to get leagues for a user
 app.get('/api/user-leagues', authenticateToken, async (req, res) => {
@@ -311,7 +381,64 @@ app.get('/api/user-leagues', authenticateToken, async (req, res) => {
   }
 });
 
-// #endregion
+
+// Route to get users in a league
+// Route to get users in a league
+app.get('/api/leagues/:leagueId/users', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  console.log('League ID:', leagueId); // Debug log
+
+  if (!leagueId || isNaN(leagueId)) {
+    return res.status(400).send('Invalid league ID');
+  }
+
+  try {
+    const query = 'SELECT * FROM user_leagues ul JOIN users u ON ul.user_id = u.user_id WHERE ul.league_id = $1';
+    const { rows: users } = await pool.query(query, [parseInt(leagueId, 10)]); // Ensure leagueId is an integer
+
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching league users:', error);
+    res.status(500).send('Failed to fetch league users');
+  }
+});
+
+
+// // Fetch teams in a league
+// app.get('/api/leagues/:leagueId/teams', authenticateToken, async (req, res) => {
+//   const { leagueId } = req.params;
+
+//   try {
+//       const result = await pool.query(
+//           'SELECT team_name FROM teams INNER JOIN league_teams ON teams.team_id = league_teams.team_id WHERE league_teams.league_id = $1',
+//           [leagueId]
+//       );
+
+//       res.json({ teams: result.rows });
+//   } catch (error) {
+//       console.error('Error fetching teams:', error);
+//       res.status(500).json({ message: 'Error fetching teams' });
+//   }
+// });
+
+// // Fetch users in a league
+// app.get('/api/leagues/:leagueId/users', authenticateToken, async (req, res) => {
+//   const { leagueId } = req.params;
+
+//   try {
+//       const result = await pool.query(
+//           'SELECT username FROM users INNER JOIN league_users ON users.user_id = league_users.user_id WHERE league_users.league_id = $1',
+//           [leagueId]
+//       );
+
+//       res.json({ users: result.rows });
+//   } catch (error) {
+//       console.error('Error fetching users:', error);
+//       res.status(500).json({ message: 'Error fetching users' });
+//   }
+// });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
