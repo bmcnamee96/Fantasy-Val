@@ -98,49 +98,130 @@
     <!--#endregion -->
 
     <!-- Main Content -->
-    <main class="container mt-5">
-        <h1>League Dashboard</h1>
-        
-        <div id="league-info" class="box card mb-4">
-            <div class="card-body">
-                <h2 id="league-name">League Name</h2>
-                <p id="league-description">League Description</p>
+    <main class="container-fluid mt-5">
+        <!-- Name and Description of League -->
+        <h1 id="league-name" class="card-title">League Name</h1>
+        <p id="league-description" class="card-text center-text">League Description</p>
+
+        <!-- Create Team Button -->
+        <button id="create-team-btn">Create My Team</button>
+
+        <div class="main-content">
+            <div class="left-section">
+                <div class="tabs">
+                    <div class="tab active" onclick="openTab(event, 'my-team-content')">My Team</div>
+                    <div class="tab" onclick="openTab(event, 'trades-content')">Trades</div>
+                    <div class="tab" onclick="openTab(event, 'free-agents-content')">Free Agents</div>
+                </div>
+                <div id="my-team-content" class="tab-content active">
+                    <button class="edit-btn">Edit Team</button>
+                    <div class="players">
+                        <div class="player starter">
+                            <span>Starter Player 1</span>
+                            <span>10 pts</span>
+                        </div>
+                        <div class="player starter">
+                            <span>Starter Player 2</span>
+                            <span>12 pts</span>
+                        </div>
+                        <div class="player starter">
+                            <span>Starter Player 3</span>
+                            <span>15 pts</span>
+                        </div>
+                        <div class="player starter">
+                            <span>Starter Player 4</span>
+                            <span>8 pts</span>
+                        </div>
+                        <div class="player starter">
+                            <span>Starter Player 5</span>
+                            <span>20 pts</span>
+                        </div>
+                        <div class="player bench">
+                            <span>Bench Player 1</span>
+                            <span>5 pts</span>
+                        </div>
+                        <div class="player bench">
+                            <span>Bench Player 2</span>
+                            <span>7 pts</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="trades-content" class="tab-content">
+                    <div class="trade trade-initiated">
+                        <span>Trade with User A</span>
+                        <span>Initiated</span>
+                    </div>
+                    <div class="trade trade-requested">
+                        <span>Trade with User B</span>
+                        <span>Requested</span>
+                    </div>
+                </div>
+                <div id="free-agents-content" class="tab-content">
+                    <div class="free-agent">
+                        <span>Free Agent Player 1 (Fragger)</span>
+                        <span>100 pts</span>
+                    </div>
+                    <div class="free-agent">
+                        <span>Free Agent Player 2 (Support)</span>
+                        <span>90 pts</span>
+                    </div>
+                    <div class="free-agent">
+                        <span>Free Agent Player 3 (Anchor)</span>
+                        <span>80 pts</span>
+                    </div>
+                </div>
+                <div class="schedule">
+                    <h2>League Schedule</h2>
+                    <p>Week 1: User A vs User B</p>
+                    <p>Week 1: User C vs User D</p>
+                    <p>Week 2: User A vs User C</p>
+                    <p>Week 2: User B vs User D</p>
+                </div>
+            </div>
+            <div class="right-section">
+                <button class="draft-btn">Draft Your Team</button>
+                <div class="timer">Draft Timer: 00:00</div>
+                <div class="opponent">
+                    <h2>Next Opponent</h2>
+                    <p>Opponent Name</p>
+                </div>
+                <div class="ranking">
+                    <h2>League Ranking</h2>
+                    <ol>
+                        <li>User A - 100 pts</li>
+                        <li>User B - 90 pts</li>
+                        <li>User C - 80 pts</li>
+                        <li>User D - 70 pts</li>
+                    </ol>
+                </div>
+                <div id="users-section">
+                    <h3 class="card-title">League Members</h3>
+                    <ul id="users-list" class="list-group list-group-flush">
+                        <!-- Users will be dynamically added here -->
+                    </ul>
+                </div>
+                <!-- Leave League -->
+                <button id="leave-league-btn" class="btn btn-danger">Leave League</button>
             </div>
         </div>
-        
-        <div id="teams-section" class="box card mb-4">
-            <div class="card-body">
-                <h3>Teams</h3>
-                <ul id="teams-list" class="list-group list-group-flush">
-                    <!-- Teams will be dynamically added here -->
-                </ul>
+
+        <!-- Confirmation Modal -->
+        <div id="confirm-leave-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="confirm-leave-close">&times;</span>
+                <h3 id="confirm-leave-message"></h3>
+                <button id="confirm-leave-btn" class="btn btn-danger">Confirm</button>
             </div>
         </div>
-        
-        <div id="users-section" class="box card mb-4">
-            <div class="card-body">
-                <h3>League Members</h3>
-                <ul id="users-list" class="list-group list-group-flush">
-                    <!-- Users will be dynamically added here -->
-                </ul>
-            </div>
-        </div>
-        
-        <!--Error Message Popup for League Dashboard-->
+
+        <!-- Error Message Popup for League Dashboard -->
         <div id="error-modal" class="modal">
             <div class="modal-content">
                 <span class="close-button">&times;</span>
                 <p id="modal-message"></p>
             </div>
         </div>
-        </main>
-
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 Fantasy Valorant. All rights reserved.</p>
-        </div>
-    </footer>
+    </main>
 
     <!-- Scripts -->
     <script src="js/scripts.js"></script>

@@ -553,28 +553,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('No token found');
             }
             console.log('Token:', token);
-    
+
             const response = await fetch('/api/user-leagues', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}` // Ensure the token is valid
                 }
             });
-    
+
             console.log('Response Status:', response.status);
-    
+
             if (!response.ok) {
                 const errorText = await response.text(); // Get error response text
                 console.error('Server response:', errorText); // Log server response
                 throw new Error(errorText);
             }
-    
+
             const leagues = await response.json();
             console.log('Leagues fetched:', leagues); // Log fetched leagues
-    
+
             const leaguesList = document.querySelector('#leagues-list');
             leaguesList.innerHTML = ''; // Clear existing content
-    
+
             if (leagues.length === 0) {
                 leaguesList.innerHTML = '<li class="list-group-item">No leagues found.</li>';
             } else {
@@ -590,11 +590,11 @@ document.addEventListener('DOMContentLoaded', () => {
             leaguesList.innerHTML = '<li class="list-group-item">You are not in a league! Join or create one now!</li>';
         }
     }
-    
+
     // Call fetchUserLeagues when on the dashboard page
     if (window.location.pathname === '/my-dashboard.html') {
         fetchUserLeagues();
-    }    
+    }
     // #endregion
 
     // Call updateUI on page load to handle existing login state

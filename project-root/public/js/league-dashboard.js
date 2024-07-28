@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed');
 
+    // #region Get League Info
     // Function to extract league ID from URL
     function getLeagueIdFromUrl() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -10,8 +11,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     const token = localStorage.getItem('token'); // Get JWT token from local storage
     const leagueId = getLeagueIdFromUrl(); // Extract league ID from URL
 
+    console.log('Full URL:', window.location.href); // Log the full URL for debugging
     console.log('Extracted League ID:', leagueId); // Log the leagueId for debugging
 
+    // Function to fetch league details
+    async function fetchLeagueDetails(leagueId) {
+        try {
+            if (!token) {
+                throw new Error('No token found');
+            }
+
+            if (!leagueId) {
+                throw new Error('Invalid league ID');
+            }
+
+            const response = await fetch(`/api/leagues/${leagueId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}` // Ensure the token is valid
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text(); // Get error response text
+                console.error('Server response:', errorText); // Log server response
+                throw new Error(errorText);
+            }
+
+            const league = await response.json();
+            console.log('League details fetched:', league); // Log fetched league details
+
+            document.querySelector('#league-name').textContent = league.league_name;
+            document.querySelector('#league-description').textContent = league.description;
+        } catch (error) {
+            console.error('Error fetching league details:', error);
+            document.querySelector('#league-info').innerHTML = '<p>Failed to load league details.</p>';
+        }
+    }
+
+    // Function to fetch league users
     async function fetchLeagueUsers(leagueId) {
         try {
             if (!token) {
@@ -55,11 +93,143 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Ensure leagueId is not null and fetch users
+    // Ensure leagueId is not null and fetch details and users
     if (leagueId) {
-        fetchLeagueUsers(leagueId);
+        await fetchLeagueDetails(leagueId);
+        await fetchLeagueUsers(leagueId);
     } else {
         console.error('No league ID found in URL');
+        document.querySelector('#league-info').innerHTML = '<p>No league ID provided.</p>';
         document.querySelector('#users-list').innerHTML = '<li class="list-group-item">No league ID provided.</li>';
     }
+    // #endregion
+
+    // #region Tabs
+    window.openTab = (event, tabName) => {
+        // Get all elements with class="tab-content" and hide them
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => content.classList.remove('active'));
+
+        // Get all elements with class="tab" and remove the class "active"
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+
+        // Show the current tab, and add an "active" class to the button that opened the tab
+        document.getElementById(tabName).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+    // #endregion
+
+    // #region Create Team
+    // Function to create a team
+    const createTeamBtn = document.getElementById('create-team-btn');
+    const teamCreationForm = document.getElementById('team-creation-form');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const teamForm = document.getElementById('team-form');
+
+    // Show the team creation form when the button is clicked
+    createTeamBtn.addEventListener('click', () => {
+        teamCreationForm.style.display = 'block';
+    });
+
+    // Hide the form when the cancel button is clicked
+    cancelBtn.addEventListener('click', () => {
+        teamCreationForm.style.display = 'none';
+    });
+
+    // Handle form submission
+    teamForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); // Prevent the default form submission
+
+        const teamName = document.getElementById('team-name').value;
+        
+        try {
+            const response = await fetch('/api/create-team', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ team_name: teamName })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Team created successfully!');
+                teamCreationForm.style.display = 'none'; // Hide the form
+                // Optionally, reload or update the UI
+            } else {
+                alert(result.message);
+            }
+        } catch (error) {
+            console.error('Error creating team:', error);
+            alert('Failed to create team');
+        }
+    });
+    // #endregion
+
+    // #region Leave League
+    // Function to show the confirmation modal
+    function showConfirmLeaveModal() {
+        const modal = document.getElementById('confirm-leave-modal');
+        const confirmBtn = document.getElementById('confirm-leave-btn');
+        const closeBtn = document.getElementById('confirm-leave-close');
+        const messageElement = document.getElementById('confirm-leave-message');
+
+        // Update message with league name
+        const leagueName = document.querySelector('#league-name').textContent;
+        messageElement.innerHTML = `Are you sure you want to leave ${leagueName}?<br><br>This action cannot be undone!`;
+
+        modal.style.display = 'block'; // Show modal
+
+        // Handle confirm button
+        confirmBtn.onclick = async () => {
+            const leagueName = document.querySelector('#league-name').textContent;
+
+            try {
+                const response = await fetch('/api/leave-league', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ league_name: leagueName })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Successfully left the league');
+                    window.location.href = 'my-dashboard.html'; // Example: redirect to the leagues page
+                } else {
+                    alert(result.message);
+                }
+            } catch (error) {
+                console.error('Error leaving league:', error);
+                alert('Failed to leave the league');
+            }
+
+            modal.style.display = 'none'; // Hide modal
+        };
+
+        // Handle close button
+        closeBtn.onclick = () => {
+            modal.style.display = 'none'; // Hide modal
+        };
+
+        // Hide modal if clicking outside of modal-content
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    }
+
+    // Event listener for the "Leave League" button
+    const leaveLeagueBtn = document.getElementById('leave-league-btn');
+    if (leaveLeagueBtn) {
+        leaveLeagueBtn.addEventListener('click', showConfirmLeaveModal);
+    }
+    // #endregion
 });

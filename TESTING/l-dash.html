@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>League Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .header {
+      margin-top: 20px;
+    }
+    .main {
+      display: flex;
+      width: 90%;
+      margin-top: 20px;
+    }
+    .left-section {
+      flex: 3;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-right: 2px solid #ddd;
+      position: relative;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #ddd;
+      margin-bottom: 10px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      cursor: pointer;
+      text-align: center;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      background-color: #f9f9f9;
+    }
+    .tab.active {
+      background-color: #fff;
+      border-bottom: 2px solid #fff;
+    }
+    .tab-content {
+      display: none;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-top: none;
+      background-color: #f9f9f9;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .players {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .player {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .starter {
+      background-color: #dff0d8;
+    }
+    .bench {
+      background-color: #f2dede;
+    }
+    .trade {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .trade-initiated {
+      background-color: #d9edf7;
+    }
+    .trade-requested {
+      background-color: #fcf8e3;
+    }
+    .free-agent {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .edit-btn {
+      position: absolute;
+      top: 65px;
+      right: 25px;
+      padding: 5px 10px;
+      background-color: #ffc107;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .right-section {
+      flex: 1;
+      padding: 20px;
+    }
+    .draft-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .timer {
+      margin-bottom: 20px;
+    }
+    .schedule, .ranking {
+      text-align: left;
+    }
+    .schedule {
+      margin-top: 20px;
+    }
+  </style>
+  <script>
+    function openTab(event, tabName) {
+      // Get all elements with class="tab-content" and hide them
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Get all elements with class="tab" and remove the class "active"
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(tab => tab.classList.remove('active'));
+      
+      // Show the current tab, and add an "active" class to the button that opened the tab
+      document.getElementById(tabName).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>League Name</h1>
+      <p>League Description</p>
+    </div>
+    <div class="main">
+      <div class="left-section">
+        <div class="tabs">
+          <div class="tab active" onclick="openTab(event, 'my-team-content')">My Team</div>
+          <div class="tab" onclick="openTab(event, 'trades-content')">Trades</div>
+          <div class="tab" onclick="openTab(event, 'free-agents-content')">Free Agents</div>
+        </div>
+        <div id="my-team-content" class="tab-content active">
+          <button class="edit-btn">Edit Team</button>
+          <div class="players">
+            <div class="player starter">
+              <span>Starter Player 1</span>
+              <span>10 pts</span>
+            </div>
+            <div class="player starter">
+              <span>Starter Player 2</span>
+              <span>12 pts</span>
+            </div>
+            <div class="player starter">
+              <span>Starter Player 3</span>
+              <span>15 pts</span>
+            </div>
+            <div class="player starter">
+              <span>Starter Player 4</span>
+              <span>8 pts</span>
+            </div>
+            <div class="player starter">
+              <span>Starter Player 5</span>
+              <span>20 pts</span>
+            </div>
+            <div class="player bench">
+              <span>Bench Player 1</span>
+              <span>5 pts</span>
+            </div>
+            <div class="player bench">
+              <span>Bench Player 2</span>
+              <span>7 pts</span>
+            </div>
+          </div>
+        </div>
+        <div id="trades-content" class="tab-content">
+          <div class="trade trade-initiated">
+            <span>Trade with User A</span>
+            <span>Initiated</span>
+          </div>
+          <div class="trade trade-requested">
+            <span>Trade with User B</span>
+            <span>Requested</span>
+          </div>
+          <!-- Add more trades as needed -->
+        </div>
+        <div id="free-agents-content" class="tab-content">
+          <div class="free-agent">
+            <span>Free Agent Player 1 (Fragger)</span>
+            <span>100 pts</span>
+          </div>
+          <div class="free-agent">
+            <span>Free Agent Player 2 (Support)</span>
+            <span>90 pts</span>
+          </div>
+          <div class="free-agent">
+            <span>Free Agent Player 3 (Anchor)</span>
+            <span>80 pts</span>
+          </div>
+          <!-- Add more free agents as needed -->
+        </div>
+        <div class="schedule">
+          <h2>League Schedule</h2>
+          <p>Week 1: User A vs User B</p>
+          <p>Week 1: User C vs User D</p>
+          <p>Week 2: User A vs User C</p>
+          <p>Week 2: User B vs User D</p>
+          <!-- Add more schedule entries as needed -->
+        </div>
+      </div>
+      <div class="right-section">
+        <button class="draft-btn">Draft Your Team</button>
+        <div class="timer">Draft Timer: 00:00</div>
+        <div class="opponent">
+          <h2>Next Opponent</h2>
+          <p>Opponent Name</p>
+        </div>
+        <div class="ranking">
+          <h2>League Ranking</h2>
+          <ol>
+            <li>User A - 100 pts</li>
+            <li>User B - 90 pts</li>
+            <li>User C - 80 pts</li>
+            <li>User D - 70 pts</li>
+            <!-- Add more ranking entries as needed -->
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

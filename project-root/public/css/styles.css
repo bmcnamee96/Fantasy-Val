@@ -637,6 +637,154 @@ th[data-sort="desc"]::after {
 }
 /* #endregion */
 
+/* #region League Dashboard */
+.center-text {
+    text-align: center;
+}
+
+.main-content {
+    display: flex;
+    flex-wrap: wrap; /* Ensures responsiveness */
+    gap: 20px; /* Optional: Adds space between sections */
+    padding: 0 15px; /* Adjusts padding to match the Bootstrap container-fluid padding */
+}
+
+.left-section {
+    flex: 3;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-right: 2px solid #ddd;
+    position: relative;
+}
+
+.tabs {
+    display: flex;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 10px;
+}
+
+.tab {
+    flex: 1;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    background-color: #f9f9f9;
+}
+
+.tab.active {
+    background-color: #fff;
+    border-bottom: 2px solid #fff;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-top: none;
+    background-color: #f9f9f9;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.players {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.player {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.starter {
+    background-color: #dff0d8;
+}
+
+.bench {
+    background-color: #f2dede;
+}
+
+.trade {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.trade-initiated {
+    background-color: #d9edf7;
+}
+
+.trade-requested {
+    background-color: #fcf8e3;
+}
+
+.free-agent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.edit-btn {
+    position: absolute;
+    top: 71px;
+    right: 41px;
+    padding: 3px 6px; /* Reduced padding for a smaller button */
+    font-size: 0.7rem; /* Optional: Adjust font size to fit smaller button */
+    background-color: #ffc107;
+    color: rgb(0, 0, 0);
+    border: none;
+    border-radius: 4px; /* Slightly smaller border-radius */
+    cursor: pointer;
+}
+
+.right-section {
+    flex: 1;
+    padding: 20px;
+}
+
+.draft-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.timer {
+    margin-bottom: 20px;
+}
+
+.schedule, .ranking {
+    text-align: left;
+}
+
+.schedule {
+    margin-top: 20px;
+}
+/* #endregion */
+
+
 /* #region Footer */
 footer {
     background-color: #333;

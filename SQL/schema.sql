@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
 	CONSTRAINT unique_username UNIQUE(username)
 );
 
+-- leagues table
 CREATE TABLE IF NOT EXISTS leagues (
     league_id SERIAL PRIMARY KEY,
     league_name VARCHAR(50) NOT NULL,
@@ -35,20 +36,25 @@ CREATE TABLE IF NOT EXISTS user_leagues (
 	UNIQUE(user_id, league_id)
 );
 
--- user_teams table
-CREATE TABLE IF NOT EXISTS user_teams (
-    team_id SERIAL PRIMARY KEY,
-    team_name TEXT NOT NULL,
-    owner_id INTEGER,
+-- team within a league table
+CREATE TABLE IF NOT EXISTS league_teams (
+    league_team_id SERIAL PRIMARY KEY,
     league_id INTEGER,
-	player_one INTEGER DEFAULT 0,
-	player_two INTEGER DEFAULT 0,
-	player_three INTEGER DEFAULT 0,
-    FOREIGN KEY (owner_id) REFERENCES users(user_id),
+    team_name TEXT NOT NULL,
+    user_id INTEGER,
     FOREIGN KEY (league_id) REFERENCES leagues(league_id),
-	FOREIGN KEY (player_one) REFERENCES player(player_id),
-	FOREIGN KEY (player_two) REFERENCES player(player_id),
-	FOREIGN KEY (player_three) REFERENCES player(player_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT unique_team_per_league UNIQUE(league_id, team_name)
+);
+
+-- players on each team table
+CREATE TABLE IF NOT EXISTS league_team_players (
+    league_team_player_id SERIAL PRIMARY KEY,
+    league_team_id INTEGER,
+    player_id INTEGER,
+    FOREIGN KEY (league_team_id) REFERENCES league_teams(league_team_id),
+    FOREIGN KEY (player_id) REFERENCES player(player_id),
+    CONSTRAINT unique_player_per_team UNIQUE(league_team_id, player_id)
 );
 
 -- Password reset token
