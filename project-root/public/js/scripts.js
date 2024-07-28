@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed');
+    console.log('DOM fully loaded and parsed for scripts.js');
 
     // #region sign-in / sign-up / fogot password / recover password
     // Get modals, buttons, and form elements
@@ -411,7 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // #endregion
 
     // #region Dashboard
-
     // #region Create League
     function showModal(message) {
         const modal = document.getElementById('error-modal');
@@ -595,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname === '/my-dashboard.html') {
         fetchUserLeagues();
     }
+    // #endregion
     // #endregion
 
     // Call updateUI on page load to handle existing login state

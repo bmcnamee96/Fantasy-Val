@@ -53,6 +53,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Public route example (not protected)
+app.get('/api/public-route', (req, res) => {
+  res.send('This is a public route');
+});
+
+// Serve index.html for the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Routes
 app.use('/', leagueRoutes);
 // Use the leagues routes
@@ -429,7 +439,6 @@ app.post('/api/leave-league', authenticateToken, async (req, res) => {
   }
 });
 
-
 // Endpoint to get leagues for a user
 app.get('/api/user-leagues', authenticateToken, async (req, res) => {
   const userId = req.user.userId;
@@ -497,6 +506,29 @@ app.get('/api/leagues/:leagueId', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching league details:', error);
     res.status(500).send('Failed to fetch league details');
+  }
+});
+
+// Endpoint to create a team
+app.post('/api/create-team', authenticateToken, async (req, res) => {
+  const { team_name, league_id, user_id } = req.body;
+
+  if (!team_name || !league_id || !user_id) {
+      return res.status(400).json({ success: false, message: 'Team name, league ID, and user ID are required' });
+  }
+
+  console.log('Request Body:', req.body); // Log the request body
+
+  try {
+      console.log('Inserting into league_teams table');
+      // Insert into league_teams table
+      await pool.query('INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)', [league_id, team_name, user_id]);
+      console.log('Insert into league_teams table successful');
+
+      res.json({ success: true, message: 'Team created successfully' });
+  } catch (error) {
+      console.error('Error creating team:', error); // Log the full error
+      res.status(500).json({ success: false, message: 'Failed to create team' });
   }
 });
 

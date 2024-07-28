@@ -8,7 +8,9 @@
 -- ALTER USER postgres WITH PASSWORD 'pgadmin'
 
 -- Users
-DROP TABLE user_teams;
+DROP TABLE league_team_players;
+
+DROP TABLE league_teams;
 
 DROP TABLE user_leagues;
 

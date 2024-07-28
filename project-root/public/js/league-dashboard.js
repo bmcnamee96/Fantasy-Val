@@ -1,5 +1,53 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM fully loaded and parsed');
+    console.log('DOM fully loaded and parsed for league-dashboard.js');
+    const token = localStorage.getItem('token')
+    console.log('User details fetched:', token)
+
+    // Function to show a modal with a message
+    function showModal(message) {
+        const modal = document.getElementById('error-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const closeButton = document.querySelector('.close-button');
+
+        if (!modal || !modalMessage || !closeButton) {
+            console.error('Modal elements are missing');
+            return;
+        }
+
+        modalMessage.textContent = message;
+        modal.style.display = 'block';
+
+        closeButton.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    }
+
+    // Function to decode JWT and get user ID
+    function getUserIdFromToken(token) {
+        if (!token) {
+            console.error('No token provided');
+            return null;
+        }
+
+        try {
+            // Split the token into parts and decode the payload
+            const payload = token.split('.')[1]; // The payload is the second part
+            const decoded = JSON.parse(atob(payload.replace(/_/g, '/').replace(/-/g, '+')));
+            console.log('Decoded payload:', decoded);
+            const userId = decoded.userId; // Adjust according to your token payload
+            console.log('Extracted user ID:', userId);
+            return userId;
+        } catch (error) {
+            console.error('Error decoding token:', error);
+            return null;
+        }
+    }
 
     // #region Get League Info
     // Function to extract league ID from URL
@@ -8,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return urlParams.get('leagueId');
     }
 
-    const token = localStorage.getItem('token'); // Get JWT token from local storage
     const leagueId = getLeagueIdFromUrl(); // Extract league ID from URL
 
     console.log('Full URL:', window.location.href); // Log the full URL for debugging
@@ -121,52 +168,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     // #endregion
 
     // #region Create Team
-    // Function to create a team
     const createTeamBtn = document.getElementById('create-team-btn');
     const teamCreationForm = document.getElementById('team-creation-form');
     const cancelBtn = document.getElementById('cancel-btn');
     const teamForm = document.getElementById('team-form');
 
-    // Show the team creation form when the button is clicked
-    createTeamBtn.addEventListener('click', () => {
-        teamCreationForm.style.display = 'block';
-    });
+    if (createTeamBtn && teamCreationForm && cancelBtn && teamForm) {
+        // Show the team creation form when the button is clicked
+        createTeamBtn.addEventListener('click', () => {
+            teamCreationForm.style.display = 'block';
+        });
 
-    // Hide the form when the cancel button is clicked
-    cancelBtn.addEventListener('click', () => {
-        teamCreationForm.style.display = 'none';
-    });
+        // Hide the form when the cancel button is clicked
+        cancelBtn.addEventListener('click', () => {
+            teamCreationForm.style.display = 'none';
+        });
 
-    // Handle form submission
-    teamForm.addEventListener('submit', async (event) => {
-        event.preventDefault(); // Prevent the default form submission
+        // Handle form submission
+        teamForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default form submission
 
-        const teamName = document.getElementById('team-name').value;
-        
-        try {
-            const response = await fetch('/api/create-team', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({ team_name: teamName })
-            });
+            const teamName = document.getElementById('team-name').value;
+            const leagueId = getLeagueIdFromUrl(); // Ensure this function works correctly
+            const token = localStorage.getItem('token'); // Get JWT token from local storage
+            const userId = getUserIdFromToken(token); // Extract user ID from token
 
-            const result = await response.json();
-            
-            if (result.success) {
-                alert('Team created successfully!');
-                teamCreationForm.style.display = 'none'; // Hide the form
-                // Optionally, reload or update the UI
-            } else {
-                alert(result.message);
+            if (!userId) {
+                alert('Unable to extract user ID from token.');
+                return;
             }
-        } catch (error) {
-            console.error('Error creating team:', error);
-            alert('Failed to create team');
-        }
-    });
+
+            console.log('Final user ID:', userId);
+
+            try {
+                const response = await fetch('/api/create-team', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ team_name: teamName, league_id: leagueId, user_id: userId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Team created successfully!');
+                    teamCreationForm.style.display = 'none'; // Hide the form
+                    // Optionally, reload or update the UI
+                } else {
+                    alert(result.message);
+                }
+            } catch (error) {
+                console.error('Error creating team:', error);
+                alert('Failed to create team');
+            }
+        });
+    }
     // #endregion
 
     // #region Leave League
