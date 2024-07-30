@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Fav Icon -->
+    <link rel="icon" href="images/favicon.png" type="image/x-icon">
+
+    <title>Draft Your Team</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Add your custom styles here */
+        .draft-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .draft-section {
+            width: 48%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Draft Page</h1>
+        <div>
+            <h2>Draft Order</h2>
+            <ul id="draft-order"></ul>
+        </div>
+        <div id="available-players" class="container">
+            <h2>Available Players</h2>
+            <!-- Available players will be inserted here -->
+        </div>
+        <div>
+            <h2>Draft Timer: <span id="draft-timer">10000</span> seconds</h2>
+        </div>
+        <button id="end-draft-btn">End Draft</button>
+
+        <ul id="user-list"></ul>
+    </div>
+    <script src="js/draft.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

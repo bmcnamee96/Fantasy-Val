@@ -1,7 +1,7 @@
 // utils/auth.js
 const jwt_decode = require('jwt-decode'); // Ensure jwt-decode is installed and required correctly
 
-const JWT_SECRET = 'valorant'; // Replace with your actual secret key
+const JWT_SECRET = 'valorant';
 
 function getUserIdFromToken(token) {
   if (!token) {

@@ -1,5 +1,5 @@
 // server.js
-
+// #region Dependencies
 const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
@@ -90,6 +90,89 @@ app.use((err, req, res, next) => {
     next(err);
   }
 });
+// #endregion
+
+// #region WebSocket
+const WebSocket = require('ws');
+
+// Create a WebSocket server
+const wss = new WebSocket.Server({ port: 8080 });
+
+// Store connected clients and user IDs
+const clients = new Map();
+
+wss.on('connection', (ws, req) => {
+    console.log('New client connected');
+
+    // Extract user ID from query parameters or headers
+    const userId = new URL(req.url, `ws://${req.headers.host}`).searchParams.get('userId');
+
+    if (userId) {
+        clients.set(userId, ws);
+        broadcastUserList();
+    }
+
+    // Send a welcome message to the new client
+    ws.send(JSON.stringify({ message: 'Welcome to the draft' }));
+
+    // Handle incoming messages
+    ws.on('message', (message) => {
+      try {
+          const data = JSON.parse(message);
+          console.log('Received message from client:', data);
+  
+          switch (data.type) {
+              case 'draftUpdate':
+                  broadcastDraftUpdate(data);
+                  break;
+              case 'userConnected':
+                  // Handle user connection logic if needed
+                  break;
+              default:
+                  console.warn('Unknown message type:', data.type);
+          }
+      } catch (error) {
+          console.error('Error processing message:', error);
+      }
+  });
+
+    ws.on('close', () => {
+        console.log('Client disconnected');
+        clients.delete(userId);
+        broadcastUserList();
+    });
+
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
+});
+
+function broadcastDraftUpdate(data) {
+  const { draftOrder, availablePlayers } = data;
+  const response = { type: 'draftUpdate', draftOrder, availablePlayers };
+
+  clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(response));
+      }
+  });
+}
+
+function broadcastUserList() {
+    const userList = Array.from(clients.keys());
+    const message = JSON.stringify({ type: 'userListUpdate', users: userList });
+
+    // Broadcast the user list to all connected clients
+    clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
+}
+
+console.log('WebSocket server is running on ws://localhost:8080');
+// #endregion
+
 
 // Endpoint to register a new user
 app.post('/api/signup', async (req, res) => {
@@ -529,6 +612,73 @@ app.post('/api/create-team', authenticateToken, async (req, res) => {
   } catch (error) {
       console.error('Error creating team:', error); // Log the full error
       res.status(500).json({ success: false, message: 'Failed to create team' });
+  }
+});
+
+// Draft order and status
+app.get('/api/leagues/:leagueId/draft-details', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+    // Fetch draft order
+    const orderResult = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
+    const draftStatus = orderResult.rows;
+
+    // Fetch drafted players
+    const draftedResult = await pool.query('SELECT * FROM drafted_players WHERE league_id = $1', [leagueId]);
+    const draftedPlayers = draftedResult.rows;
+
+    res.json({ draftStatus, draftedPlayers });
+  } catch (error) {
+    console.error('Error fetching draft details:', error);
+    res.status(500).json({ error: 'Failed to fetch draft details' });
+  }
+});
+
+// Get available players for a specific league
+app.get('/api/leagues/:leagueId/available-players', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+      // Fetch available players
+      const result = await pool.query(
+          `SELECT p.player_id, p.player_name, p.team_abrev
+           FROM player p
+           LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
+           WHERE dp.player_id IS NULL`,
+          [leagueId]
+      );
+
+      const availablePlayers = result.rows;
+      res.json(availablePlayers);
+  } catch (error) {
+      console.error('Error fetching available players:', error);
+      res.status(500).json({ error: 'Failed to fetch available players' });
+  }
+});
+
+
+// Draft a player
+app.post('/api/draft-player', authenticateToken, async (req, res) => {
+  const { userId, playerId, leagueId } = req.body;
+
+  try {
+    // Update draft status
+    await pool.query('UPDATE draft_status SET current_drafter = $1 WHERE league_id = $2', [userId, leagueId]);
+
+    // Insert drafted player
+    await pool.query(
+      'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
+      [leagueId, playerId, userId]
+    );
+
+    // Remove player from draft pool (if necessary)
+    await pool.query('DELETE FROM player_pool WHERE player_id = $1 AND league_id = $2', [playerId, leagueId]);
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Error drafting player:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to draft player' });
   }
 });
 

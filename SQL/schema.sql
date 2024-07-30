@@ -57,6 +57,27 @@ CREATE TABLE IF NOT EXISTS league_team_players (
     CONSTRAINT unique_player_per_team UNIQUE(league_team_id, player_id)
 );
 
+-- draft status table
+CREATE TABLE IF NOT EXISTS draft_status (
+    draft_status_id SERIAL PRIMARY KEY,
+    league_id INTEGER,
+    status TEXT NOT NULL,  -- 'not_started', 'ongoing', 'completed'
+    current_pick INTEGER,
+    FOREIGN KEY (league_id) REFERENCES leagues(league_id)
+);
+
+-- drafted players table
+CREATE TABLE IF NOT EXISTS drafted_players (
+    drafted_player_id SERIAL PRIMARY KEY,
+    league_id INTEGER,
+    player_id INTEGER,
+    league_team_id INTEGER,
+    FOREIGN KEY (league_id) REFERENCES leagues(league_id),
+    FOREIGN KEY (player_id) REFERENCES player(player_id),
+    FOREIGN KEY (league_team_id) REFERENCES league_teams(league_team_id),
+    CONSTRAINT unique_drafted_player UNIQUE(league_id, player_id)
+);
+
 -- Password reset token
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     token_id SERIAL PRIMARY KEY,

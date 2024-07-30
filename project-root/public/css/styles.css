@@ -798,6 +798,26 @@ th[data-sort="desc"]::after {
 
 /* #endregion */
 
+/* #region Draft Board */
+.available-players-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Adjust the spacing between items */
+}
+
+.player-item {
+    flex: 1 1 calc(33.333% - 10px); /* 3 columns with a gap of 10px */
+    box-sizing: border-box;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.player-item button {
+    margin-top: 5px;
+}
+/* #endregion */
 
 /* #region Footer */
 footer {

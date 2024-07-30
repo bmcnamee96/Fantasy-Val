@@ -290,4 +290,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         leaveLeagueBtn.addEventListener('click', showConfirmLeaveModal);
     }
     // #endregion
+
+    // #region Draft
+    // Open Draft
+    // Function to open the draft
+    function openDraft() {
+        const leagueId = getLeagueIdFromUrl();
+
+        if (!leagueId) {
+            console.error('No league ID found for draft');
+            return;
+        }
+
+        window.location.href = `draft.html?leagueId=${leagueId}`;
+        removeDraftButton();
+    }
+
+    // Function to remove the draft button
+    function removeDraftButton() {
+        const draftButton = document.getElementById('draft-button');
+        if (draftButton) {
+            draftButton.style.display = 'none';
+        }
+    }
+
+    // Attach event listener to the draft button
+    const draftButton = document.getElementById('draft-button');
+    if (draftButton) {
+        draftButton.addEventListener('click', openDraft);
+    }
+    // #endregion
 });
