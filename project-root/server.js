@@ -149,6 +149,8 @@ wss.on('connection', (ws, req) => {
 
 function broadcastDraftUpdate(data) {
   const { draftOrder, availablePlayers } = data;
+  console.log('Broadcasting draft update:', { draftOrder, availablePlayers });
+
   const response = { type: 'draftUpdate', draftOrder, availablePlayers };
 
   clients.forEach((client) => {
@@ -173,6 +175,76 @@ function broadcastUserList() {
 console.log('WebSocket server is running on ws://localhost:8080');
 // #endregion
 
+// Draft order and status
+app.get('/api/leagues/:leagueId/draft-details', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  console.log('League ID:', leagueId);
+
+  try {
+    // Fetch draft order
+    const orderResult = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
+    const draftStatus = orderResult.rows;
+
+    // Fetch drafted players
+    const draftedResult = await pool.query('SELECT * FROM drafted_players WHERE league_id = $1', [leagueId]);
+    const draftedPlayers = draftedResult.rows;
+
+    res.json({ draftStatus, draftedPlayers });
+  } catch (error) {
+    console.error('Error fetching draft details:', error);
+    res.status(500).json({ error: 'Failed to fetch draft details' });
+  }
+});
+
+// Get available players for a specific league
+app.get('/api/leagues/:leagueId/available-players', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+      const result = await pool.query(
+          `SELECT p.player_id, p.player_name, p.team_abrev
+           FROM player p
+           LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
+           WHERE dp.player_id IS NULL`,
+          [leagueId] // Passing the leagueId parameter
+      );
+
+      const availablePlayers = result.rows;
+      res.json(availablePlayers);
+  } catch (error) {
+      console.error('Error fetching available players:', error);
+      res.status(500).json({ error: 'Failed to fetch available players' });
+  }
+});
+
+// Draft a player
+app.post('/api/draft-player', authenticateToken, async (req, res) => {
+  const { userId, playerId, leagueId } = req.body;
+
+  try {
+    // Update draft status
+    await pool.query('UPDATE draft_status SET current_drafter = $1 WHERE league_id = $2', [userId, leagueId]);
+
+    // Insert drafted player
+    await pool.query(
+      'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
+      [leagueId, playerId, userId]
+    );
+
+    // Remove player from draft pool (if necessary)
+    await pool.query('DELETE FROM player_pool WHERE player_id = $1 AND league_id = $2', [playerId, leagueId]);
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Error drafting player:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to draft player' });
+  }
+});
+
+app.use((req, res, next) => {
+  console.log('Authorization header:', req.headers['authorization']);
+  next();
+});
 
 // Endpoint to register a new user
 app.post('/api/signup', async (req, res) => {
@@ -612,73 +684,6 @@ app.post('/api/create-team', authenticateToken, async (req, res) => {
   } catch (error) {
       console.error('Error creating team:', error); // Log the full error
       res.status(500).json({ success: false, message: 'Failed to create team' });
-  }
-});
-
-// Draft order and status
-app.get('/api/leagues/:leagueId/draft-details', authenticateToken, async (req, res) => {
-  const { leagueId } = req.params;
-
-  try {
-    // Fetch draft order
-    const orderResult = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
-    const draftStatus = orderResult.rows;
-
-    // Fetch drafted players
-    const draftedResult = await pool.query('SELECT * FROM drafted_players WHERE league_id = $1', [leagueId]);
-    const draftedPlayers = draftedResult.rows;
-
-    res.json({ draftStatus, draftedPlayers });
-  } catch (error) {
-    console.error('Error fetching draft details:', error);
-    res.status(500).json({ error: 'Failed to fetch draft details' });
-  }
-});
-
-// Get available players for a specific league
-app.get('/api/leagues/:leagueId/available-players', authenticateToken, async (req, res) => {
-  const { leagueId } = req.params;
-
-  try {
-      // Fetch available players
-      const result = await pool.query(
-          `SELECT p.player_id, p.player_name, p.team_abrev
-           FROM player p
-           LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
-           WHERE dp.player_id IS NULL`,
-          [leagueId]
-      );
-
-      const availablePlayers = result.rows;
-      res.json(availablePlayers);
-  } catch (error) {
-      console.error('Error fetching available players:', error);
-      res.status(500).json({ error: 'Failed to fetch available players' });
-  }
-});
-
-
-// Draft a player
-app.post('/api/draft-player', authenticateToken, async (req, res) => {
-  const { userId, playerId, leagueId } = req.body;
-
-  try {
-    // Update draft status
-    await pool.query('UPDATE draft_status SET current_drafter = $1 WHERE league_id = $2', [userId, leagueId]);
-
-    // Insert drafted player
-    await pool.query(
-      'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
-      [leagueId, playerId, userId]
-    );
-
-    // Remove player from draft pool (if necessary)
-    await pool.query('DELETE FROM player_pool WHERE player_id = $1 AND league_id = $2', [playerId, leagueId]);
-
-    res.json({ status: 'success' });
-  } catch (error) {
-    console.error('Error drafting player:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to draft player' });
   }
 });
 
