@@ -20,19 +20,26 @@
         .draft-section {
             width: 48%;
         }
+        #startDraftButton {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Draft Page</h1>
+        <ul id="user-list"></ul>
+
+        <!-- Start Draft Button -->
+        <button id="startDraftButton">Start Draft</button>
+
         <div>
             <h2>Draft Order</h2>
-            <ul id="draft-order"></ul>
+            <ul id="draftOrderContainer"></ul>
         </div>
-        <div id="available-players" class="row"></div>
         <h2>Available Players</h2>
+        <div id="available-players" class="row"></div>
         <!-- Available players will be inserted here -->
-        <ul id="user-list"></ul>
         <div>
             <h2>Draft Timer: <span id="draft-timer">10000</span> seconds</h2>
         </div>

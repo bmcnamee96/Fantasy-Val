@@ -47,6 +47,13 @@ CREATE TABLE IF NOT EXISTS league_teams (
     CONSTRAINT unique_team_per_league UNIQUE(league_id, team_name)
 );
 
+-- draft order for each league
+CREATE TABLE IF NOT EXISTS draft_orders (
+    league_id INTEGER NOT NULL,
+    draft_order JSONB NOT NULL,
+    PRIMARY KEY (league_id)
+);
+
 -- players on each team table
 CREATE TABLE IF NOT EXISTS league_team_players (
     league_team_player_id SERIAL PRIMARY KEY,
@@ -55,15 +62,6 @@ CREATE TABLE IF NOT EXISTS league_team_players (
     FOREIGN KEY (league_team_id) REFERENCES league_teams(league_team_id),
     FOREIGN KEY (player_id) REFERENCES player(player_id),
     CONSTRAINT unique_player_per_team UNIQUE(league_team_id, player_id)
-);
-
--- draft status table
-CREATE TABLE IF NOT EXISTS draft_status (
-    draft_status_id SERIAL PRIMARY KEY,
-    league_id INTEGER,
-    status TEXT NOT NULL,  -- 'not_started', 'ongoing', 'completed'
-    current_pick INTEGER,
-    FOREIGN KEY (league_id) REFERENCES leagues(league_id)
 );
 
 -- drafted players table

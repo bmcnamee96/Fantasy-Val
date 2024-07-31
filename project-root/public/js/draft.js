@@ -34,24 +34,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Fetch league details to get the owner ID
+    let leagueOwnerId;
+    try {
+        const leagueResponse = await fetch(`/api/leagues/${leagueId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const league = await leagueResponse.json();
+        leagueOwnerId = league.owner_id;
+        console.log('League Owner ID:', leagueOwnerId);
+
+        if (userId === leagueOwnerId) {
+            const startDraftButton = document.getElementById('startDraftButton');
+            if (startDraftButton) {
+                startDraftButton.style.display = 'block';
+                console.log('Start Draft button displayed for league owner');
+            } else {
+                console.error('Start Draft button element not found');
+            }
+        } else {
+            console.log('User is not the league owner');
+        }
+    } catch (error) {
+        console.error('Error fetching league details:', error);
+        return;
+    }
+
     const ws = new WebSocket(`ws://localhost:8080?userId=${userId}`);
     let draftOrder = [];
     let availablePlayers = [];
+    let currentDraftIndex = 0;
     let draftTimer;
 
+    // Event listener for the "Start Draft" button
+    document.getElementById('startDraftButton').addEventListener('click', () => {
+        ws.send(JSON.stringify({ type: 'startDraft', leagueId }));
+    });
+
     ws.onmessage = (event) => {
-        console.log('Received message:', event.data);
         try {
             const message = JSON.parse(event.data);
-            console.log('Parsed message:', message);
     
             switch (message.type) {
                 case 'userListUpdate':
                     updateUserListUI(message.users);
                     break;
                 case 'draftUpdate':
-                    updateDraftOrderUI(message.draftOrder);
-                    updateAvailablePlayersUI(message.availablePlayers);
+                    const { draftOrder, availablePlayers } = message;
+                    if (Array.isArray(draftOrder)) {
+                        updateDraftOrderUI(draftOrder);
+                    } else {
+                        console.warn('Received draft order is not an array:', draftOrder);
+                    }
+                    updateAvailablePlayersUI(availablePlayers);
+                    break;
+                case 'startDraft':
+                    startDraft();
                     break;
                 case 'welcome':
                     console.log(message.message);
@@ -62,24 +100,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Failed to process WebSocket message:', error);
         }
-    };
+    };    
 
     async function fetchDraftDetails() {
         try {
+            // Fetch available players
             const response = await fetch(`/api/leagues/${leagueId}/available-players`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-    
             const availablePlayers = await response.json();
-            console.log('Fetched available players:', availablePlayers);
+
+            // Construct draft order URL
+            const draftOrderUrl = `/api/leagues/${leagueId}/draft-order`;
+            console.log(`Draft Order URL: ${draftOrderUrl}`)
+    
+            // Fetch draft order
+            const draftOrderResponse = await fetch(draftOrderUrl, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!draftOrderResponse.ok) {
+                throw new Error(`HTTP error! Status: ${draftOrderResponse.status}`);
+            }
+
+            const draftOrderData = await draftOrderResponse.json();
+            const draftOrder = Array.isArray(draftOrderData) ? draftOrderData : [];
+
+            console.log('Draft Order:', draftOrder);
     
             ws.send(JSON.stringify({
                 type: 'draftUpdate',
-                draftOrder, // Ensure draftOrder is also populated if needed
+                draftOrder,
                 availablePlayers
             }));
     
-            updateDraftOrderUI(draftOrder); // Ensure draftOrder is updated if needed
+            updateDraftOrderUI(draftOrder);
             updateAvailablePlayersUI(availablePlayers);
         } catch (error) {
             console.error('Failed to fetch draft details:', error);
@@ -87,13 +142,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }    
 
     function updateDraftOrderUI(draftOrder) {
-        const draftOrderElement = document.getElementById('draft-order');
-        if (draftOrderElement) {
-            draftOrderElement.innerHTML = draftOrder.map(order => `<li>${order.userId}</li>`).join('');
-            console.log('Updated draft order UI:', draftOrder);
-        } else {
-            console.error('Draft order element not found');
-        }
+        const draftOrderContainer = document.getElementById('draftOrderContainer');
+        draftOrderContainer.innerHTML = '';  // Clear existing content
+    
+        draftOrder.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.textContent = `${user.username}`;
+            draftOrderContainer.appendChild(userElement);
+        });
     }
 
     function updateAvailablePlayersUI(availablePlayers) {
@@ -116,40 +172,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('User list element not found');
             console.log('Users:', users);
         }
-    }
+    } 
 
-    function draftPlayer(playerId) {
-        const button = document.querySelector(`button[data-player-id="${playerId}"]`);
-        if (button) {
-            button.disabled = true;
-        }
-
-        fetch('/api/draft-player', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ userId, playerId, leagueId }),
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.status === 'success') {
-                fetchDraftDetails();
-            } else {
-                console.error('Failed to draft player');
-                if (button) {
-                    button.disabled = false;
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error drafting player:', error);
-            if (button) {
-                button.disabled = false;
+    function startDraft(leagueId) {
+        console.log('Starting draft for league:', leagueId);
+        const response = { type: 'startDraft' };
+    
+        // Ensure the draft order is fetched and updated in the server
+    
+        // Broadcast the start draft message to all clients
+        clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(response));
             }
         });
-    }    
+    }
 
     function updateDraftTimer() {
         let timerElement = document.getElementById('draft-timer');
@@ -175,7 +212,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('end-draft-btn').addEventListener('click', endDraft);
 
-    await fetchDraftDetails();
+    // Initialize WebSocket and fetch initial draft details
+    ws.onopen = () => {
+        console.log('WebSocket connection opened');
+    };
 
-    draftTimer = setInterval(updateDraftTimer, 1000);
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket connection closed');
+    };
+
+    await fetchDraftDetails();
 });

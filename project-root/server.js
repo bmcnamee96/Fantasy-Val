@@ -104,12 +104,15 @@ const clients = new Map();
 wss.on('connection', (ws, req) => {
     console.log('New client connected');
 
-    // Extract user ID from query parameters or headers
+    // Extract user ID and league ID
     const userId = new URL(req.url, `ws://${req.headers.host}`).searchParams.get('userId');
+    const leagueId = new URL(req.url, `ws://${req.headers.host}`).searchParams.get('leagueId');
 
-    if (userId) {
-        clients.set(userId, ws);
-        broadcastUserList();
+    if (userId && leagueId) {
+      clients.set(userId, { ws, leagueId });
+      broadcastUserList();
+    } else {
+        console.error('User ID or League ID missing');
     }
 
     // Send a welcome message to the new client
@@ -123,13 +126,23 @@ wss.on('connection', (ws, req) => {
   
           switch (data.type) {
               case 'draftUpdate':
-                  broadcastDraftUpdate(data);
-                  break;
+                broadcastDraftUpdate(data);
+                break;
               case 'userConnected':
-                  // Handle user connection logic if needed
-                  break;
-              default:
-                  console.warn('Unknown message type:', data.type);
+                // Handle user connection logic if needed
+                break;
+              case 'startDraft':
+                // Extract leagueId from the message and start the draft
+                const { leagueId } = data;
+                const client = Array.from(clients.values()).find(client => client.leagueId === leagueId);
+                if (client) {
+                    startDraft(client.leagueId);
+                } else {
+                    console.error('Client not found for league:', leagueId);
+                }
+                break;
+            default:
+                console.warn('Unknown message type:', data.type);
           }
       } catch (error) {
           console.error('Error processing message:', error);
@@ -172,27 +185,83 @@ function broadcastUserList() {
     });
 }
 
+function startDraft(leagueId) {
+  console.log('Starting draft for league:', leagueId);
+
+  // Fetch the users in the league
+  pool.query('SELECT user_id FROM league_users WHERE league_id = $1', [leagueId])
+    .then(result => {
+      const users = result.rows.map(row => row.user_id);
+
+      // Randomize the draft order
+      const draftOrder = users.sort(() => Math.random() - 0.5);
+
+      console.log('Draft Order:', draftOrder);
+
+      // Insert or update the draft order in the draft_orders table
+      return pool.query(
+        'INSERT INTO draft_orders (league_id, draft_order) VALUES ($1, $2) ON CONFLICT (league_id) DO UPDATE SET draft_order = EXCLUDED.draft_order',
+        [leagueId, JSON.stringify(draftOrder)]
+      );
+    })
+    .then(() => {
+      // Notify all clients to start the draft
+      const response = { type: 'startDraft', leagueId };
+      clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(response));
+        }
+      });
+    })
+    .catch(error => {
+      console.error('Error starting draft:', error);
+    });
+}
+
 console.log('WebSocket server is running on ws://localhost:8080');
 // #endregion
 
-// Draft order and status
-app.get('/api/leagues/:leagueId/draft-details', authenticateToken, async (req, res) => {
+// Get league details
+app.get('/api/leagues/:leagueId', authenticateToken, async (req, res) => {
   const { leagueId } = req.params;
-  console.log('League ID:', leagueId);
 
   try {
-    // Fetch draft order
-    const orderResult = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
-    const draftStatus = orderResult.rows;
+      // Fetch league details
+      const result = await pool.query('SELECT * FROM leagues WHERE league_id = $1', [leagueId]);
+      const league = result.rows[0];
 
-    // Fetch drafted players
-    const draftedResult = await pool.query('SELECT * FROM drafted_players WHERE league_id = $1', [leagueId]);
-    const draftedPlayers = draftedResult.rows;
-
-    res.json({ draftStatus, draftedPlayers });
+      if (league) {
+          res.json(league);
+      } else {
+          res.status(404).json({ error: 'League not found' });
+      }
   } catch (error) {
-    console.error('Error fetching draft details:', error);
-    res.status(500).json({ error: 'Failed to fetch draft details' });
+      console.error('Error fetching league details:', error);
+      res.status(500).json({ error: 'Failed to fetch league details' });
+  }
+});
+
+// Get draft order for a specific league
+app.get('/api/leagues/:leagueId/draft-order', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  console.log(`Fetching draft order for league: ${leagueId}`);
+
+  try {
+      const result = await pool.query('SELECT draft_order FROM draft_orders WHERE league_id = $1', [leagueId]);
+      console.log('Query result:', result.rows);
+
+      if (result.rows.length === 0) {
+          console.log('Draft order not found');
+          return res.status(404).json({ error: 'Draft order not found' });
+      }
+
+      const draftOrder = result.rows[0].draft_order;
+      console.log('Draft order:', draftOrder);
+
+      res.json(draftOrder);
+  } catch (error) {
+      console.error('Error fetching draft order:', error);
+      res.status(500).json({ error: 'Failed to fetch draft order' });
   }
 });
 
@@ -222,28 +291,23 @@ app.post('/api/draft-player', authenticateToken, async (req, res) => {
   const { userId, playerId, leagueId } = req.body;
 
   try {
-    // Update draft status
-    await pool.query('UPDATE draft_status SET current_drafter = $1 WHERE league_id = $2', [userId, leagueId]);
+      // Insert drafted player
+      await pool.query(
+          'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
+          [leagueId, playerId, userId]
+      );
 
-    // Insert drafted player
-    await pool.query(
-      'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
-      [leagueId, playerId, userId]
-    );
+      // Update league_team_players table
+      await pool.query(
+          'INSERT INTO league_team_players (league_team_id, player_id) VALUES ((SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2), $3)',
+          [leagueId, userId, playerId]
+      );
 
-    // Remove player from draft pool (if necessary)
-    await pool.query('DELETE FROM player_pool WHERE player_id = $1 AND league_id = $2', [playerId, leagueId]);
-
-    res.json({ status: 'success' });
+      res.json({ status: 'success' });
   } catch (error) {
-    console.error('Error drafting player:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to draft player' });
+      console.error('Error drafting player:', error);
+      res.status(500).json({ status: 'error', message: 'Failed to draft player' });
   }
-});
-
-app.use((req, res, next) => {
-  console.log('Authorization header:', req.headers['authorization']);
-  next();
 });
 
 // Endpoint to register a new user
@@ -443,6 +507,14 @@ app.post('/api/leagues', authenticateToken, async (req, res) => {
 
     const league_id = newLeagueResult.rows[0].league_id;
 
+    // Initialize the draft order with an empty array or default value
+    const initialDraftOrder = [];
+
+    await pool.query(
+      'INSERT INTO draft_orders (league_id, draft_order) VALUES ($1, $2)',
+      [league_id, JSON.stringify(initialDraftOrder)]
+    );
+
     // Commit the transaction
     await pool.query('COMMIT');
 
@@ -454,6 +526,7 @@ app.post('/api/leagues', authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to create league', error: error.message });
   }
 });
+
 
 // Join League Endpoint
 app.post('/api/join-league', authenticateToken, async (req, res) => {
