@@ -16,7 +16,7 @@ const leagueRoutes = require('./routes/leagueRoutes.js');
 const jwt = require('jsonwebtoken');
 const authenticateToken = require('./middleware/authMiddleware'); // Adjust path if necessary
 const leaguesRouter = require('./routes/leagueRoutes');
-
+const WebSocket = require('ws');
 
 const app = express();
 const port = 3000;
@@ -93,24 +93,65 @@ app.use((err, req, res, next) => {
 // #endregion
 
 // #region WebSocket
-const WebSocket = require('ws');
+// Define helper functions
 
-// Create a WebSocket server
+const TURN_DURATION = 5000; // 15 seconds
+const TIME_UPDATE_INTERVAL = 1000; // Update every second
+
+/**
+ * Generates a snake draft order based on the users array.
+ * @param {Array} users - Array of user IDs.
+ * @returns {Array} - The snake draft order.
+ */
+function generateSnakeDraftOrder(users) {
+  const draftOrder = [];
+  const numUsers = users.length;
+
+  // Determine the number of rounds
+  const numRounds = 7; // Assuming each team drafts 7 players
+
+  for (let round = 0; round < numRounds; round++) {
+      if (round % 2 === 0) {
+          // Normal order for odd rounds
+          for (let i = 0; i < numUsers; i++) {
+              draftOrder.push(users[i]);
+          }
+      } else {
+          // Reverse order for even rounds
+          for (let i = numUsers - 1; i >= 0; i--) {
+              draftOrder.push(users[i]);
+          }
+      }
+  }
+
+  return draftOrder;
+}
+
+// Set up WebSocket server
 const wss = new WebSocket.Server({ port: 8080 });
 
 // Store connected clients and user IDs
 const clients = new Map();
+let draftTimers = {}; // Store timers for each user
 
 wss.on('connection', (ws, req) => {
     console.log('New client connected');
 
-    // Extract user ID and league ID
-    const userId = new URL(req.url, `ws://${req.headers.host}`).searchParams.get('userId');
-    const leagueId = new URL(req.url, `ws://${req.headers.host}`).searchParams.get('leagueId');
+    // Log the full URL and query parameters
+    console.log('Request URL:', req.url);
+
+    // Extract user ID and league ID from query parameters
+    const urlParams = new URLSearchParams(req.url.split('?')[1]);
+    const userId = urlParams.get('userId');
+    const leagueId = urlParams.get('leagueId');
+
+    console.log('Extracted userId:', userId);
+    console.log('Extracted leagueId:', leagueId);
 
     if (userId && leagueId) {
-      clients.set(userId, { ws, leagueId });
-      broadcastUserList();
+        // Store the WebSocket connection and league ID
+        clients.set(userId, { ws, leagueId });
+        broadcastUserList();
     } else {
         console.error('User ID or League ID missing');
     }
@@ -120,34 +161,33 @@ wss.on('connection', (ws, req) => {
 
     // Handle incoming messages
     ws.on('message', (message) => {
-      try {
-          const data = JSON.parse(message);
-          console.log('Received message from client:', data);
-  
-          switch (data.type) {
-              case 'draftUpdate':
-                broadcastDraftUpdate(data);
-                break;
-              case 'userConnected':
-                // Handle user connection logic if needed
-                break;
-              case 'startDraft':
-                // Extract leagueId from the message and start the draft
-                const { leagueId } = data;
-                const client = Array.from(clients.values()).find(client => client.leagueId === leagueId);
-                if (client) {
-                    startDraft(client.leagueId);
-                } else {
-                    console.error('Client not found for league:', leagueId);
-                }
-                break;
-            default:
-                console.warn('Unknown message type:', data.type);
-          }
-      } catch (error) {
-          console.error('Error processing message:', error);
-      }
-  });
+        try {
+            const data = JSON.parse(message);
+            console.log('Received message from client:', data);
+
+            switch (data.type) {
+                case 'draftUpdate':
+                    broadcastDraftUpdate(data);
+                    break;
+                case 'userConnected':
+                    // Handle user connection logic if needed
+                    break;
+                case 'startDraft':
+                    const leagueId = data.leagueId;
+                    const client = Array.from(clients.values()).find(client => client.leagueId === leagueId);
+                    if (client) {
+                        startDraft(client.leagueId);
+                    } else {
+                        console.error('Client not found for league:', leagueId);
+                    }
+                    break;
+                default:
+                    console.warn('Unknown message type:', data.type);
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
+        }
+    });
 
     ws.on('close', () => {
         console.log('Client disconnected');
@@ -161,16 +201,16 @@ wss.on('connection', (ws, req) => {
 });
 
 function broadcastDraftUpdate(data) {
-  const { draftOrder, availablePlayers } = data;
-  console.log('Broadcasting draft update:', { draftOrder, availablePlayers });
+    const { draftOrder, availablePlayers } = data;
+    console.log('Broadcasting draft update:', { draftOrder, availablePlayers });
 
-  const response = { type: 'draftUpdate', draftOrder, availablePlayers };
+    const response = { type: 'draftUpdate', draftOrder, availablePlayers };
 
-  clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(response));
-      }
-  });
+    clients.forEach((client) => {
+        if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(JSON.stringify(response));
+        }
+    });
 }
 
 function broadcastUserList() {
@@ -179,43 +219,113 @@ function broadcastUserList() {
 
     // Broadcast the user list to all connected clients
     clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(message);
+        if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(message);
         }
     });
 }
 
-function startDraft(leagueId) {
-  console.log('Starting draft for league:', leagueId);
-
-  // Fetch the users in the league
-  pool.query('SELECT user_id FROM league_users WHERE league_id = $1', [leagueId])
-    .then(result => {
-      const users = result.rows.map(row => row.user_id);
-
-      // Randomize the draft order
-      const draftOrder = users.sort(() => Math.random() - 0.5);
-
-      console.log('Draft Order:', draftOrder);
-
-      // Insert or update the draft order in the draft_orders table
-      return pool.query(
-        'INSERT INTO draft_orders (league_id, draft_order) VALUES ($1, $2) ON CONFLICT (league_id) DO UPDATE SET draft_order = EXCLUDED.draft_order',
-        [leagueId, JSON.stringify(draftOrder)]
-      );
-    })
-    .then(() => {
-      // Notify all clients to start the draft
-      const response = { type: 'startDraft', leagueId };
-      clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(response));
+function broadcastToLeague(leagueId, message) {
+    clients.forEach((client) => {
+        if (client.ws.readyState === WebSocket.OPEN && client.leagueId === leagueId) {
+            client.ws.send(JSON.stringify(message));
         }
-      });
-    })
-    .catch(error => {
-      console.error('Error starting draft:', error);
     });
+}
+
+// Initialize a timer for each user's turn
+function startUserTurn(leagueId, userId, turnIndex) {
+    console.log(`Starting turn for user ${userId} in league ${leagueId}`);
+
+    // Clear any existing timer for this user
+    if (draftTimers[userId]) {
+        clearTimeout(draftTimers[userId]);
+    }
+
+    // Notify clients about the current turn and the remaining time
+    const response = { type: 'userTurn', userId, turnIndex, remainingTime: TURN_DURATION / 1000 };
+    broadcastToLeague(leagueId, response);
+
+    // Start a countdown timer for the turn
+    draftTimers[userId] = setTimeout(() => {
+        console.log(`Time's up for user ${userId} in league ${leagueId}`);
+        // Move to the next user
+        moveToNextUser(leagueId);
+    }, TURN_DURATION);
+
+    // Periodically broadcast the remaining time
+    const startTime = Date.now();
+    const intervalId = setInterval(() => {
+        const timeLeft = Math.max(0, Math.ceil((TURN_DURATION - (Date.now() - startTime)) / 1000));
+        broadcastToLeague(leagueId, { type: 'timeUpdate', remainingTime: timeLeft });
+
+        if (timeLeft <= 0) {
+            clearInterval(intervalId);
+        }
+    }, TIME_UPDATE_INTERVAL);
+}
+
+function moveToNextUser(leagueId) {
+    // Fetch the current draft status
+    pool.query('SELECT current_turn_index, draft_order FROM draft_status WHERE league_id = $1', [leagueId])
+        .then(result => {
+            const { current_turn_index, draft_order } = result.rows[0];
+            const draftOrder = JSON.parse(draft_order);
+
+            // Calculate the next turn index
+            const nextTurnIndex = (current_turn_index + 1) % draftOrder.length;
+
+            // Update the draft status with the new turn index
+            return pool.query('UPDATE draft_status SET current_turn_index = $1 WHERE league_id = $2', [nextTurnIndex, leagueId])
+                .then(() => {
+                    const nextUserId = draftOrder[nextTurnIndex];
+                    startUserTurn(leagueId, nextUserId, nextTurnIndex);
+                });
+        })
+        .catch(error => {
+            console.error('Error moving to next user:', error);
+        });
+}
+
+// Server-side function to start the draft
+function startDraft(leagueId) {
+    console.log('Starting draft for league:', leagueId);
+
+    let draftOrder = [];
+
+    // Fetch the users in the league
+    pool.query('SELECT user_id FROM user_leagues WHERE league_id = $1', [leagueId])
+        .then(result => {
+            const users = result.rows.map(row => row.user_id);
+            console.log('League users:', users);
+
+            // Generate the snake draft order
+            draftOrder = generateSnakeDraftOrder(users);
+
+            console.log('Draft Order:', draftOrder);
+
+            // Insert or update the draft order in the draft_orders table
+            return pool.query(
+                'INSERT INTO draft_orders (league_id, draft_order) VALUES ($1, $2) ON CONFLICT (league_id) DO UPDATE SET draft_order = EXCLUDED.draft_order',
+                [leagueId, JSON.stringify(draftOrder)]
+            );
+        })
+        .then(() => {
+            // Update the draft status to indicate that the draft has started
+            return pool.query(
+                'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, TRUE, FALSE) ON CONFLICT (league_id) DO UPDATE SET draft_started = TRUE, current_turn_index = EXCLUDED.current_turn_index',
+                [leagueId, 0] // Assuming the draft starts with turn index 0
+            );
+        })
+        .then(() => {
+            // Notify all clients to start the draft
+            const response = { type: 'startDraft', draftOrder };
+            console.log('Sending startDraft message to league:', leagueId);
+            broadcastToLeague(leagueId, response);
+        })
+        .catch(error => {
+            console.error('Error starting draft:', error);
+        });
 }
 
 console.log('WebSocket server is running on ws://localhost:8080');
@@ -286,6 +396,36 @@ app.get('/api/leagues/:leagueId/available-players', authenticateToken, async (re
   }
 });
 
+// Update draft status for a specific league
+app.post('/api/leagues/:leagueId/draft-status', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  const { currentTurnIndex, draftStarted, draftEnded } = req.body;
+
+  try {
+      // Check if draft status exists
+      const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
+
+      if (existingStatus.rows.length === 0) {
+          // Insert new draft status if not exists
+          await pool.query(
+              'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)',
+              [leagueId, currentTurnIndex, draftStarted, draftEnded]
+          );
+      } else {
+          // Update existing draft status
+          await pool.query(
+              'UPDATE draft_status SET current_turn_index = $1, draft_started = $2, draft_ended = $3 WHERE league_id = $4',
+              [currentTurnIndex, draftStarted, draftEnded, leagueId]
+          );
+      }
+
+      res.status(200).json({ message: 'Draft status updated successfully' });
+  } catch (error) {
+      console.error('Error updating draft status:', error);
+      res.status(500).json({ error: 'Failed to update draft status' });
+  }
+});
+
 // Draft a player
 app.post('/api/draft-player', authenticateToken, async (req, res) => {
   const { userId, playerId, leagueId } = req.body;
@@ -307,6 +447,23 @@ app.post('/api/draft-player', authenticateToken, async (req, res) => {
   } catch (error) {
       console.error('Error drafting player:', error);
       res.status(500).json({ status: 'error', message: 'Failed to draft player' });
+  }
+});
+
+// End the draft
+app.post('/api/leagues/:leagueId/end-draft', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+      await pool.query(
+          'UPDATE draft_status SET draft_ended = TRUE WHERE league_id = $1',
+          [leagueId]
+      );
+
+      res.status(200).json({ message: 'Draft ended successfully' });
+  } catch (error) {
+      console.error('Error ending the draft:', error);
+      res.status(500).json({ error: 'Failed to end the draft' });
   }
 });
 

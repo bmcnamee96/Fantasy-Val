@@ -54,6 +54,14 @@ CREATE TABLE IF NOT EXISTS draft_orders (
     PRIMARY KEY (league_id)
 );
 
+CREATE TABLE IF NOT EXISTS draft_status (
+    league_id INT PRIMARY KEY,      -- References the league for which the draft is happening
+    current_turn_index INT NOT NULL DEFAULT 0,  -- Index of the current user’s turn in the draft order
+    draft_started BOOLEAN NOT NULL DEFAULT FALSE,  -- Indicates if the draft has started
+    draft_ended BOOLEAN NOT NULL DEFAULT FALSE,    -- Indicates if the draft has ended
+    FOREIGN KEY (league_id) REFERENCES leagues(league_id) -- Assuming there's a 'leagues' table with 'id' as its primary key
+);
+
 -- players on each team table
 CREATE TABLE IF NOT EXISTS league_team_players (
     league_team_player_id SERIAL PRIMARY KEY,

@@ -23,6 +23,9 @@
         #startDraftButton {
             display: none;
         }
+        #draftOrderContainer{
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -33,16 +36,21 @@
         <!-- Start Draft Button -->
         <button id="startDraftButton">Start Draft</button>
 
+        <div id="draftTimer">Draft Timer: 00:00</div>
+
         <div>
-            <h2>Draft Order</h2>
             <ul id="draftOrderContainer"></ul>
+        </div>
+        <!-- Ensure this element exists in your HTML -->
+        <div id="current-turn" class="alert alert-info">
+            <strong>Current Turn:</strong> <span id="current-turn-user">Waiting for draft to start...</span>
         </div>
         <h2>Available Players</h2>
         <div id="available-players" class="row"></div>
         <!-- Available players will be inserted here -->
-        <div>
-            <h2>Draft Timer: <span id="draft-timer">10000</span> seconds</h2>
-        </div>
+
+
+
         <button id="end-draft-btn">End Draft</button>
     </div>
     <script src="js/draft.js"></script>

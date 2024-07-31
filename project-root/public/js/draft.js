@@ -60,15 +60,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const ws = new WebSocket(`ws://localhost:8080?userId=${userId}`);
+    const ws = new WebSocket(`ws://localhost:8080/?userId=${userId}&leagueId=${leagueId}`);
+    const draftInterval = 5000; // Interval time in milliseconds (e.g., 60000ms = 1 minute)
+    let currentTurnIndex = 0; // Initialize currentTurnIndex
     let draftOrder = [];
-    let availablePlayers = [];
-    let currentDraftIndex = 0;
-    let draftTimer;
+    let draftTimer; // Global variable to hold the timer
+    let remainingTime = 0; // Global variable to hold the remaining time for the current turn
 
     // Event listener for the "Start Draft" button
     document.getElementById('startDraftButton').addEventListener('click', () => {
         ws.send(JSON.stringify({ type: 'startDraft', leagueId }));
+    });
+
+    // Event listener for the "End Draft" button
+    document.getElementById('end-draft-btn').addEventListener('click', async () => {
+        try {
+            // Notify server to end the draft
+            await fetch(`/api/leagues/${leagueId}/end-draft`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            // Handle end draft UI
+            endDraft();
+        } catch (error) {
+            console.error('Error ending draft:', error);
+        }
     });
 
     ws.onmessage = (event) => {
@@ -80,8 +100,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     updateUserListUI(message.users);
                     break;
                 case 'draftUpdate':
-                    const { draftOrder, availablePlayers } = message;
-                    if (Array.isArray(draftOrder)) {
+                    const { draftOrder: newDraftOrder, availablePlayers } = message;
+                    if (Array.isArray(newDraftOrder)) {
+                        draftOrder = newDraftOrder; // Update draftOrder with the new data
                         updateDraftOrderUI(draftOrder);
                     } else {
                         console.warn('Received draft order is not an array:', draftOrder);
@@ -89,7 +110,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     updateAvailablePlayersUI(availablePlayers);
                     break;
                 case 'startDraft':
-                    startDraft();
+                    startDraft(message);
+                    break;
+                case 'endDraft':
+                    endDraft();
+                    break;
+                case 'userTurn':
+                    handleUserTurn(message);
+                    break;
+                case 'timeUpdate':
+                    handleTimeUpdate(message);
                     break;
                 case 'welcome':
                     console.log(message.message);
@@ -110,12 +140,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             const availablePlayers = await response.json();
 
-            // Construct draft order URL
-            const draftOrderUrl = `/api/leagues/${leagueId}/draft-order`;
-            console.log(`Draft Order URL: ${draftOrderUrl}`)
-    
             // Fetch draft order
-            const draftOrderResponse = await fetch(draftOrderUrl, {
+            const draftOrderResponse = await fetch(`/api/leagues/${leagueId}/draft-order`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -124,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const draftOrderData = await draftOrderResponse.json();
-            const draftOrder = Array.isArray(draftOrderData) ? draftOrderData : [];
+            draftOrder = Array.isArray(draftOrderData) ? draftOrderData : [];
 
             console.log('Draft Order:', draftOrder);
     
@@ -145,9 +171,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const draftOrderContainer = document.getElementById('draftOrderContainer');
         draftOrderContainer.innerHTML = '';  // Clear existing content
     
-        draftOrder.forEach(user => {
+        draftOrder.forEach(userId => {
             const userElement = document.createElement('div');
-            userElement.textContent = `${user.username}`;
+            userElement.textContent = `User ID: ${userId}`;  // Display userId
             draftOrderContainer.appendChild(userElement);
         });
     }
@@ -174,43 +200,86 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } 
 
-    function startDraft(leagueId) {
-        console.log('Starting draft for league:', leagueId);
-        const response = { type: 'startDraft' };
+    function startDraft(data) {
+        if (!data || !data.draftOrder) {
+            console.error('Invalid draft data:', data);
+            return;
+        }
     
-        // Ensure the draft order is fetched and updated in the server
+        console.log('Draft has started.');
     
-        // Broadcast the start draft message to all clients
-        clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(response));
-            }
-        });
+        draftOrder = data.draftOrder || [];
+        if (draftOrder.length === 0) {
+            console.error('No draft order provided.');
+            return;
+        }
+    
+        currentTurnIndex = 0;
+        remainingTime = draftInterval / 1000; // Reset remaining time
+        startDraftTimer();
+    }    
+
+    function startDraftTimer() {
+        console.log('Starting draft timer...');
+        if (draftTimer) {
+            clearInterval(draftTimer);
+            console.log('Previous draft timer cleared');
+        }
+        draftTimer = setInterval(() => {
+            handleDraftTurn();
+            remainingTime = draftInterval / 1000; // Reset remaining time
+        }, draftInterval);
     }
 
-    function updateDraftTimer() {
-        let timerElement = document.getElementById('draft-timer');
-        if (timerElement) {
-            let currentTime = parseInt(timerElement.textContent);
+    function handleDraftTurn() {
+        console.log('Handling draft turn...');
+        if (draftOrder.length === 0) {
+            console.error('Draft order is empty');
+            return;
+        }
+      
+        const currentUserId = draftOrder[currentTurnIndex];
+        console.log(`Current Turn: User ID ${currentUserId}`);
+        updateCurrentTurnUI(currentUserId);
+    
+        // Move to the next user
+        currentTurnIndex = (currentTurnIndex + 1) % draftOrder.length;
+    }
 
-            if (currentTime <= 0) {
-                // Handle timer expiration logic
-                endDraft(); // Example
-            } else {
-                timerElement.textContent = currentTime - 1;
-            }
+    function handleUserTurn(message) {
+        if (!message.userId || !message.turnIndex) {
+            console.error('Invalid user turn message:', message);
+            return;
+        }
+    
+        console.log(`Handling turn for user ${message.userId}`);
+        updateCurrentTurnUI(message.userId);
+    }
+
+    function handleTimeUpdate(message) {
+        if (!message.remainingTime) {
+            console.error('Invalid time update message:', message);
+            return;
+        }
+    
+        remainingTime = message.remainingTime;
+        updateCurrentTurnUI();
+    }
+
+    function updateCurrentTurnUI(userId) {
+        const currentTurnElement = document.getElementById('current-turn-user');
+        if (currentTurnElement) {
+            currentTurnElement.textContent = userId ? `User ID: ${userId}` : 'Waiting for draft to start...';
         } else {
-            console.error('Draft timer element not found');
+            console.error('Current turn element not found');
         }
     }
 
     function endDraft() {
         clearInterval(draftTimer);
         alert('Draft has ended.');
-        window.close();
+        window.close(); // Or any other logic to end the draft
     }
-
-    document.getElementById('end-draft-btn').addEventListener('click', endDraft);
 
     // Initialize WebSocket and fetch initial draft details
     ws.onopen = () => {
