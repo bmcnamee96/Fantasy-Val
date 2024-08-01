@@ -14,3 +14,7 @@ SET current_turn_index = 0  -- Example: move to the next user's turn
 WHERE league_id = 3;
 
 SELECT * FROM draft_status;
+
+UPDATE draft_status
+SET current_turn_index = 5, draft_started = TRUE, draft_ended = FALSE
+WHERE league_id = 3;

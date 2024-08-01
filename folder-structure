@@ -1,0 +1,48 @@
+project-root/
+│
+├── config/
+│    └── database.js
+│
+├── controllers/
+│    └── leagueController.js
+│ 
+├── middleware/
+│    └── authMiddleware.js
+│ 
+├── models/
+│    └── leagues.js
+│
+├── node_modules/
+│
+├── public/
+│     ├── css/
+│     ├── images/
+│     ├── js/
+│     │    ├── draft.js
+│     │    ├── league-dashboard.js
+│     │    └── scripts.js
+│     ├── create-league.html
+│     ├── discussion.html
+│     ├── draft.html
+│     ├── index.html
+│     ├── join-league.html
+│     ├── league-dashboard.html
+│     ├── leagues.html
+│     ├── my-dashboard.html
+│     └── player-stats.html
+│
+├── routes/
+│    ├── authRoutes.js
+│    ├── valStatsRoutes.js
+│    ├── leagueRoutes.js
+│    └── draftRoutes.js
+│
+├── services/
+│    └── emailService.js
+│
+├── utils/
+│    └── someUtilityFile.js
+│
+├── server.js
+├── package-lock.json
+└── package.json

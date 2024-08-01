@@ -291,7 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // #endregion
 
-    // #region Draft
+    // #region Enter Draft
     // Open Draft
     // Function to open the draft
     function openDraft() {

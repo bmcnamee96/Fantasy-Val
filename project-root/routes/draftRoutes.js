@@ -83,7 +83,7 @@ router.get('/leagues/:leagueId', authenticateToken, async (req, res) => {
   }
 });
 
-// Get available players for a specific league
+// Get available players
 router.get('/leagues/:leagueId/available-players', authenticateToken, async (req, res) => {
     const { leagueId } = req.params;
   
@@ -104,74 +104,91 @@ router.get('/leagues/:leagueId/available-players', authenticateToken, async (req
     }
 });
   
-// Update draft status for a specific league
+// Update draft status
 router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, res) => {
-const { leagueId } = req.params;
-const { currentTurnIndex, draftStarted, draftEnded } = req.body;
+    const { leagueId } = req.params;
+    const { currentTurnIndex, draftStarted, draftEnded } = req.body;
 
-try {
-    // Check if draft status exists
-    const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
+    console.log('Request body:', { currentTurnIndex, draftStarted, draftEnded });
 
-    if (existingStatus.rows.length === 0) {
-        // Insert new draft status if not exists
-        await pool.query(
-            'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)',
-            [leagueId, currentTurnIndex, draftStarted, draftEnded]
-        );
-    } else {
-        // Update existing draft status
-        await pool.query(
-            'UPDATE draft_status SET current_turn_index = $1, draft_started = $2, draft_ended = $3 WHERE league_id = $4',
-            [currentTurnIndex, draftStarted, draftEnded, leagueId]
-        );
+    if (typeof currentTurnIndex !== 'number' || typeof draftStarted !== 'boolean' || typeof draftEnded !== 'boolean') {
+        return res.status(400).json({ error: 'Invalid input data' });
     }
 
-    res.status(200).json({ message: 'Draft status updated successfully' });
-} catch (error) {
-    console.error('Error updating draft status:', error);
-    res.status(500).json({ error: 'Failed to update draft status' });
-}
+    try {
+        const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
+
+        if (existingStatus.rows.length === 0) {
+            console.log('Inserting new draft status');
+            await pool.query(
+                'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)',
+                [leagueId, currentTurnIndex, draftStarted, draftEnded]
+            );
+        } else {
+            console.log('Updating existing draft status');
+            await pool.query(
+                'UPDATE draft_status SET current_turn_index = $1, draft_started = $2, draft_ended = $3 WHERE league_id = $4',
+                [currentTurnIndex, draftStarted, draftEnded, leagueId]
+            );
+        }
+
+        const updatedStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
+        console.log('Updated draft status:', updatedStatus.rows);
+
+        // Calculate the current round
+        const roundNumber = Math.floor(currentTurnIndex / 7) + 1;
+        console.log(`League ${leagueId}: Current Round ${roundNumber}, Current Turn Index ${currentTurnIndex}`);
+
+        res.status(200).json({ message: 'Draft status updated successfully', round: roundNumber });
+    } catch (error) {
+        console.error('Error updating draft status:', error);
+        res.status(500).json({ error: 'Failed to update draft status' });
+    }
 });
   
 // Draft a player
 router.post('/draft-player', authenticateToken, async (req, res) => {
-const { userId, playerId, leagueId } = req.body;
+    const { userId, playerId, leagueId } = req.body;
 
-try {
-    // Insert drafted player
-    await pool.query(
-        'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
-        [leagueId, playerId, userId]
-    );
+    try {
+        // Insert drafted player
+        await pool.query(
+            'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
+            [leagueId, playerId, userId]
+        );
 
-    // Update league_team_players table
-    await pool.query(
-        'INSERT INTO league_team_players (league_team_id, player_id) VALUES ((SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2), $3)',
-        [leagueId, userId, playerId]
-    );
+        // Update league_team_players table
+        await pool.query(
+            'INSERT INTO league_team_players (league_team_id, player_id) VALUES ((SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2), $3)',
+            [leagueId, userId, playerId]
+        );
 
-    res.json({ status: 'success' });
-} catch (error) {
-    console.error('Error drafting player:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to draft player' });
-}
+        res.json({ status: 'success' });
+    } catch (error) {
+        console.error('Error drafting player:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to draft player' });
+    }
 });
   
+// End Draft
 router.post('/leagues/:leagueId/end-draft', authenticateToken, async (req, res) => {
-const { leagueId } = req.params;
+    const { leagueId } = req.params;
 
-try {
-    await pool.query(
-        'UPDATE draft_status SET draft_ended = TRUE WHERE league_id = $1',
-        [leagueId]
-    );
+    try {
+        await pool.query(
+            'UPDATE draft_status SET draft_ended = TRUE WHERE league_id = $1',
+            [leagueId]
+        );
 
-    res.status(200).json({ message: 'Draft ended successfully' });
-} catch (error) {
-    console.error('Error ending the draft:', error);
-    res.status(500).json({ error: 'Failed to end the draft' });
-}
+        // Notify all clients that the draft has ended
+        broadcastToLeague(leagueId, { type: 'draftEnded' });
+
+        res.status(200).json({ message: 'Draft ended successfully' });
+    } catch (error) {
+        console.error('Error ending the draft:', error);
+        res.status(500).json({ error: 'Failed to end the draft' });
+    }
 });
+
 
 module.exports = router;

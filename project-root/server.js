@@ -72,7 +72,7 @@ app.use((err, req, res, next) => {
 // #endregion
 
 // #region WebSocket
-// Define helper functions
+// #region helper functions
 
 const TURN_DURATION = 5000; // 15 seconds
 const TIME_UPDATE_INTERVAL = 1000; // Update every second
@@ -105,6 +105,7 @@ function generateSnakeDraftOrder(users) {
 
   return draftOrder;
 }
+// #endregion
 
 // Set up WebSocket server
 const wss = new WebSocket.Server({ port: 8080 });
@@ -143,7 +144,7 @@ wss.on('connection', (ws, req) => {
         try {
             const data = JSON.parse(message);
             console.log('Received message from client:', data);
-
+    
             switch (data.type) {
                 case 'draftUpdate':
                     broadcastDraftUpdate(data);
@@ -165,8 +166,9 @@ wss.on('connection', (ws, req) => {
             }
         } catch (error) {
             console.error('Error processing message:', error);
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
         }
-    });
+    });    
 
     ws.on('close', () => {
         console.log('Client disconnected');
@@ -245,21 +247,39 @@ function startUserTurn(leagueId, userId, turnIndex) {
 }
 
 function moveToNextUser(leagueId) {
-    // Fetch the current draft status
-    pool.query('SELECT current_turn_index, draft_order FROM draft_status WHERE league_id = $1', [leagueId])
+    // Fetch the current draft status and draft order
+    pool.query('SELECT current_turn_index, draft_order, draft_started FROM draft_status WHERE league_id = $1', [leagueId])
         .then(result => {
-            const { current_turn_index, draft_order } = result.rows[0];
+            const { current_turn_index, draft_order, draft_started } = result.rows[0];
             const draftOrder = JSON.parse(draft_order);
+            
+            if (!draft_started) {
+                // Draft has not started
+                return;
+            }
 
             // Calculate the next turn index
             const nextTurnIndex = (current_turn_index + 1) % draftOrder.length;
-
-            // Update the draft status with the new turn index
-            return pool.query('UPDATE draft_status SET current_turn_index = $1 WHERE league_id = $2', [nextTurnIndex, leagueId])
-                .then(() => {
-                    const nextUserId = draftOrder[nextTurnIndex];
-                    startUserTurn(leagueId, nextUserId, nextTurnIndex);
-                });
+            
+            // Check if we have completed all rounds
+            const numRounds = 7; // Total number of rounds
+            const numUsers = draftOrder.length / numRounds;
+            
+            if (nextTurnIndex % numUsers === 0 && nextTurnIndex / numUsers >= numRounds) {
+                // End the draft if all rounds are complete
+                return pool.query('UPDATE draft_status SET draft_ended = TRUE WHERE league_id = $1', [leagueId])
+                    .then(() => {
+                        // Notify all clients that the draft has ended
+                        broadcastToLeague(leagueId, { type: 'draftEnded' });
+                    });
+            } else {
+                // Update the draft status with the new turn index
+                return pool.query('UPDATE draft_status SET current_turn_index = $1 WHERE league_id = $2', [nextTurnIndex, leagueId])
+                    .then(() => {
+                        const nextUserId = draftOrder[nextTurnIndex];
+                        startUserTurn(leagueId, nextUserId, nextTurnIndex);
+                    });
+            }
         })
         .catch(error => {
             console.error('Error moving to next user:', error);
