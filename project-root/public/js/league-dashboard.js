@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('Final user ID:', userId);
 
             try {
-                const response = await fetch('/api/create-team', {
+                const response = await fetch('/api/draft/create-team', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const leagueName = document.querySelector('#league-name').textContent;
 
             try {
-                const response = await fetch('/api/leave-league', {
+                const response = await fetch('/api/leagues/leave-league', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

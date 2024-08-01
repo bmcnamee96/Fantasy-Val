@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Fetch league details to get the owner ID
     let leagueOwnerId;
     try {
-        const leagueResponse = await fetch(`/api/leagues/${leagueId}`, {
+        const leagueResponse = await fetch(`/api/draft/leagues/${leagueId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const league = await leagueResponse.json();
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('end-draft-btn').addEventListener('click', async () => {
         try {
             // Notify server to end the draft
-            await fetch(`/api/leagues/${leagueId}/end-draft`, {
+            await fetch(`/api/draft/leagues/${leagueId}/end-draft`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -135,13 +135,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function fetchDraftDetails() {
         try {
             // Fetch available players
-            const response = await fetch(`/api/leagues/${leagueId}/available-players`, {
+            const response = await fetch(`/api/draft/leagues/${leagueId}/available-players`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const availablePlayers = await response.json();
 
             // Fetch draft order
-            const draftOrderResponse = await fetch(`/api/leagues/${leagueId}/draft-order`, {
+            const draftOrderResponse = await fetch(`/api/draft/leagues/${leagueId}/draft-order`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

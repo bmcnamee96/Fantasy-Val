@@ -1,4 +1,5 @@
-// middleware.js or authMiddleware.js
+// middleware/authMiddleware.js
+
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'valorant'; // Ensure this is the same secret used for signing the token
 

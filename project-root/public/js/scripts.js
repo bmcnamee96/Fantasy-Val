@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = document.getElementById('signupEmail').value;
 
         try {
-            const response = await fetch('/api/signup', {
+            const response = await fetch('/api/users/signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = document.getElementById('signinPassword').value;
 
         try {
-            const response = await fetch('/api/signin', {
+            const response = await fetch('/api/users/signin', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Recovery Email:', recoveryEmail); // Debugging statement
 
             try {
-                const response = await fetch('/api/recover-password', {
+                const response = await fetch('/api/users/recover-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fetch data from the API for PlayerStats
         async function fetchPlayerStats(team_abrev = '') {
             try {
-                const response = await fetch(`/api/player-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
+                const response = await fetch(`/api/val-stats/player-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
                 const data = await response.json();
                 console.log('Fetched data:', data); // Debug log
                 populatePlayerStatsTable(data);
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fetch data from the API for MatchStats
         async function fetchMatchStats(team_abrev = '') {
             try {
-                const response = await fetch(`/api/match-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
+                const response = await fetch(`/api/val-stats/match-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
                 const text = await response.text(); // Get response as text first
                 console.log('Response text:', text); // Log response text
                 const data = JSON.parse(text); // Parse text as JSON
@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const token = localStorage.getItem('token'); // Get JWT token from local storage
 
             try {
-                const response = await fetch('/api/leagues', {
+                const response = await fetch('/api/leagues/create-league', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const token = localStorage.getItem('token'); // Get JWT token from local storage
 
             try {
-                const response = await fetch('/api/join-league', {
+                const response = await fetch('/api/leagues/join-league', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             console.log('Token:', token);
 
-            const response = await fetch('/api/user-leagues', {
+            const response = await fetch('/api/leagues/user-leagues', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}` // Ensure the token is valid
