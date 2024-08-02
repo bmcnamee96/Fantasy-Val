@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Fav Icon -->
+    <link rel="icon" href="images/favicon.png" type="image/x-icon">
+
+    <title>Draft Your Team</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="draft.css"> <!-- Added new CSS file link -->
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Draft Page</h1>
+        
+        <div class="row mb-4">
+            <div class="col-md-6 d-flex align-items-center justify-content-center">
+                <div id="current-turn" class="alert alert-info w-100 text-center">
+                    <strong class="display-4">Current Turn:</strong>
+                    <div id="current-turn-user" class="font-weight-bold">Waiting for draft to start...</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div id="round-timer-container" class="d-flex flex-column">
+                    <div id="current-round" class="alert alert-info">
+                        <strong>Current Round:</strong> <span id="current-round-text">Waiting for draft to start...</span>
+                    </div>
+                    <div id="draft-timer" class="alert alert-warning">
+                        Time remaining: 60 seconds
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Draft Button -->
+        <div class="text-center mb-4">
+            <button id="startDraftButton" class="btn btn-primary">Start Draft</button>
+        </div>
+
+        <h2 class="text-center mb-4">Available Players</h2>
+        <div id="available-players" class="row">
+            <!-- Player Cards -->
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">T1 John (Duelist)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">SEN Jane (Sentinel)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">100T Alex (Controller)</h5>
+                    </div>
+                </div>
+            </div>
+            <!-- More players... (total 30) -->
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">C9 Emily (Initiator)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">NRG Chris (Duelist)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">FAZE Olivia (Sentinel)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">ENVY Daniel (Controller)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">TSM Natalie (Initiator)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">XSET Ryan (Duelist)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">LG Sophia (Sentinel)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">BBG David (Controller)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">ANDBOX Sarah (Initiator)</h5>
+                    </div>
+                </div>
+            </div>
+            <!-- Add more players until you have 30 -->
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">GEN.G Brian (Duelist)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">IMM Lauren (Sentinel)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">FNATIC Kevin (Controller)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">G2 Amanda (Initiator)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">FPX Joshua (Duelist)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">M3C Megan (Sentinel)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">KRU Steven (Controller)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">VK Kimberly (Initiator)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">ACE Mark (Duelist)</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 player-card">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">TENSTAR Rachel (Sentinel)</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button id="end-draft-btn" class="btn btn-danger">End Draft</button>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="js/draft.js"></script>
+</body>
+</html>

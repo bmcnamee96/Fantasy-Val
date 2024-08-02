@@ -1,0 +1,101 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+h1, h2 {
+    font-weight: bold;
+}
+
+.alert {
+    font-size: 1rem;
+}
+
+/* Add your custom styles here */
+.draft-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.draft-section {
+    width: 48%;
+}
+
+#startDraftButton {
+    display: none;
+}
+
+#draftOrderContainer {
+    display: none;
+}
+
+#draft-timer, #current-round {
+    font-size: 1.25rem;
+    width: 100%;
+}
+
+#current-round {
+    margin-bottom: 10px;
+}
+
+#round-timer-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+#current-round, #draft-timer {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+#available-players .player-card {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+#available-players .player-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#end-draft-btn {
+    display: none;
+}
+
+.card {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.card-title {
+    text-align: center;
+}
+
+#current-turn {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
