@@ -39,174 +39,223 @@
             <button id="startDraftButton" class="btn btn-primary">Start Draft</button>
         </div>
 
-        <h2 class="text-center mb-4">Available Players</h2>
-        <div id="available-players" class="row">
-            <!-- Player Cards -->
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">T1 John (Duelist)</h5>
+        <!-- Tabbed Interface -->
+        <ul class="nav nav-tabs" id="draftTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="available-players-tab" data-toggle="tab" href="#available-players" role="tab" aria-controls="available-players" aria-selected="true">Available Players</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="my-team-tab" data-toggle="tab" href="#my-team" role="tab" aria-controls="my-team" aria-selected="false">My Team</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="draftTabsContent">
+            <div class="tab-pane fade show active" id="available-players" role="tabpanel" aria-labelledby="available-players-tab">
+                <h2 class="text-center mb-4">Available Players</h2>
+                <div class="row">
+                    <!-- Player Cards -->
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">T1 John (Duelist)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">SEN Jane (Sentinel)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">100T Alex (Controller)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">C9 Emily (Initiator)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">NRG Chris (Duelist)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">FAZE Olivia (Sentinel)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">ENVY Daniel (Controller)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">TSM Natalie (Initiator)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">XSET Ryan (Duelist)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">LG Sophia (Sentinel)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">BBG David (Controller)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">ANDBOX Sarah (Initiator)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">GEN.G Brian (Duelist)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">IMM Lauren (Sentinel)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">FNATIC Kevin (Controller)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">G2 Amanda (Initiator)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">FPX Joshua (Duelist)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">M3C Megan (Sentinel)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">KRU Steven (Controller)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">VK Kimberly (Initiator)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">ACE Mark (Duelist)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">TENSTAR Rachel (Sentinel)</h5>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">SEN Jane (Sentinel)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">100T Alex (Controller)</h5>
-                    </div>
-                </div>
-            </div>
-            <!-- More players... (total 30) -->
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">C9 Emily (Initiator)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">NRG Chris (Duelist)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">FAZE Olivia (Sentinel)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">ENVY Daniel (Controller)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">TSM Natalie (Initiator)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">XSET Ryan (Duelist)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">LG Sophia (Sentinel)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">BBG David (Controller)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">ANDBOX Sarah (Initiator)</h5>
-                    </div>
-                </div>
-            </div>
-            <!-- Add more players until you have 30 -->
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">GEN.G Brian (Duelist)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">IMM Lauren (Sentinel)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">FNATIC Kevin (Controller)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">G2 Amanda (Initiator)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">FPX Joshua (Duelist)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">M3C Megan (Sentinel)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">KRU Steven (Controller)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">VK Kimberly (Initiator)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">ACE Mark (Duelist)</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 player-card">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">TENSTAR Rachel (Sentinel)</h5>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <div class="tab-pane fade" id="my-team" role="tabpanel" aria-labelledby="my-team-tab">
+                <h2 class="text-center mb-4">My Team</h2>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Role</th>
+                            </tr>
+                        </thead>
+                        <tbody id="my-team-table-body">
+                            <!-- JavaScript will populate this -->
 
-        <div class="text-center mt-4">
-            <button id="end-draft-btn" class="btn btn-danger">End Draft</button>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="js/draft.js"></script>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const myTeamTableBody = document.getElementById('my-team-table-body');
+
+            // Function to add a player to "My Team"
+            function addPlayerToTeam(playerName, playerRole) {
+                const row = document.createElement('tr');
+                const playerCell = document.createElement('td');
+                const roleCell = document.createElement('td');
+
+                playerCell.textContent = playerName;
+                roleCell.textContent = playerRole;
+
+                row.appendChild(playerCell);
+                row.appendChild(roleCell);
+                myTeamTableBody.appendChild(row);
+            }
+
+            // Add 3 players to "My Team" for visual example
+            addPlayerToTeam('T1 John', 'Duelist');
+            addPlayerToTeam('SEN Jane', 'Sentinel');
+            addPlayerToTeam('100T Alex', 'Controller');
+            addPlayerToTeam('KRU Steven', 'Controller');
+        });
+    </script>
 </body>
 </html>
