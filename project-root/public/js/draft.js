@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM fully loaded and parsed for draft.js');
+
     // Define functions
     function getUserIdFromToken(token) {
         if (!token) {
@@ -61,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const ws = new WebSocket(`ws://localhost:8080/?userId=${userId}&leagueId=${leagueId}`);
-    const draftInterval = 2000; // Interval time in milliseconds (e.g., 60000ms = 1 minute)
+    const draftInterval = 5000; // Interval time in milliseconds (e.g., 60000ms = 1 minute)
     let currentTurnIndex = 0;
     let draftOrder = [];
     let draftTimer = null;
@@ -124,6 +126,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     break;
                 case 'userTurn':
                     handleUserTurn(message);
+                    break;
+                case 'updateRound':
+                    updateCurrentRound(data.round);
                     break;
                 case 'timeUpdate':
                     handleTimeUpdate(message);
@@ -269,10 +274,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`Handling turn for user ${message.userId}, Turn Index: ${message.turnIndex}`);
         currentTurnIndex = message.turnIndex;
         updateCurrentTurnUI(message.userId);
+
+            // Optionally reset or start the countdown timer
+        startCountdownTimer(TURN_DURATION / 1000);
     }
     
 
+    // Function to handle time update messages
     function handleTimeUpdate(message) {
+        console.log('Time update received:', message);
         if (message.remainingTime === undefined) {
             console.error('Invalid time update message:', message);
             return;
@@ -291,6 +301,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Function to update the current round in the HTML
+    function updateCurrentRound(round) {
+        const roundElement = document.getElementById('current-round');
+        if (roundElement) {
+            roundElement.textContent = round;
+        }
+    }
+
+    // Function to update the draft timer UI
     function updateDraftTimerUI(time) {
         const timerElement = document.getElementById('draft-timer');
         if (timerElement) {

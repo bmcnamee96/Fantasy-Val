@@ -36,12 +36,16 @@
         <!-- Start Draft Button -->
         <button id="startDraftButton">Start Draft</button>
 
-        <div id="draftTimer">Draft Timer: 00:00</div>
+        <div id="draft-timer">Time remaining: 60 seconds</div>
 
         <div>
             <ul id="draftOrderContainer"></ul>
         </div>
-        <!-- Ensure this element exists in your HTML -->
+
+        <div id="current-round" class="alert alert-info">
+            <strong>Current Round:</strong> <span id="current-round">Waiting for draft to start...</span>
+        </div>
+
         <div id="current-turn" class="alert alert-info">
             <strong>Current Turn:</strong> <span id="current-turn-user">Waiting for draft to start...</span>
         </div>
