@@ -54,7 +54,7 @@ h1, h2 {
     flex: 1;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 #available-players .player-card {
@@ -70,6 +70,7 @@ h1, h2 {
 #available-players .player-card:hover {
     transform: scale(1.05);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: green;
 }
 
 #end-draft-btn {
@@ -81,6 +82,7 @@ h1, h2 {
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: rgb(190, 190, 190);
 }
 
 .card-body {
@@ -88,10 +90,17 @@ h1, h2 {
     align-items: center;
     justify-content: center;
     width: 100%;
+    height: 100%;
 }
 
 .card-title {
     text-align: center;
+    margin: 0;
+}
+
+h5 {
+    color: black;
+    margin: 0; /* Remove default margin */
 }
 
 #current-turn {
