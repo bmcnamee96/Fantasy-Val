@@ -1,3 +1,6 @@
+let intervalId;
+let draftOrder = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for draft.js');
 
@@ -65,9 +68,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ws = new WebSocket(`ws://localhost:8080/?userId=${userId}&leagueId=${leagueId}`);
     const draftInterval = 5000; // Interval time in milliseconds (e.g., 60000ms = 1 minute)
     let currentTurnIndex = 0;
-    let draftOrder = [];
     let draftTimer = null;
     let remainingTime = 0;
+    const TURN_DURATION = 5000;
+    let countdownTimer = null; // Timer reference for countdown
 
     // Event listener for the "Start Draft" button
     document.getElementById('startDraftButton').addEventListener('click', () => {
@@ -120,8 +124,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 return; // Early return to avoid further processing
             }
-    
-            // Existing message handling logic
+            
+            // message handling
             switch (message.type) {
                 case 'userListUpdate':
                     updateUserListUI(message.users);
@@ -229,7 +233,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Available players element not found');
         }
     }
-        
 
     function updateUserListUI(users) {
         const userListElement = document.getElementById('user-list');
@@ -255,6 +258,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // Update the UI with the new draft order
+        updateDraftOrderUI(draftOrder);
+
         currentTurnIndex = 0;
         remainingTime = draftInterval / 1000; // Reset remaining time
         startDraftTimer();
@@ -262,24 +268,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function startDraftTimer() {
         console.log('Starting draft timer...');
-        if (draftTimer) {
-            clearInterval(draftTimer);
+        if (intervalId) {
+            clearInterval(intervalId);
             console.log('Previous draft timer cleared');
         }
-        draftTimer = setInterval(() => {
+        intervalId = setInterval(() => {
             handleDraftTurn();
         }, draftInterval);
     }
 
+    // Function to start the countdown timer
+    function startCountdownTimer(durationInSeconds) {
+        // Clear any existing countdown timer
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            console.log('Previous countdown timer cleared');
+        }
+
+        let timeLeft = durationInSeconds;
+        countdownTimer = setInterval(() => {
+            if (timeLeft <= 0) {
+                clearInterval(countdownTimer);
+                countdownTimer = null; // Reset timer reference
+                console.log('Countdown finished');
+                handleDraftTurn(); // Move to the next user
+            } else {
+                timeLeft--;
+                updateDraftTimerUI(timeLeft); // Update UI with remaining time
+            }
+        }, 1000); // Update every second
+    }
+
     function handleDraftTurn() {
         console.log('Handling draft turn...');
+        
         if (draftOrder.length === 0) {
             console.error('Draft order is empty');
             return;
         }
-
-        // End draft if the turn index is 48
-        if (currentTurnIndex >= 48) {
+    
+        // Define maximum turns or picks allowed in the draft
+        const MAX_TURNS = 2;
+    
+        // End draft if the turn index reaches or exceeds the maximum
+        if (currentTurnIndex >= MAX_TURNS) {
             endDraft();
             return;
         }
@@ -294,6 +326,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
         // Update draft status on server
         updateDraftStatus(currentTurnIndex, true, false);
+
+        // Start countdown timer for the new turn
+        const durationInSeconds = TURN_DURATION / 1000; // Convert milliseconds to seconds
+        console.log(`Starting countdown for ${durationInSeconds} seconds`);
+        startCountdownTimer(durationInSeconds);
     }
     
     function handleUserTurn(message) {
@@ -306,10 +343,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentTurnIndex = message.turnIndex;
         updateCurrentTurnUI(message.userId);
 
-            // Optionally reset or start the countdown timer
+        // Optionally reset or start the countdown timer
         startCountdownTimer(TURN_DURATION / 1000);
     }
-    
 
     // Function to handle time update messages
     function handleTimeUpdate(message) {
@@ -334,11 +370,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Function to update the current round in the HTML
     function updateCurrentRound(round) {
-        const roundElement = document.getElementById('current-round');
-        if (roundElement) {
-            roundElement.textContent = round;
+        const roundTextElement = document.getElementById('current-round-text');
+        if (roundTextElement) {
+            roundTextElement.textContent = round;
         }
     }
+
 
     // Function to update the draft timer UI
     function updateDraftTimerUI(time) {
@@ -372,16 +409,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const result = await response.json();
             console.log(result.message);
+            updateCurrentRound(result.round);
         } catch (error) {
             console.error('Error updating draft status:', error);
         }
     }
 
     function endDraft() {
-        clearInterval(draftTimer);
-        alert('Draft has ended.');
-        updateDraftStatus(currentTurnIndex, true, true); // Update draft status as ended
-        window.close(); // Or any other logic to end the draft
+        if (draftTimer) {
+            clearInterval(draftTimer);
+            draftTimer = null;
+            console.log('Draft timer cleared');
+        }
+    
+        // Notify the server that the draft has ended
+        updateDraftStatus(currentTurnIndex, true, true)
+            .then(() => {
+                ws.send(JSON.stringify({
+                    type: 'endDraft',
+                    message: 'The draft has ended.'
+                }));
+    
+                alert('Draft has ended.');
+                window.location.href = `league-dashboard.html?leagueId=${leagueId}`; // Use stored leagueId
+            })
+            .catch(error => {
+                console.error('Error ending draft:', error);
+            });
     }
 
     ws.onerror = (error) => {

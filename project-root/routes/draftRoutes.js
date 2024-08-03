@@ -103,19 +103,39 @@ router.get('/leagues/:leagueId/available-players', authenticateToken, async (req
         res.status(500).json({ error: 'Failed to fetch available players' });
     }
 });
-  
-// Update draft status
+
+// Start Draft
+router.post('/leagues/:leagueId/start-draft', authenticateToken, async (req, res) => {
+    const { leagueId } = req.params;
+
+    try {
+        // Logic to start the draft
+        await pool.query('UPDATE draft_status SET draft_started = TRUE WHERE league_id = $1', [leagueId]);
+
+        res.status(200).json({ message: 'Draft started successfully' });
+    } catch (error) {
+        logger.error('Error starting draft:', error);
+        res.status(500).json({ error: 'Failed to start draft' });
+    }
+});
+
+
+// Draft Status
 router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, res) => {
     const { leagueId } = req.params;
     const { currentTurnIndex, draftStarted, draftEnded } = req.body;
 
+    // Validate input data
     if (typeof currentTurnIndex !== 'number' || typeof draftStarted !== 'boolean' || typeof draftEnded !== 'boolean') {
+        logger.error('Invalid input data:', { currentTurnIndex, draftStarted, draftEnded });
         return res.status(400).json({ error: 'Invalid input data' });
     }
 
     try {
+        // Check if draft status already exists
         const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
 
+        // Insert or update draft status
         if (existingStatus.rows.length === 0) {
             await pool.query(
                 'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)',
