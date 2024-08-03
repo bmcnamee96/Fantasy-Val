@@ -819,6 +819,53 @@ th[data-sort="desc"]::after {
 }
 /* #endregion */
 
+/* Style for player cards */
+.draft-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+#draftTabsContent {
+    display: block;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-top: none;
+    background-color: #f4f4f4;
+}
+
+#draft-card {
+    transition: background-color 0.3s ease; /* Smooth transition for color change */
+    background-color: #9999; /* Initial color */
+}
+
+#draft-card:hover {
+    background-color: #666; /* Darker color on hover */
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center; /* Center-align text inside the h5 */
+}
+
+.card-body .btn {
+    margin-top: 10px; /* Add some spacing between the h5 and the button */
+}
+
+.draft-section {
+    width: 48%;
+}
+
+#startDraftButton {
+    display: none;
+}
+
+#draftOrderContainer{
+    display: none;
+}
+
 /* #region Footer */
 footer {
     background-color: #333;

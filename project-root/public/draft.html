@@ -31,31 +31,69 @@
 <body>
     <div class="container">
         <h1>Draft Page</h1>
-        <ul id="user-list"></ul>
 
         <!-- Start Draft Button -->
-        <button id="startDraftButton">Start Draft</button>
-
-        <div id="draft-timer">Time remaining: 60 seconds</div>
-
-        <div>
-            <ul id="draftOrderContainer"></ul>
+        <div class="text-center mb-4">
+            <button id="startDraftButton" class="btn btn-primary">Start Draft</button>
         </div>
 
-        <div id="current-round" class="alert alert-info">
-            <strong>Current Round:</strong> <span id="current-round">Waiting for draft to start...</span>
+        <div class="row mb-4">
+            <!-- Current Turn -->
+            <div class="col-md-6 d-flex align-items-center justify-content-center">
+                <div id="current-turn" class="alert alert-info w-100 text-center">
+                    <strong class="display-4">Current Turn:</strong>
+                    <div id="current-turn-user" class="font-weight-bold">Waiting for draft to start...</div>
+                </div>
+            </div>
+
+            <!-- Current Round -->
+            <div class="col-md-6">
+                <div id="round-timer-container" class="d-flex flex-column">
+                    <div id="current-round" class="alert alert-info">
+                        <strong>Current Round:</strong> <span id="current-round-text">Waiting for draft to start...</span>
+                    </div>
+                    <div id="draft-timer" class="alert alert-warning">
+                        Time remaining: 60 seconds
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="current-turn" class="alert alert-info">
-            <strong>Current Turn:</strong> <span id="current-turn-user">Waiting for draft to start...</span>
+        <div id="round-timer-container">
+            <div id="draftOrderContainer"></div>
         </div>
-        <h2>Available Players</h2>
-        <div id="available-players" class="row"></div>
-        <!-- Available players will be inserted here -->
+
+        <!-- Tabbed Interface -->
+        <ul class="nav nav-tabs" id="draftTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="available-players-tab" data-toggle="tab" href="#available-players" role="tab" aria-controls="available-players" aria-selected="true">Available Players</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="my-team-tab" data-toggle="tab" href="#my-team" role="tab" aria-controls="my-team" aria-selected="false">My Team</a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="draftTabsContent">
+            <!-- Available Players Tab -->
+            <div class="tab-pane fade show active" id="available-players" role="tabpanel" aria-labelledby="available-players-tab">
+                <h2 class="text-center mb-4">Available Players</h2>
+                <div id="available-players-content" class="row" >
+                    <!-- Player cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- My Team Tab (Placeholder) -->
+            <div class="tab-pane fade" id="my-team" role="tabpanel" aria-labelledby="my-team-tab">
+                <h2 class="text-center mb-4">My Team</h2>
+                <p>Content for the My Team tab will go here.</p>
+            </div>
+        </div>
 
 
+        <ul id="user-list"></ul>
 
-        <button id="end-draft-btn">End Draft</button>
+        <button id="end-draft-btn" class="btn btn-danger">End Draft</button>
     </div>
     <script src="js/draft.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

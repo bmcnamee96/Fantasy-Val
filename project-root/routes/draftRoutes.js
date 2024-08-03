@@ -1,9 +1,10 @@
-//routes/draftRoutes.js
+// routes/draftRoutes.js
 
 // #region Dependencies
 const express = require('express');
 const { Pool } = require('pg');
 const authenticateToken = require('../middleware/authMiddleware');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -24,17 +25,17 @@ router.post('/create-team', authenticateToken, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Team name, league ID, and user ID are required' });
     }
   
-    console.log('Request Body:', req.body); // Log the request body
+    logger.debug('Request Body:', req.body);
   
     try {
-        console.log('Inserting into league_teams table');
+        logger.debug('Inserting into league_teams table');
         // Insert into league_teams table
         await pool.query('INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)', [league_id, team_name, user_id]);
-        console.log('Insert into league_teams table successful');
+        logger.info('Insert into league_teams table successful');
   
         res.json({ success: true, message: 'Team created successfully' });
     } catch (error) {
-        console.error('Error creating team:', error); // Log the full error
+        logger.error('Error creating team:', error);
         res.status(500).json({ success: false, message: 'Failed to create team' });
     }
 });
@@ -42,23 +43,22 @@ router.post('/create-team', authenticateToken, async (req, res) => {
 // Get draft order for a specific league
 router.get('/leagues/:leagueId/draft-order', authenticateToken, async (req, res) => {
     const { leagueId } = req.params;
-    console.log(`Fetching draft order for league: ${leagueId}`);
+    logger.info(`Fetching draft order for league: ${leagueId}`);
   
     try {
         const result = await pool.query('SELECT draft_order FROM draft_orders WHERE league_id = $1', [leagueId]);
-        console.log('Query result:', result.rows);
+        logger.debug('Query result:', result.rows);
   
         if (result.rows.length === 0) {
-            console.log('Draft order not found');
+            logger.warn('Draft order not found');
             return res.status(404).json({ error: 'Draft order not found' });
         }
   
         const draftOrder = result.rows[0].draft_order;
-        console.log('Draft order:', draftOrder);
   
         res.json(draftOrder);
     } catch (error) {
-        console.error('Error fetching draft order:', error);
+        logger.error('Error fetching draft order:', error);
         res.status(500).json({ error: 'Failed to fetch draft order' });
     }
 });
@@ -78,7 +78,7 @@ router.get('/leagues/:leagueId', authenticateToken, async (req, res) => {
           res.status(404).json({ error: 'League not found' });
       }
   } catch (error) {
-      console.error('Error fetching league details:', error);
+      logger.error('Error fetching league details:', error);
       res.status(500).json({ error: 'Failed to fetch league details' });
   }
 });
@@ -99,7 +99,7 @@ router.get('/leagues/:leagueId/available-players', authenticateToken, async (req
         const availablePlayers = result.rows;
         res.json(availablePlayers);
     } catch (error) {
-        console.error('Error fetching available players:', error);
+        logger.error('Error fetching available players:', error);
         res.status(500).json({ error: 'Failed to fetch available players' });
     }
 });
@@ -109,8 +109,6 @@ router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, re
     const { leagueId } = req.params;
     const { currentTurnIndex, draftStarted, draftEnded } = req.body;
 
-    console.log('Request body:', { currentTurnIndex, draftStarted, draftEnded });
-
     if (typeof currentTurnIndex !== 'number' || typeof draftStarted !== 'boolean' || typeof draftEnded !== 'boolean') {
         return res.status(400).json({ error: 'Invalid input data' });
     }
@@ -119,29 +117,24 @@ router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, re
         const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
 
         if (existingStatus.rows.length === 0) {
-            console.log('Inserting new draft status');
             await pool.query(
                 'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)',
                 [leagueId, currentTurnIndex, draftStarted, draftEnded]
             );
         } else {
-            console.log('Updating existing draft status');
             await pool.query(
                 'UPDATE draft_status SET current_turn_index = $1, draft_started = $2, draft_ended = $3 WHERE league_id = $4',
                 [currentTurnIndex, draftStarted, draftEnded, leagueId]
             );
         }
 
-        const updatedStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
-        console.log('Updated draft status:', updatedStatus.rows);
-
         // Calculate the current round
         const roundNumber = Math.floor(currentTurnIndex / 7) + 1;
-        console.log(`League ${leagueId}: Current Round ${roundNumber}, Current Turn Index ${currentTurnIndex}`);
+        logger.info(`League ${leagueId}: Current Round ${roundNumber}, Current Turn Index ${currentTurnIndex}`);
 
         res.status(200).json({ message: 'Draft status updated successfully', round: roundNumber });
     } catch (error) {
-        console.error('Error updating draft status:', error);
+        logger.error('Error updating draft status:', error);
         res.status(500).json({ error: 'Failed to update draft status' });
     }
 });
@@ -165,7 +158,7 @@ router.post('/draft-player', authenticateToken, async (req, res) => {
 
         res.json({ status: 'success' });
     } catch (error) {
-        console.error('Error drafting player:', error);
+        logger.error('Error drafting player:', error);
         res.status(500).json({ status: 'error', message: 'Failed to draft player' });
     }
 });
@@ -185,10 +178,9 @@ router.post('/leagues/:leagueId/end-draft', authenticateToken, async (req, res) 
 
         res.status(200).json({ message: 'Draft ended successfully' });
     } catch (error) {
-        console.error('Error ending the draft:', error);
+        logger.error('Error ending the draft:', error);
         res.status(500).json({ error: 'Failed to end the draft' });
     }
 });
-
 
 module.exports = router;

@@ -71,7 +71,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event listener for the "Start Draft" button
     document.getElementById('startDraftButton').addEventListener('click', () => {
-        ws.send(JSON.stringify({ type: 'startDraft', leagueId }));
+        ws.send(JSON.stringify({
+            type: 'startDraft',
+            leagueId: leagueId
+        }));
     });
 
     // Event listener for the "End Draft" button
@@ -97,13 +100,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     ws.onopen = () => {
         console.log('WebSocket connection opened');
         // Send a welcome message to the new client
-        ws.send(JSON.stringify({ message: 'Welcome to the draft' }));
+        ws.send(JSON.stringify({
+            type: 'welcome',
+            message: 'Welcome to the draft'
+        }));
     };
 
     ws.onmessage = (event) => {
         try {
             const message = JSON.parse(event.data);
-
+            console.log('Received WebSocket message:', message);
+    
+            // Handle messages without a type property
+            if (!message.type) {
+                console.warn('Received message without type property:', message);
+                if (message.message) {
+                    // Handle messages with a `message` property
+                    console.log('Message:', message.message);
+                }
+                return; // Early return to avoid further processing
+            }
+    
+            // Existing message handling logic
             switch (message.type) {
                 case 'userListUpdate':
                     updateUserListUI(message.users);
@@ -128,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     handleUserTurn(message);
                     break;
                 case 'updateRound':
-                    updateCurrentRound(data.round);
+                    updateCurrentRound(message.round);
                     break;
                 case 'timeUpdate':
                     handleTimeUpdate(message);
@@ -142,8 +160,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Failed to process WebSocket message:', error);
         }
-    };
-
+    };    
+    
     async function fetchDraftDetails() {
         try {
             const response = await fetch(`/api/draft/leagues/${leagueId}/available-players`, {
@@ -166,8 +184,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             ws.send(JSON.stringify({
                 type: 'draftUpdate',
-                draftOrder,
-                availablePlayers
+                draftOrder: draftOrder,
+                availablePlayers: availablePlayers
             }));
 
             updateDraftOrderUI(draftOrder);
@@ -191,14 +209,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateAvailablePlayersUI(availablePlayers) {
         const availablePlayersElement = document.getElementById('available-players');
         if (availablePlayersElement) {
-            availablePlayersElement.innerHTML = availablePlayers.map(player =>
-                `<div class="col-md-4">${player.player_name} <button data-player-id="${player.player_id}" onclick="draftPlayer('${player.player_id}')">Draft</button></div>`
+            // Clear previous content
+            availablePlayersElement.innerHTML = '';
+    
+            // Create new cards
+            const cardsHTML = availablePlayers.map(player =>
+                `<div class="col-md-4 player-card">
+                    <div class="card">
+                        <div class="card-body" id="draft-card">
+                            <h5 class="card-title">${player.player_name} (undefined)</h5>
+                            <button class="btn btn-primary" data-player-id="${player.player_id}" onclick="draftPlayer('${player.player_id}')">Draft</button>
+                        </div>
+                    </div>
+                </div>`
             ).join('');
-            console.log('Updated available players UI:', availablePlayers);
+    
+            availablePlayersElement.innerHTML = `<div class="row">${cardsHTML}</div>`;
         } else {
             console.error('Available players element not found');
         }
     }
+        
 
     function updateUserListUI(users) {
         const userListElement = document.getElementById('user-list');

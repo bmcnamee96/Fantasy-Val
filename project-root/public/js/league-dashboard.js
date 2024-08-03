@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error('Invalid league ID');
             }
 
-            const response = await fetch(`/api/leagues/${leagueId}`, {
+            const response = await fetch(`/api/draft/leagues/${leagueId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}` // Ensure the token is valid
