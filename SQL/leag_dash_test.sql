@@ -42,7 +42,7 @@ SELECT user_id FROM user_leagues WHERE league_id = 1;
 SELECT user_id, username FROM users WHERE user_id = ANY(ARRAY[1, 3, 5, 6, 7, 8, 9, 10]::integer[]);
 
 -- Fetch the element at index 2 from the draft_order array
-SELECT draft_order[0] AS second_element
+SELECT draft_order[2] AS second_element
 FROM draft_orders
 WHERE league_id = 6;
 
