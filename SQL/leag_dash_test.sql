@@ -17,7 +17,7 @@ SELECT * FROM draft_status;
 
 SELECT * FROM draft_orders;
 INSERT INTO draft_orders (league_id, draft_order)
-VALUES (3, '[]');
+VALUES (6, '[]');
 
 UPDATE draft_status
 SET current_turn_index = 5, draft_started = TRUE, draft_ended = FALSE
@@ -41,4 +41,8 @@ GROUP BY
 SELECT user_id FROM user_leagues WHERE league_id = 1;
 SELECT user_id, username FROM users WHERE user_id = ANY(ARRAY[1, 3, 5, 6, 7, 8, 9, 10]::integer[]);
 
+-- Fetch the element at index 2 from the draft_order array
+SELECT draft_order[0] AS second_element
+FROM draft_orders
+WHERE league_id = 6;
 

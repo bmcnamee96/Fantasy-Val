@@ -109,8 +109,33 @@ router.post('/leagues/:leagueId/start-draft', authenticateToken, async (req, res
     const { leagueId } = req.params;
 
     try {
-        // Logic to start the draft
-        await pool.query('UPDATE draft_status SET draft_started = TRUE WHERE league_id = $1', [leagueId]);
+        console.log(`Starting draft for league ${leagueId}`);
+
+        // Check and initialize draft status
+        const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
+
+        if (existingStatus.rows.length === 0) {
+            // Create a new entry with initial values
+            console.log('Draft status not found. Creating new entry.');
+            await pool.query(
+                'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)',
+                [leagueId, 0, true, false] // Initialize currentTurnIndex to 0
+            );
+        } else {
+            // Update the existing draft status
+            console.log('Draft status found. Updating existing entry.');
+            await pool.query(
+                'UPDATE draft_status SET draft_started = TRUE, current_turn_index = $1 WHERE league_id = $2',
+                [0, leagueId] // Ensure currentTurnIndex is set to 0
+            );
+        }
+
+        // Send WebSocket message to clients to start the draft
+        console.log(`Sending WebSocket message to start draft for league ${leagueId}`);
+        ws.send(JSON.stringify({
+            type: 'startDraft',
+            leagueId: leagueId
+        }));
 
         res.status(200).json({ message: 'Draft started successfully' });
     } catch (error) {
@@ -118,7 +143,6 @@ router.post('/leagues/:leagueId/start-draft', authenticateToken, async (req, res
         res.status(500).json({ error: 'Failed to start draft' });
     }
 });
-
 
 // Draft Status
 router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, res) => {
@@ -132,6 +156,14 @@ router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, re
     }
 
     try {
+        // Fetch the number of users in the league
+        const usersResult = await pool.query('SELECT COUNT(user_id) AS user_count FROM user_leagues WHERE league_id = $1', [leagueId]);
+        const numberOfUsers = usersResult.rows[0].user_count;
+
+        // Calculate the current round based on the number of users
+        const turnsPerRound = numberOfUsers; // Each round consists of one turn per user
+        const roundNumber = Math.floor((currentTurnIndex-1) / turnsPerRound) + 1;
+
         // Check if draft status already exists
         const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
 
@@ -148,8 +180,6 @@ router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, re
             );
         }
 
-        // Calculate the current round
-        const roundNumber = Math.floor(currentTurnIndex / 7) + 1;
         logger.info(`League ${leagueId}: Current Round ${roundNumber}, Current Turn Index ${currentTurnIndex}`);
 
         res.status(200).json({ message: 'Draft status updated successfully', round: roundNumber });
