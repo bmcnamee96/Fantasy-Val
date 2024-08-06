@@ -8,48 +8,111 @@ let draftTimer = null;
 let remainingTime = 0;
 const TURN_DURATION = 5000;
 let countdownTimer = null; // Timer reference for countdown
+let userIdToUsername = {}; // Initialize the mapping
 
+const token = localStorage.getItem('token');
+const leagueId = getLeagueIdFromUrl();
+const userId = getUserIdFromToken(token);
+console.log('Token:', token);
+console.log('League ID:', leagueId);
+console.log('User ID:', userId);
+
+// Define function to get User ID from token
+function getUserIdFromToken(token) {
+    if (!token) {
+        console.error('No token provided');
+        return null;
+    }
+    try {
+        const payload = token.split('.')[1];
+        const decoded = JSON.parse(atob(payload.replace(/_/g, '/').replace(/-/g, '+')));
+        return decoded.userId;
+    } catch (error) {
+        console.error('Error decoding token:', error);
+        return null;
+    }
+}
+
+// Define function to get League ID from URL
+function getLeagueIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('leagueId');
+}
+
+async function initializeUserMapping() {
+    const users = await fetchUserDetails();
+    
+    // Populate the mapping with user IDs and usernames
+    userIdToUsername = users.reduce((acc, user) => {
+        acc[user.user_id] = user.username;
+        return acc;
+    }, {});
+
+    console.log('User ID to Username Mapping:', userIdToUsername);
+}
+
+// Function to fetch user details
+async function fetchUserDetails() {
+    try {
+        const response = await fetch('/api/draft/users', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Use the appropriate authorization method if needed
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        
+        const users = await response.json();
+        return users; // Expecting an array of user objects
+    } catch (error) {
+        console.error('Error fetching user details:', error);
+        return []; // Return an empty array in case of error
+    }
+}
 
 // DOM Content Loaded Event
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for draft.js');
 
-    const token = localStorage.getItem('token');
-    const leagueId = getLeagueIdFromUrl();
-    const userId = getUserIdFromToken(token);
-    console.log('Token:', token);
-    console.log('League ID:', leagueId);
-    console.log('User ID:', userId);
+    // Initialize user mapping and handle any subsequent operations
+    await initializeUserMapping();
+
 
     // #region Functions
-
-    // Define function to get User ID from token
-    function getUserIdFromToken(token) {
-        if (!token) {
-            console.error('No token provided');
-            return null;
-        }
-        try {
-            const payload = token.split('.')[1];
-            const decoded = JSON.parse(atob(payload.replace(/_/g, '/').replace(/-/g, '+')));
-            return decoded.userId;
-        } catch (error) {
-            console.error('Error decoding token:', error);
-            return null;
-        }
-    }
-
-    // Define function to get League ID from URL
-    function getLeagueIdFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('leagueId');
-    }
 
     // Check if all requirements are met
     if (!token || !leagueId || !userId) {
         console.error('Missing required parameters.');
         return;
     }
+
+    // Function to get the username by userId
+    async function getUsernameById(userId) {
+        const users = await fetchUserDetails();
+        const user = users.find(user => user.user_id === userId);
+        return user ? user.username : 'Unknown';
+    }
+
+    // Example function to use username with userId
+    async function exampleFunctionUsingUsername() {
+        const username = await getUsernameById(userId);
+        console.log(`The username for userId ${userId} is ${username}`);
+    }
+    
+    exampleFunctionUsingUsername()
+    
+    // Function to fetch user details and update the user list UI
+    async function refreshUserList() {
+        const users = await fetchUserDetails(); // Fetch user details from the server
+        updateUserListUI(users); // Update the UI with the fetched user details
+    }
+
+    // Call refreshUserList to load user details on page load or whenever needed
+    refreshUserList();
 
     // Function to fetch draft details
     function waitForWebSocketReady() {
@@ -156,6 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, { once: true });
     }
     
+    // function to draft player
     async function draftPlayer(userId, playerId, leagueId) {
         try {
             const response = await fetch('/draft-player', {
@@ -179,11 +243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error drafting player:', error);
             alert('An error occurred while drafting the player.');
         }
-    }
-
-    function getUserTurnIndex(userId, draftOrder) {
-        return draftOrder.findIndex(player => player.userId === userId);
-    }    
+    } 
 
     // Function to disable all draft buttons
     function disableDraftButtons() {
@@ -196,26 +256,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Call this function when the page loads
     disableDraftButtons();
 
-    // Function to enable draft buttons for the current turn
-    function enableDraftButtonsForCurrentTurn() {
-        const isCurrentTurn = (playerId) => currentTurnIndex === getUserTurnIndex(userId, draftOrder);
-
+    // Function to enable or disable draft buttons
+    function enableOrDisableDraftButtons(currentUserId) {
         document.querySelectorAll('.btn-secondary').forEach(button => {
-            const playerId = button.getAttribute('data-player-id');
-            if (isCurrentTurn(playerId)) {
-                button.classList.remove('disabled');
-                button.disabled = false;
-            } else {
-                button.classList.add('disabled');
-                button.disabled = true;
-            }
-        });
-    }
-
-    function enableDraftButtons() {
-        document.querySelectorAll('.btn-secondary').forEach(button => {
-            button.classList.remove('disabled');
-            button.disabled = false;
+            const isCurrentTurn = currentUserId === userId;
+            button.classList.toggle('disabled', !isCurrentTurn);
+            button.disabled = !isCurrentTurn; // Ensure the button is disabled
         });
     }
 
@@ -261,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             availablePlayersElement.innerHTML = `<div class="row">${cardsHTML}</div>`;
 
             // Update button states after rendering
-            enableDraftButtonsForCurrentTurn();
+            enableOrDisableDraftButtons();
 
             // Add event listeners to the draft buttons
             document.querySelectorAll('.draft-button').forEach(button => {
@@ -289,15 +335,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     } 
 
     // Function to update the user list UI
-    function updateUserListUI(users) {
+    function updateUserListUI(userIds) {
         const userListElement = document.getElementById('user-list');
         if (userListElement) {
-            userListElement.innerHTML = users.map(user => `<li>${user}</li>`).join('');
+            // Map user IDs to usernames using the local mapping
+            const userListHTML = userIds.map(userId => {
+                const username = userIdToUsername[userId];
+                return `<li>${username || 'Unknown User'}</li>`;
+            }).join('');
+            
+            userListElement.innerHTML = userListHTML;
         } else {
             console.error('User list element not found');
-            console.log('Users:', users);
+            console.log('User IDs:', userIds);
         }
     }
+    
 
     // Function to update the current round in the HTML
     function updateCurrentRound(round) {
@@ -337,6 +390,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`Current Turn: ${currentUserId} (Index: ${currentTurnIndex})`);
         updateCurrentTurnUI(currentUserId);
 
+        // Enable or disable draft buttons based on current turn
+        enableOrDisableDraftButtons(currentUserId);
+
         // Move to the next turn
         currentTurnIndex = (currentTurnIndex + 1) % draftOrder.length;
 
@@ -346,9 +402,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Start countdown timer for the new turn
         const durationInSeconds = TURN_DURATION / 1000; // Convert milliseconds to seconds
         startCountdownTimer(durationInSeconds);
-
-        // Update button states after turn change
-        enableDraftButtonsForCurrentTurn();
     }
 
     // Function to handle user turn updates
@@ -357,8 +410,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Invalid user turn message:', message);
             return;
         }
-
-        console.log(`Handling turn for user ${message.userId}, Turn Index: ${message.turnIndex}`);
         
         // Check for and resolve any turn index mismatches
         if (message.turnIndex !== currentTurnIndex) {
@@ -474,12 +525,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       
         // Update the UI with the new draft order
         updateDraftOrderUI(draftOrder);
+
+        // Hide the "Start Draft" button
+        const startDraftButton = document.getElementById('startDraftButton');
+        if (startDraftButton) {
+            startDraftButton.style.display = 'none';
+        }
       
         remainingTime = draftInterval / 1000; // Reset remaining time
         startDraftTimer();
-
-        // Enable draft buttons
-        enableDraftButtons();
     }
 
     // Function to end the draft
