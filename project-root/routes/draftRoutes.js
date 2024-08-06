@@ -89,7 +89,7 @@ router.get('/leagues/:leagueId/available-players', authenticateToken, async (req
   
     try {
         const result = await pool.query(
-            `SELECT p.player_id, p.player_name, p.team_abrev
+            `SELECT p.player_id, p.player_name, p.team_abrev, p.role
              FROM player p
              LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
              WHERE dp.player_id IS NULL`,

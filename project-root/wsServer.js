@@ -143,7 +143,7 @@ function startDraft(leagueId) {
       // Insert or update draft status
       return pool.query(
         'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, TRUE, FALSE) ON CONFLICT (league_id) DO UPDATE SET draft_started = TRUE, current_turn_index = EXCLUDED.current_turn_index',
-        [leagueId, -1]
+        [leagueId, 0]
       );
     })
     .then(() => {

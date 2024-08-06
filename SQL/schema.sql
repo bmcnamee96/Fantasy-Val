@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS player (
     player_id SERIAL PRIMARY KEY,
     player_name TEXT NOT NULL,
     team_abrev TEXT NOT NULL,
+	role TEXT,
     FOREIGN KEY (team_abrev) REFERENCES teams(team_abrev),
     CONSTRAINT unique_player UNIQUE(player_name, team_abrev)
 );
