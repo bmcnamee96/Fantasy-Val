@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS league_teams (
     user_id INTEGER,
     FOREIGN KEY (league_id) REFERENCES leagues(league_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT unique_team_per_league UNIQUE(league_id, team_name)
+    CONSTRAINT unique_team_per_league UNIQUE(league_id, user_id)
 );
 
 -- draft order for each league

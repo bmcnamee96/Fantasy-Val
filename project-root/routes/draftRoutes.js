@@ -205,25 +205,53 @@ router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, re
   
 // Draft a player
 router.post('/draft-player', authenticateToken, async (req, res) => {
-    const { userId, playerId, leagueId } = req.body;
-
+    const client = await pool.connect();
     try {
+        const { userId, playerId, leagueId } = req.body;
+
+        // Validate the input data
+        if (!userId || !playerId || !leagueId) {
+            return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+        }
+
+        // Start a transaction
+        await client.query('BEGIN');
+
+        // Ensure league_team_id is fetched correctly
+        const leagueTeamResult = await client.query(
+            'SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2',
+            [leagueId, userId]
+        );
+
+        if (leagueTeamResult.rows.length === 0) {
+            throw new Error('League team not found');
+        }
+
+        const leagueTeamId = leagueTeamResult.rows[0].league_team_id;
+
         // Insert drafted player
-        await pool.query(
-            'INSERT INTO drafted_players (league_id, player_id, drafted_by) VALUES ($1, $2, $3)',
-            [leagueId, playerId, userId]
+        await client.query(
+            'INSERT INTO drafted_players (league_id, player_id, league_team_id) VALUES ($1, $2, $3)',
+            [leagueId, playerId, leagueTeamId]
         );
 
         // Update league_team_players table
-        await pool.query(
-            'INSERT INTO league_team_players (league_team_id, player_id) VALUES ((SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2), $3)',
-            [leagueId, userId, playerId]
+        await client.query(
+            'INSERT INTO league_team_players (league_team_id, player_id) VALUES ($1, $2)',
+            [leagueTeamId, playerId]
         );
+
+        // Commit transaction
+        await client.query('COMMIT');
 
         res.json({ status: 'success' });
     } catch (error) {
+        // Rollback transaction in case of an error
+        await client.query('ROLLBACK');
         logger.error('Error drafting player:', error);
-        res.status(500).json({ status: 'error', message: 'Failed to draft player' });
+        res.status(500).json({ status: 'error', message: 'Failed to draft player', error: error.message });
+    } finally {
+        client.release(); // Release the client back to the pool
     }
 });
   

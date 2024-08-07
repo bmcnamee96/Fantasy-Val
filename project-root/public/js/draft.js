@@ -1,3 +1,5 @@
+// File: draft.js
+
 // Variable declarations
 let intervalId;
 let draftOrder = [];
@@ -74,6 +76,58 @@ async function fetchUserDetails() {
     }
 }
 
+// Attach the function to the window object to make it globally accessible
+window.showDraftConfirmation = showDraftConfirmation;
+
+// Define showDraftConfirmation 
+function showDraftConfirmation(playerId, teamAbrev, playerName, playerRole) {
+    const confirmationMessage = `Are you sure you want to draft ${teamAbrev} ${playerName} (${playerRole})?`;
+    document.getElementById('confirmationMessage').innerText = confirmationMessage;
+
+    // Show the modal
+    document.getElementById('confirmationModal').style.display = 'block';
+
+    // Handle the submit button click
+    document.getElementById('confirmDraftButton').addEventListener('click', function handleConfirm() {
+        draftPlayer(userId, playerId, leagueId);
+        hideModal();
+    }, { once: true });
+}
+
+function hideModal() {
+    document.getElementById('confirmationModal').style.display = 'none';
+}
+
+// function to draft player
+async function draftPlayer(userId, playerId, leagueId) {
+    try {
+        const response = await fetch('api/draft/draft-player', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // If you are using token-based auth
+            },
+            body: JSON.stringify({ userId, playerId, leagueId })
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            alert('Player successfully drafted!');
+            // Optionally, update the UI to reflect the drafted player
+            updateAvailablePlayersUI(); // Re-fetch and update available players
+        } else {
+            alert('Failed to draft player: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error drafting player:', error);
+        alert('An error occurred while drafting the player.');
+    }
+} 
+
 // DOM Content Loaded Event
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for draft.js');
@@ -89,28 +143,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Missing required parameters.');
         return;
     }
-
-    // Function to get the username by userId
-    async function getUsernameById(userId) {
-        const users = await fetchUserDetails();
-        const user = users.find(user => user.user_id === userId);
-        return user ? user.username : 'Unknown';
-    }
-
-    // Example function to use username with userId
-    async function exampleFunctionUsingUsername() {
-        const username = await getUsernameById(userId);
-        console.log(`The username for userId ${userId} is ${username}`);
-    }
-    
-    exampleFunctionUsingUsername()
     
     // Function to fetch user details and update the user list UI
     async function refreshUserList() {
         const users = await fetchUserDetails(); // Fetch user details from the server
         updateUserListUI(users); // Update the UI with the fetched user details
     }
-
     // Call refreshUserList to load user details on page load or whenever needed
     refreshUserList();
 
@@ -157,9 +195,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Find current turn index
             currentTurnIndex = draftOrder.findIndex(player => player.userId === userId);
 
-            if (currentTurnIndex === -1) {
-                currentTurnIndex = 0; 
-            }
+            // if (currentTurnIndex === -1) {
+            //     currentTurnIndex = 0; 
+            // }
     
             // Log current turn index to debug
             console.log('Current Turn Index:', currentTurnIndex);
@@ -204,47 +242,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    function showDraftConfirmation(playerId, teamAbrev, playerName, playerRole) {
-        const confirmationMessage = `Are you sure you want to draft ${teamAbrev} ${playerName} (${playerRole})?`;
-        document.getElementById('confirmationMessage').innerText = confirmationMessage;
-    
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-        modal.show();
-    
-        // Handle the submit button click
-        document.getElementById('confirmDraftButton').addEventListener('click', () => {
-            draftPlayer(userId, playerId, leagueId);
-            modal.hide();
-        }, { once: true });
-    }
-    
-    // function to draft player
-    async function draftPlayer(userId, playerId, leagueId) {
-        try {
-            const response = await fetch('/draft-player', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ userId, playerId, leagueId })
-            });
-    
-            const result = await response.json();
-            if (result.status === 'success') {
-                alert('Player successfully drafted!');
-                // Optionally, update the UI to reflect the drafted player
-                updateAvailablePlayersUI(); // Re-fetch and update available players
-            } else {
-                alert('Failed to draft player: ' + result.message);
-            }
-        } catch (error) {
-            console.error('Error drafting player:', error);
-            alert('An error occurred while drafting the player.');
-        }
-    } 
-
     // Function to disable all draft buttons
     function disableDraftButtons() {
         document.querySelectorAll('.btn-secondary').forEach(button => {
@@ -259,13 +256,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to enable or disable draft buttons
     function enableOrDisableDraftButtons(currentUserId) {
         document.querySelectorAll('.btn-secondary').forEach(button => {
-            const isCurrentTurn = currentUserId === userId;
+            const username = userIdToUsername[userId];
+            const isCurrentTurn = currentUserId === username;
             button.classList.toggle('disabled', !isCurrentTurn);
             button.disabled = !isCurrentTurn; // Ensure the button is disabled
         });
     }
-
-    // #region UPDATE UI
 
     // Function to update the draft order UI
     function updateDraftOrderUI(draftOrder) {
@@ -307,7 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             availablePlayersElement.innerHTML = `<div class="row">${cardsHTML}</div>`;
 
             // Update button states after rendering
-            enableOrDisableDraftButtons();
+            enableOrDisableDraftButtons(draftOrder[currentTurnIndex]);
 
             // Add event listeners to the draft buttons
             document.querySelectorAll('.draft-button').forEach(button => {
@@ -351,7 +347,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-
     // Function to update the current round in the HTML
     function updateCurrentRound(round) {
         const roundTextElement = document.getElementById('current-round-text');
@@ -369,8 +364,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Draft timer element not found');
         }
     }
-
-    // #endregion
 
     // Function to handle the draft turn
     function handleDraftTurn() {
@@ -422,7 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Update button states after turn change
-        enableDraftButtonsForCurrentTurn();
+        enableOrDisableDraftButtons(message.userId);
     }   
 
     // Function to update draft status on server
