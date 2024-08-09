@@ -97,6 +97,24 @@ router.get('/leagues/:leagueId', authenticateToken, async (req, res) => {
   }
 });
 
+// get all player details
+router.get('/players/:playerId', async (req, res) => {
+    const { playerId } = req.params;
+
+    try {
+        const result = await pool.query('SELECT player_name, team_abrev FROM player WHERE player_id = $1', [playerId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching player details:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 // Get available players
 router.get('/leagues/:leagueId/available-players', authenticateToken, async (req, res) => {
     const { leagueId } = req.params;
@@ -255,6 +273,25 @@ router.post('/draft-player', authenticateToken, async (req, res) => {
     }
 });
   
+// Endpoint to get all players for a specific team
+router.get('/teams/:teamId/players', authenticateToken, async (req, res) => {
+    const { teamId } = req.params;
+
+    try {
+        const result = await pool.query(`
+            SELECT p.player_id, p.player_name, p.team_abrev
+            FROM league_team_players ltp
+            JOIN player p ON ltp.player_id = p.player_id
+            WHERE ltp.league_team_id = $1
+        `, [teamId]);
+
+        res.json({ players: result.rows });
+    } catch (err) {
+        console.error('Error fetching team players:', err);
+        res.status(500).json({ error: 'Failed to fetch team players' });
+    }
+});
+
 // End Draft
 router.post('/leagues/:leagueId/end-draft', authenticateToken, async (req, res) => {
     const { leagueId } = req.params;

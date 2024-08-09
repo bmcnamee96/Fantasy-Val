@@ -37,6 +37,12 @@
             <button id="startDraftButton" class="btn btn-primary">Start Draft</button>
         </div>
 
+        <!-- Add this snippet in your HTML, preferably near the top of the page -->
+        <div id="message-area" style="position: fixed; top: 10px; right: 10px; padding: 10px; z-index: 1000;">
+            <p id="draft-message" class="alert alert-info">Draft messages will appear here</p>
+        </div>
+
+
         <div class="row mb-4">
             <!-- Current Turn -->
             <div class="col-md-6 d-flex align-items-center justify-content-center">
@@ -85,11 +91,14 @@
                 </div>
             </div>
 
-            <!-- My Team Tab (Placeholder) -->
+            <!-- My Team Tab -->
             <div class="tab-pane fade" id="my-team" role="tabpanel" aria-labelledby="my-team-tab">
                 <h2 class="text-center mb-4">My Team</h2>
-                <p>Content for the My Team tab will go here.</p>
+                <div id="team-container">
+                    <!-- Players will be dynamically inserted here -->
+                </div>
             </div>
+
         </div>
 
         <!-- Modal -->
@@ -112,10 +121,9 @@
                 </div>
             </div>
         </div>
-
-        <button id="end-draft-btn" class="btn btn-danger">End Draft</button>
     </div>
-    <script src="js/draft.js"></script>
+    <!-- <script src="js/draft.js"></script> -->
+    <script src="js/reorganizing.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

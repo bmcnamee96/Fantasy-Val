@@ -866,6 +866,18 @@ th[data-sort="desc"]::after {
     display: none;
 }
 
+#team-container {
+    padding: 10px;
+}
+
+.player {
+    margin-bottom: 10px;
+    font-size: 16px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+}
+
+
 /* #region Footer */
 footer {
     background-color: #333;

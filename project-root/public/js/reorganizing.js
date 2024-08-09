@@ -16,13 +16,17 @@ const token = localStorage.getItem('token');
 const leagueId = getLeagueIdFromUrl();
 const userId = getUserIdFromToken(token);
 
-console.log('Token:', token);
-console.log('League ID:', leagueId);
-console.log('User ID:', userId);
-
 const ws = new WebSocket(`ws://localhost:8080/?userId=${userId}&leagueId=${leagueId}`);
 
 // #region Initialization and Setup
+async function init() {
+    try {
+        await initializeUserMapping();  // Ensure user mapping is initialized first
+        await initializeWebSocket();    // Then initialize WebSocket
+    } catch (error) {
+        console.error('Initialization error:', error);
+    }
+}
 
 async function initializeUserMapping() {
     const users = await fetchUserDetails();
@@ -76,6 +80,49 @@ function getUserIdFromToken(token) {
 function getLeagueIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('leagueId');
+}
+
+async function getTeamIdForPlayer(playerId, leagueId) {
+    try {
+        // Fetch the list of teams in the league
+        const teamsResponse = await fetch(`/api/leagues/${leagueId}/teams`);
+        if (!teamsResponse.ok) {
+            throw new Error('Failed to fetch league teams');
+        }
+        const teams = await teamsResponse.json();
+        console.log(teams);
+
+        // Fetch the player details
+        const playerResponse = await fetch(`/api/draft/users`);
+        if (!playerResponse.ok) {
+            throw new Error('Failed to fetch player details');
+        }
+        const player = await playerResponse.json();
+
+        // Find the team that has this player
+        const team = teams.find(team => team.players.includes(playerId));
+        if (!team) {
+            throw new Error('Player does not belong to any team');
+        }
+
+        return team.teamId;
+    } catch (error) {
+        console.error('Error getting team ID for player:', error);
+        return null;
+    }
+}
+
+async function fetchTeamPlayers(teamId) {
+    try {
+        const response = await fetch(`/api/draft/teams/${teamId}/players`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch team players');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching team players:', error);
+        return { players: [] }; // Return an empty array or handle the error as needed
+    }
 }
 
 //#endregion
@@ -169,11 +216,16 @@ function updateCurrentTurnUI(userId) {
 } 
 
 function updateUserListUI(userIds) {
+    console.log('User IDs from WebSocket:', userIds);
+    
     const userListElement = document.getElementById('user-list');
     if (userListElement) {
-        // Map user IDs to usernames using the local mapping
+        // Convert the WebSocket user IDs to numbers to match the keys in the mapping
         const userListHTML = userIds.map(userId => {
-            const username = userIdToUsername[userId];
+            const normalizedUserId = parseInt(userId, 10); // Convert the ID to a number
+            const username = userIdToUsername[normalizedUserId];
+            console.log(`User ID: ${normalizedUserId}, Username: ${username}`); // Log to verify
+            
             return `<li>${username || 'Unknown User'}</li>`;
         }).join('');
         
@@ -183,7 +235,6 @@ function updateUserListUI(userIds) {
         console.log('User IDs:', userIds);
     }
 }
-
 
 function updateCurrentRound(round) {
     const roundTextElement = document.getElementById('current-round-text');
@@ -201,9 +252,39 @@ function updateDraftTimerUI(time) {
     }
 }
 
+function updateTeamUI(players) {
+    const teamContainer = document.getElementById('team-container');
+    teamContainer.innerHTML = ''; // Clear the existing content
+
+    players.forEach(player => {
+        const playerElement = document.createElement('div');
+        playerElement.classList.add('player');
+        playerElement.textContent = `${player.player_name} (${player.team_abrev})`;
+        teamContainer.appendChild(playerElement);
+    });
+}
+
 async function refreshUserList() {
     const users = await fetchUserDetails(); // Fetch user details from the server
-    updateUserListUI(users); // Update the UI with the fetched user details
+    const userIds = users.map(user => user.user_id); // Extract user IDs
+    updateUserListUI(userIds); // Update the UI with the fetched user IDs
+}
+
+function updateCurrentTurnMessage(message) {
+    document.getElementById('current-turn-user').innerText = message;
+}
+
+function updateCurrentRoundMessage(message) {
+    document.getElementById('current-round-text').innerText = message;
+}
+
+function updateDraftMessage(message) {
+    const draftMessageElement = document.getElementById('draft-message');
+    if (draftMessageElement) {
+        draftMessageElement.innerText = message;
+    } else {
+        console.error('Draft message element not found');
+    }
 }
 
 //#endregion
@@ -260,6 +341,10 @@ function startDraft(data) {
         console.log('Draft started with currentTurnIndex:', currentTurnIndex);
     }
     
+    // Update messages to indicate that the draft is beginning
+    updateCurrentTurnMessage('Draft Beginning Now...');
+    updateCurrentRoundMessage('Draft Beginning Now...');
+
     // Update the UI with the new draft order
     updateDraftOrderUI(draftOrder);
 
@@ -288,7 +373,7 @@ function endDraft() {
                 message: 'The draft has ended.'
             }));
 
-            alert('Draft has ended.');
+            // alert('Draft has ended.');
             window.location.href = `league-dashboard.html?leagueId=${leagueId}`; // Use stored leagueId
         })
         .catch(error => {
@@ -346,6 +431,37 @@ function handleUserTurn(message) {
     // Update button states after turn change
     enableOrDisableDraftButtons(message.userId);
 }  
+
+async function handlePlayerDrafted(message) {
+    if (!message.playerId || !message.userId) {
+        console.error('Invalid playerDrafted message:', message);
+        return;
+    }
+
+    try {
+        // Fetch player details from the API
+        const response = await fetch(`/api/draft/players/${message.playerId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch player details');
+        }
+
+        const playerData = await response.json();
+        const playerName = playerData.player_name;
+        const teamAbrev = playerData.team_abrev;
+
+        console.log(`Player drafted: ${message.playerId} by user: ${message.userId}`);
+        
+        // Display the drafted player information in the message box
+        updateDraftMessage(`Player drafted: ${teamAbrev} ${playerName}`);
+
+    } catch (error) {
+        console.error('Error fetching player details:', error);
+        updateDraftMessage('Error retrieving player details.');
+    }
+}
 
 async function updateDraftStatus(currentTurnIndex, draftStarted, draftEnded) {
     try {
@@ -432,19 +548,38 @@ async function draftPlayer(userId, playerId, leagueId) {
 
         const result = await response.json();
         if (result.status === 'success') {
-            alert('Player successfully drafted!');
+            // alert('Player successfully drafted!');
             // Fetch the updated list of available players
             const availablePlayersResponse = await fetch(`/api/draft/leagues/${leagueId}/available-players`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const availablePlayers = await availablePlayersResponse.json();
-            updateAvailablePlayersUI(availablePlayers); // Pass the data here
+            updateAvailablePlayersUI(availablePlayers);
+
+            // Update draft message
+            ws.send(JSON.stringify({
+                type: 'playerDrafted',
+                userId: userId,
+                teamAbrev: result.teamAbrev,
+                playerName: result.playerName
+            }));
+
+            // Handle the drafted player locally
+            handlePlayerDrafted({
+                playerId: playerId,
+                userId: userId,
+                teamAbrev: result.teamAbrev,
+                playerName: result.playerName
+            });
+
+            // Move to the next turn
+            handleDraftTurn();
         } else {
-            alert('Failed to draft player: ' + result.message);
+            // alert('Failed to draft player: ' + result.message);
         }
     } catch (error) {
         console.error('Error drafting player:', error);
-        alert('An error occurred while drafting the player.');
+        // alert('An error occurred while drafting the player.');
     }
 }
 
@@ -532,74 +667,81 @@ function handleTimeUpdate(message) {
 // #endregion
 
 // #region WebSocket Event Handlers
+function initializeWebSocket() {
+    const ws = new WebSocket(`ws://localhost:8080/?userId=${userId}&leagueId=${leagueId}`);
 
-ws.onopen = () => {
-    console.log('WebSocket connection opened');
-    // Send a welcome message to the new client
-    ws.send(JSON.stringify({
-        type: 'welcome',
-        message: 'Welcome to the draft'
-    }));
-};
-
-ws.onmessage = (event) => {
-    try {
-        const message = JSON.parse(event.data);
-        console.log('Received WebSocket message:', message);
-
-        if (!message.type) {
-            console.warn('Received message without type property:', message);
-            return;
+    ws.onopen = () => {
+        console.log('WebSocket connection opened');
+        // Send a welcome message to the new client
+        ws.send(JSON.stringify({
+            type: 'welcome',
+            message: 'Welcome to the draft'
+        }));
+    };
+    
+    ws.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            console.log('Received WebSocket message:', message);
+    
+            if (!message.type) {
+                console.warn('Received message without type property:', message);
+                return;
+            }
+    
+            // Handle different types of messages
+            switch (message.type) {
+                case 'userListUpdate':
+                    updateUserListUI(message.users);
+                    break;
+                case 'draftUpdate':
+                    const { draftOrder: newDraftOrder, availablePlayers } = message;
+                    if (Array.isArray(newDraftOrder)) {
+                        draftOrder = newDraftOrder;
+                        updateDraftOrderUI(draftOrder);
+                    } else {
+                        console.warn('Received draft order is not an array:', newDraftOrder);
+                    }
+                    updateAvailablePlayersUI(availablePlayers);
+                    break;
+                case 'startDraft':
+                    startDraft(message);
+                    break;
+                case 'endDraft':
+                    endDraft();
+                    break;
+                case 'userTurn':
+                    handleUserTurn(message);
+                    break;
+                case 'updateRound':
+                    updateCurrentRound(message.round);
+                    break;
+                case 'timeUpdate':
+                    handleTimeUpdate(message);
+                    break;
+                case 'playerDrafted':
+                    handlePlayerDrafted(message);
+                    break;
+                case 'welcome':
+                    console.log(message.message);
+                    break;
+                default:
+                    console.warn('Unknown message type:', message.type);
+            }
+        } catch (error) {
+            console.error('Failed to process WebSocket message:', error);
         }
+    };
+    
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+    
+    ws.onclose = () => {
+        console.log('WebSocket connection closed');
+    };
+}
 
-        // Handle different types of messages
-        switch (message.type) {
-            case 'userListUpdate':
-                updateUserListUI(message.users);
-                break;
-            case 'draftUpdate':
-                const { draftOrder: newDraftOrder, availablePlayers } = message;
-                if (Array.isArray(newDraftOrder)) {
-                    draftOrder = newDraftOrder;
-                    updateDraftOrderUI(draftOrder);
-                } else {
-                    console.warn('Received draft order is not an array:', newDraftOrder);
-                }
-                updateAvailablePlayersUI(availablePlayers);
-                break;
-            case 'startDraft':
-                startDraft(message);
-                break;
-            case 'endDraft':
-                endDraft();
-                break;
-            case 'userTurn':
-                handleUserTurn(message);
-                break;
-            case 'updateRound':
-                updateCurrentRound(message.round);
-                break;
-            case 'timeUpdate':
-                handleTimeUpdate(message);
-                break;
-            case 'welcome':
-                console.log(message.message);
-                break;
-            default:
-                console.warn('Unknown message type:', message.type);
-        }
-    } catch (error) {
-        console.error('Failed to process WebSocket message:', error);
-    }
-};
-
-ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
-};
-
-ws.onclose = () => {
-    console.log('WebSocket connection closed');
-};
 
 // #endregion
 
@@ -616,31 +758,12 @@ document.getElementById('startDraftButton').addEventListener('click', () => {
     }));
 });
 
-document.getElementById('end-draft-btn').addEventListener('click', async () => {
-    try {
-        // Notify server to end the draft
-        await fetch(`/api/draft/leagues/${leagueId}/end-draft`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // Handle end draft UI
-        endDraft();
-    } catch (error) {
-        console.error('Error ending draft:', error);
-    }
-});
-
 // #endregion
+
+// #region DOM
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for draft.js');
-
-    await initializeUserMapping();
-    await refreshUserList();
 
     // Check if all requirements are met
     if (!token || !leagueId || !userId) {
@@ -648,9 +771,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const users = await fetchUserDetails();
-    updateUserListUI(users);
+    await init();
 
+    console.log('Token:', token);
+    console.log('League ID:', leagueId);
+    console.log('User ID:', userId);
 
     let leagueOwnerId;
     try {
@@ -682,5 +807,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await fetchDraftDetails();
 });
+
+// #endregion
 
 // #endregion

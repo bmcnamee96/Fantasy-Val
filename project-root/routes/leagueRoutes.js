@@ -256,4 +256,27 @@ router.get('/:leagueId/users', authenticateToken, async (req, res) => {
   }
 });
 
+// Route to get teams in a league
+router.get('/:leagueId/teams', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+      // Fetch the teams and players for the specified league
+      const result = await db.query(`
+          SELECT lt.league_team_id AS teamId, t.team_name AS teamName, ARRAY_AGG(p.player_id) AS players
+          FROM league_team_players lt
+          JOIN player p ON lt.player_id = p.player_id
+          JOIN league_teams lt2 ON lt.league_team_id = lt2.league_team_id
+          JOIN teams t ON lt2.team_abrev = t.team_abrev
+          WHERE lt2.league_id = $1
+          GROUP BY lt.league_team_id, t.team_name
+      `, [leagueId]);
+
+      res.json(result.rows);
+  } catch (error) {
+      console.error('Error fetching teams:', error);
+      res.status(500).json({ error: 'Failed to fetch teams' });
+  }
+});
+
 module.exports = router;
