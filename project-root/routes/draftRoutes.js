@@ -266,7 +266,7 @@ router.post('/draft-player', authenticateToken, async (req, res) => {
     } catch (error) {
         // Rollback transaction in case of an error
         await client.query('ROLLBACK');
-        logger.error('Error drafting player:', error);
+        logger.error('Error drafting player:', error.message, error.stack);
         res.status(500).json({ status: 'error', message: 'Failed to draft player', error: error.message });
     } finally {
         client.release(); // Release the client back to the pool

@@ -1,18 +1,23 @@
-// server.js
-
 // #region Dependencies
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const { expressjwt: expressJwt } = require('express-jwt');
-// const WebSocket = require('ws');
+const http = require('http');
+const socketIo = require('socket.io');
 const { Pool } = require('pg');
 const { JWT_SECRET } = require('./utils/auth');
-const startWebSocketServer = require('./wsServer');
 const logger = require('./utils/logger'); // Import your logger
+const startSocketIOServer = require('./socketio'); // Import the Socket.IO server setup
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Create an HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO with the HTTP server
+const io = socketIo(server);
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
@@ -85,7 +90,10 @@ const pool = new Pool({
   port: 5432,
 });
 
-app.listen(port, () => {
+// Start the Socket.IO server
+startSocketIOServer(io);
+
+// Start the HTTP server
+server.listen(port, () => {
   logger.info(`Server running on http://localhost:${port}`);
-  startWebSocketServer(); // Start the WebSocket server
 });
