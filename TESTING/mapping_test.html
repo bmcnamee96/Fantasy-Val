@@ -3,11 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User List</title>
+    <title>Player Stats Table</title>
+    <!-- Bootstrap Styles -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .player-img {
+            width: 50px; /* Fixed width */
+            height: 50px; /* Fixed height to keep images consistent */
+            object-fit: contain; /* Ensures the image covers the given dimensions without distortion */
+        }
+        .table-img {
+            width: 50px; /* Adjust size as needed */
+            height: auto;
+        }
+    </style>
 </head>
 <body>
-    <ul id="user-list"></ul>
-    
-    <script src="mapping_test.js"></script>
+    <div class="container my-4">
+        <h2 class="mb-4">Player Stats</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Score</th>
+                    <th>Games Played</th>
+                    <th>Rank</th>
+                    <th>Achievements</th> <!-- New Column -->
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <img src="images/Cryo.png" class="player-img" alt="Cryo">
+                        Cryo
+                    </td>
+                    <td>1500</td>
+                    <td>25</td>
+                    <td>Top 10%</td>
+                    <td>Gold Medal</td> <!-- New Data -->
+                </tr>
+                <tr>
+                    <td>
+                        <img src="images/Eeiu.png" class="player-img" alt="Eeiu">
+                        Eeiu
+                    </td>
+                    <td>1400</td>
+                    <td>22</td>
+                    <td>Top 15%</td>
+                    <td>Silver Medal</td> <!-- New Data -->
+                </tr>
+                <tr>
+                    <td>
+                        <img src="images/Moose.png" class="player-img" alt="Moose">
+                        Moose
+                    </td>
+                    <td>1400</td>
+                    <td>22</td>
+                    <td>Top 15%</td>
+                    <td>Silver Medal</td> <!-- New Data -->
+                </tr>
+                <!-- Add more rows as needed -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Bootstrap JavaScript and Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
