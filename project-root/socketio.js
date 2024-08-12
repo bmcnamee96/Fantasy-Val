@@ -237,7 +237,20 @@ function startSocketIOServer() {
                         break;
                     case 'startDraft':
                         logger.debug('Starting draft with league ID:', data.leagueId);
-                        startDraft(data.leagueId);
+        
+                        // Log the real data received from the client
+                        console.log('Real draft data:', data.data);
+        
+                        // Validate the structure of the real data
+                        if (!data.data || !data.data.draftOrder || typeof data.data.MAX_TURNS === 'undefined') {
+                            console.error('Invalid draft data received:', data.data);
+                            return; // Exit if data is invalid
+                        }
+        
+                        // Emit the validated data to all clients in the league
+                        io.to(data.leagueId).emit('startDraft', data.data);
+                        logger.debug('Draft data sent to league:', data.leagueId);
+        
                         break;
                     default:
                         logger.warn(`Unknown message type: ${data.type}`);

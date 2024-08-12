@@ -22,26 +22,124 @@ const socket = io(`http://localhost:8080`, {
     transports: ['websocket']
 });
 
+// #region DOM
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM fully loaded and parsed for draft.js');
+
+    if (!token || !leagueId || !userId) {
+        console.error('Missing required parameters.');
+        return;
+    }
+
+    console.log('Token:', token);
+    console.log('League ID:', leagueId);
+    console.log('User ID:', userId);
+
+    let leagueOwnerId;
+    try {
+        const leagueResponse = await fetch(`/api/draft/leagues/${leagueId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const league = await leagueResponse.json();
+        leagueOwnerId = league.owner_id;
+        console.log('League Owner ID:', leagueOwnerId);
+
+        if (userId === leagueOwnerId) {
+            const startDraftButton = document.getElementById('startDraftButton');
+            if (startDraftButton) {
+                startDraftButton.style.display = 'block';
+                console.log('Start Draft button displayed for league owner');
+            } else {
+                console.error('Start Draft button element not found');
+            }
+        } else {
+            console.log('User is not the league owner');
+        }
+    } catch (error) {
+        console.error('Error fetching league details:', error);
+        return;
+    }
+
+    // Initialize user mapping and then fetch draft details
+    try {
+        await initializeUserMapping(leagueId);  // Initialize user mapping first
+        await fetchDraftDetails();  // Fetch draft details afterward
+    } catch (error) {
+        console.error('Error initializing user mapping or fetching draft details:', error);
+    }
+    updateUserListUI(userIdToUsername);
+});
+
+// #endregion
+
 // #region Initialization and Setup
 async function init() {
     try {
-        await initializeUserMapping();  // Ensure user mapping is initialized first
-        initializeSocket(); // Initialize Socket.IO
+        await initializeUserMapping(leagueId);
+        await fetchDraftDetails(); // Ensure this is done after user mapping
+        initializeSocket(); // Initialize Socket.IO after draft details
     } catch (error) {
         console.error('Initialization error:', error);
     }
 }
 
-async function initializeUserMapping() {
-    const users = await fetchUserDetails();
-    
-    // Populate the mapping with user IDs and usernames
-    userIdToUsername = users.reduce((acc, user) => {
-        acc[user.user_id] = user.username;
-        return acc;
-    }, {});
+async function fetchLeagueUserIds(leagueId) {
+    if (!leagueId) {
+        console.error('League ID is undefined');
+        return [];
+    }
 
-    console.log('User ID to Username Mapping:', userIdToUsername);
+    try {
+        const response = await fetch(`/api/leagues/${leagueId}/users`, {
+            headers: {
+                'Authorization': `Bearer ${token}` // If your API requires authentication
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Received API response:', data); // Debug log
+
+        // Extract user IDs from the response objects
+        if (Array.isArray(data)) {
+            return data.map(user => user.user_id); // Extract user IDs from the objects
+        } else {
+            console.error('Invalid response format. Expected an array of user objects.');
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching league user IDs:', error);
+        return [];
+    }
+}
+
+async function initializeUserMapping(leagueId) {
+    if (!leagueId) {
+        console.error('League ID is not defined');
+        return;
+    }
+
+    try {
+        const users = await fetchUserDetails();
+
+        const leagueUserIds = await fetchLeagueUserIds(leagueId);
+        console.log('Fetched league user IDs:', leagueUserIds); // Log league user IDs
+
+        userIdToUsername = users
+            .filter(user => leagueUserIds.includes(user.user_id)) // Keep only league users
+            .reduce((acc, user) => {
+                acc[user.user_id] = user.username;
+                return acc;
+            }, {});
+
+        console.log('Filtered User ID to Username Mapping:', userIdToUsername);
+    } catch (error) {
+        console.error('Error initializing user mapping:', error);
+    }
 }
 
 async function fetchUserDetails() {
@@ -59,10 +157,10 @@ async function fetchUserDetails() {
         }
 
         const users = await response.json();
+        console.log('Fetched users:', users); // Log fetched users
         return users;
     } catch (error) {
         console.error('Error fetching user details:', error);
-        // Optionally, you could retry fetching the data or provide user feedback
         return [];
     }
 }
@@ -220,17 +318,17 @@ function updateCurrentTurnUI(userId) {
     }
 } 
 
-function updateUserListUI(userIds) {
-    console.log('User IDs from WebSocket:', userIds);
-    console.log('User ID to Username Mapping:', userIdToUsername);
+function updateUserListUI(userIdToUsername) {
+    console.log('Received userIdToUsername mapping:', userIdToUsername);  // Log received data
+
+    if (!userIdToUsername || typeof userIdToUsername !== 'object' || Array.isArray(userIdToUsername)) {
+        console.error('Invalid userIdToUsername mapping:', userIdToUsername);
+        return;
+    }
 
     const userListElement = document.getElementById('user-list');
     if (userListElement) {
-        const userListHTML = userIds.map(userId => {
-            // Normalize userId to integer
-            const normalizedUserId = parseInt(userId, 10);
-            // Look up the username
-            const username = userIdToUsername[normalizedUserId];
+        const userListHTML = Object.entries(userIdToUsername).map(([userId, username]) => {
             return `<li>${username || 'Unknown User'}</li>`;
         }).join('');
         userListElement.innerHTML = userListHTML;
@@ -238,7 +336,6 @@ function updateUserListUI(userIds) {
         console.error('User list element not found');
     }
 }
-
 
 function updateCurrentRound(round) {
     const roundTextElement = document.getElementById('current-round-text');
@@ -269,9 +366,25 @@ function updateTeamUI(players) {
 }
 
 async function refreshUserList() {
-    const users = await fetchUserDetails(); // Fetch user details from the server
-    const userIds = users.map(user => user.user_id); // Extract user IDs
-    updateUserListUI(userIds); // Update the UI with the fetched user IDs
+    const users = await fetchUserDetails();
+    if (users.length === 0) {
+        console.warn('No users found to map');
+        return;
+    }
+
+    const userIdToUsername = users.reduce((acc, user) => {
+        if (user.user_id && user.username) {
+            acc[user.user_id] = user.username;
+        }
+        return acc;
+    }, {});
+
+    if (Object.keys(userIdToUsername).length === 0) {
+        console.warn('User ID to Username mapping is empty');
+        return;
+    }
+
+    updateUserListUI(userIdToUsername);
 }
 
 function updateCurrentTurnMessage(message) {
@@ -382,6 +495,7 @@ function endDraft() {
             console.error('Error ending draft:', error);
         });
 }
+
 function handleDraftTurn() {
     if (draftOrder.length === 0) {
         console.error('Draft order is empty');
@@ -665,17 +779,13 @@ function initializeSocket() {
         socket.emit('requestCurrentState', {});
     });
 
-    socket.on('userMappings', (data) => {
-        console.log('Received userMappings:', data);
-        userMappings = data;
-        // Update UI with user mappings
-        updateUserListUI(userMappings);
-    });
-
     socket.on('userListUpdate', (data) => {
-        console.log('Received userListUpdate:', data);
         if (data.users && Array.isArray(data.users)) {
-            updateUserListUI(data.users);
+            const userIdToUsername = data.users.reduce((acc, user) => {
+                acc[user.user_id] = user.username;
+                return acc;
+            }, {});
+            updateUserListUI(userIdToUsername);
         } else {
             console.error('Expected users to be an array but got:', data.users);
         }
@@ -692,9 +802,9 @@ function initializeSocket() {
     });
 
     socket.on('startDraft', (data) => {
-        startDraft(data);
+        console.log('Received startDraft event from server:', data);
+        startDraft(data); // Call the startDraft function with the received data
     });
-
     socket.on('endDraft', () => {
         endDraft();
     });
@@ -743,62 +853,9 @@ window.addEventListener('load', () => {
 
 // #region Button Event Listeners
 
-document.getElementById('startDraftButton').addEventListener('click', () => {
-    socket.emit('startDraft', {
-        leagueId: leagueId
-    });
-});
 
 // #endregion
 
-// #region DOM
 
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM fully loaded and parsed for draft.js');
-
-    // Check if all requirements are met
-    if (!token || !leagueId || !userId) {
-        console.error('Missing required parameters.');
-        return;
-    }
-
-    await init();
-
-    console.log('Token:', token);
-    console.log('League ID:', leagueId);
-    console.log('User ID:', userId);
-
-    let leagueOwnerId;
-    try {
-        const leagueResponse = await fetch(`/api/draft/leagues/${leagueId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const league = await leagueResponse.json();
-        leagueOwnerId = league.owner_id;
-        console.log('League Owner ID:', leagueOwnerId);
-
-        // Display "Start Draft" button if the user is the league owner
-        if (userId === leagueOwnerId) {
-            const startDraftButton = document.getElementById('startDraftButton');
-            if (startDraftButton) {
-                startDraftButton.style.display = 'block';
-                console.log('Start Draft button displayed for league owner');
-            } else {
-                console.error('Start Draft button element not found');
-            }
-        } else {
-            console.log('User is not the league owner');
-        }
-    } catch (error) {
-        console.error('Error fetching league details:', error);
-        return;
-    }
-
-    disableDraftButtons();
-
-    await fetchDraftDetails();
-});
-
-// #endregion
 
 // #endregion
