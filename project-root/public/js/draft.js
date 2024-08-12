@@ -848,14 +848,3 @@ window.addEventListener('load', () => {
 });
 
 // #endregion
-
-// #region Event Listeners
-
-// #region Button Event Listeners
-
-
-// #endregion
-
-
-
-// #endregion
