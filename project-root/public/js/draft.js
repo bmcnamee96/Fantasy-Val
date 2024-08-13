@@ -3,7 +3,7 @@
 // Variable declarations
 let intervalId;
 let draftOrder = [];
-let MAX_TURNS;
+let MAX_TURNS = null;
 let currentTurnIndex = 0; // Initialize here
 const draftInterval = 5000; // Interval time in milliseconds
 let draftTimer = null;
@@ -11,6 +11,7 @@ let remainingTime = 0;
 const TURN_DURATION = 5000;
 let countdownTimer = null; // Timer reference for countdown
 let userIdToUsername = {}; // Initialize the mapping
+let connectedUserIds = [];
 
 const token = localStorage.getItem('token');
 const leagueId = getLeagueIdFromUrl();
@@ -21,8 +22,6 @@ const socket = io(`http://localhost:8080`, {
     query: { userId, leagueId },
     transports: ['websocket']
 });
-
-// #region DOM
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for draft.js');
@@ -61,90 +60,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Initialize user mapping and then fetch draft details
-    try {
-        await initializeUserMapping(leagueId);  // Initialize user mapping first
-        await fetchDraftDetails();  // Fetch draft details afterward
-    } catch (error) {
-        console.error('Error initializing user mapping or fetching draft details:', error);
-    }
-    updateUserListUI(userIdToUsername);
+    disableDraftButtons();
+
+    init(); // Call init function
+
+    document.getElementById('startDraftButton').addEventListener('click', initializeDraft);
+    
 });
 
-// #endregion
-
-// #region Initialization and Setup
 async function init() {
     try {
-        await initializeUserMapping(leagueId);
-        await fetchDraftDetails(); // Ensure this is done after user mapping
-        initializeSocket(); // Initialize Socket.IO after draft details
+        initializeSocket();
+        await fetchDraftDetails(leagueId); 
+        await initializeUserMapping(leagueId, connectedUserIds);
     } catch (error) {
         console.error('Initialization error:', error);
     }
 }
 
-async function fetchLeagueUserIds(leagueId) {
-    if (!leagueId) {
-        console.error('League ID is undefined');
-        return [];
-    }
-
+async function fetchUserDetails(leagueId) {
     try {
         const response = await fetch(`/api/leagues/${leagueId}/users`, {
-            headers: {
-                'Authorization': `Bearer ${token}` // If your API requires authentication
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Received API response:', data); // Debug log
-
-        // Extract user IDs from the response objects
-        if (Array.isArray(data)) {
-            return data.map(user => user.user_id); // Extract user IDs from the objects
-        } else {
-            console.error('Invalid response format. Expected an array of user objects.');
-            return [];
-        }
-    } catch (error) {
-        console.error('Error fetching league user IDs:', error);
-        return [];
-    }
-}
-
-async function initializeUserMapping(leagueId) {
-    if (!leagueId) {
-        console.error('League ID is not defined');
-        return;
-    }
-
-    try {
-        const users = await fetchUserDetails();
-
-        const leagueUserIds = await fetchLeagueUserIds(leagueId);
-        console.log('Fetched league user IDs:', leagueUserIds); // Log league user IDs
-
-        userIdToUsername = users
-            .filter(user => leagueUserIds.includes(user.user_id)) // Keep only league users
-            .reduce((acc, user) => {
-                acc[user.user_id] = user.username;
-                return acc;
-            }, {});
-
-        console.log('Filtered User ID to Username Mapping:', userIdToUsername);
-    } catch (error) {
-        console.error('Error initializing user mapping:', error);
-    }
-}
-
-async function fetchUserDetails() {
-    try {
-        const response = await fetch('/api/draft/users', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -157,11 +93,64 @@ async function fetchUserDetails() {
         }
 
         const users = await response.json();
-        console.log('Fetched users:', users); // Log fetched users
+        console.log('Fetched users:', users);
+
+        // No need to filter here, as the API should already return users for the specific league
         return users;
+
     } catch (error) {
         console.error('Error fetching user details:', error);
         return [];
+    }
+}
+
+async function initializeUserMapping(leagueId, connectedUserIds) {
+    console.log('initializeUserMapping');
+    // Convert strings to numbers
+    connectedUserIds = connectedUserIds.map(id => Number(id));
+    console.log('UserIds connected', connectedUserIds);
+
+    if (!leagueId) {
+        console.error('League ID is not defined');
+        return;
+    }
+
+    try {
+        // Fetch users directly filtered by leagueId
+        const leagueUsers = await fetchUserDetails(leagueId);
+
+        // Ensure connectedUserIds are numbers
+        const connectedLeagueUsers = leagueUsers.filter(user => connectedUserIds.includes(user.user_id));
+
+        // Create the mapping of user IDs to usernames
+        const userIdToUsername = connectedLeagueUsers.reduce((acc, user) => {
+            acc[user.user_id] = user.username;
+            return acc;
+        }, {});
+
+        console.log('Filtered User ID to Username Mapping (Connected Users Only):', userIdToUsername);
+        updateUserListUI(userIdToUsername); // Update UI after mapping is initialized
+    } catch (error) {
+        console.error('Error initializing user mapping:', error);
+    }
+}
+
+async function fetchAndUpdateUserList() {
+    try {
+        const userDetails = await fetchUserDetails(leagueId);
+        
+        // Update the userIdToUsername mapping
+        userIdToUsername = userDetails.reduce((acc, user) => {
+            acc[user.user_id] = user.username;
+            return acc;
+        }, {});
+
+        console.log('Updated User ID to Username Mapping:', userIdToUsername);
+
+        // Update the UI
+        updateUserListUI(userIdToUsername);
+    } catch (error) {
+        console.error('Error fetching user details:', error);
     }
 }
 
@@ -319,18 +308,16 @@ function updateCurrentTurnUI(userId) {
 } 
 
 function updateUserListUI(userIdToUsername) {
-    console.log('Received userIdToUsername mapping:', userIdToUsername);  // Log received data
-
-    if (!userIdToUsername || typeof userIdToUsername !== 'object' || Array.isArray(userIdToUsername)) {
-        console.error('Invalid userIdToUsername mapping:', userIdToUsername);
-        return;
-    }
-
     const userListElement = document.getElementById('user-list');
     if (userListElement) {
-        const userListHTML = Object.entries(userIdToUsername).map(([userId, username]) => {
-            return `<li>${username || 'Unknown User'}</li>`;
-        }).join('');
+        // Generate user list HTML
+        const userListHTML = connectedUserIds
+            .map(userId => {
+                const username = userIdToUsername[userId] || 'Unknown User';
+                return `<li>${username}</li>`;
+            })
+            .join('');
+
         userListElement.innerHTML = userListHTML;
     } else {
         console.error('User list element not found');
@@ -363,28 +350,6 @@ function updateTeamUI(players) {
         playerElement.textContent = `${player.player_name} (${player.team_abrev})`;
         teamContainer.appendChild(playerElement);
     });
-}
-
-async function refreshUserList() {
-    const users = await fetchUserDetails();
-    if (users.length === 0) {
-        console.warn('No users found to map');
-        return;
-    }
-
-    const userIdToUsername = users.reduce((acc, user) => {
-        if (user.user_id && user.username) {
-            acc[user.user_id] = user.username;
-        }
-        return acc;
-    }, {});
-
-    if (Object.keys(userIdToUsername).length === 0) {
-        console.warn('User ID to Username mapping is empty');
-        return;
-    }
-
-    updateUserListUI(userIdToUsername);
 }
 
 function updateCurrentTurnMessage(message) {
@@ -436,6 +401,20 @@ function hideModal() {
 
 // #region Draft Handling
 
+function initializeDraft() {
+    if (!draftOrder || typeof MAX_TURNS === 'undefined') {
+        console.error('Draft data is not available.');
+        return;
+    }
+
+    // Emit the draft start event with necessary data
+    socket.emit('message', {
+        type: 'startDraft',
+        draftOrder: draftOrder,
+        MAX_TURNS: MAX_TURNS
+    });
+}
+
 function startDraft(data) {
     if (!data || !data.draftOrder || typeof data.MAX_TURNS === 'undefined') {
         console.error('Invalid draft data:', data);
@@ -443,8 +422,8 @@ function startDraft(data) {
     }
     
     console.log('Draft has started.');
-    MAX_TURNS = data.MAX_TURNS; // Store MAX_TURNS
-    console.log(`Draft started with MAX_TURNS: ${MAX_TURNS}`);
+    // MAX_TURNS should be set by fetchDraftDetails
+    console.log(`Draft started with MAX_TURNS: ${data.MAX_TURNS}`);
     
     draftOrder = data.draftOrder || [];
     if (draftOrder.length === 0) {
@@ -671,14 +650,6 @@ async function draftPlayer(userId, playerId, leagueId) {
             const availablePlayers = await availablePlayersResponse.json();
             updateAvailablePlayersUI(availablePlayers);
 
-            // Update draft message
-            ws.send(JSON.stringify({
-                type: 'playerDrafted',
-                userId: userId,
-                teamAbrev: result.teamAbrev,
-                playerName: result.playerName
-            }));
-
             // Handle the drafted player locally
             handlePlayerDrafted({
                 playerId: playerId,
@@ -735,13 +706,16 @@ async function fetchDraftDetails() {
         // Log draft order to check its content
         console.log('Draft Order:', draftOrder);
 
+        // Find the MAX_TURNS
+        MAX_TURNS = ((draftOrder.length / 8)*7); 
+        console.log('MAX_TURNS set to:', MAX_TURNS);
+
         // Find current turn index based on the userId
         currentTurnIndex = draftOrder.findIndex(player => player.userId === userId);
 
         // Handle case where userId is not found in the draft order
         if (currentTurnIndex === -1) {
             console.warn('User not found in draft order');
-            // Optionally handle this case, e.g., reset to a default state
         }
 
         // Log current turn index to debug
@@ -752,7 +726,6 @@ async function fetchDraftDetails() {
         updateAvailablePlayersUI(availablePlayers);
     } catch (error) {
         console.error('Failed to fetch draft details:', error);
-        // Optionally handle the error, e.g., show a user-friendly message
     }
 }  
 
@@ -769,28 +742,48 @@ function handleTimeUpdate(message) {
 
 // #endregion
 
-// #region socketio Event Handlers
 function initializeSocket() {
-    socket.on('connect', () => {
-        console.log('Socket.IO connection established');
-        socket.emit('welcome', 'Welcome to the draft');
+    console.log('Initializing socket...');
 
-        // Request current state on initial connection
-        socket.emit('requestCurrentState', {});
+    // Initialize socket connection
+    const socket = io('http://localhost:8080', {
+        query: { userId, leagueId },
+        transports: ['websocket']
     });
 
-    socket.on('userListUpdate', (data) => {
+    socket.on('connect', () => {
+    });
+
+    socket.on('userListUpdate', async (data) => {
         if (data.users && Array.isArray(data.users)) {
-            const userIdToUsername = data.users.reduce((acc, user) => {
-                acc[user.user_id] = user.username;
-                return acc;
-            }, {});
-            updateUserListUI(userIdToUsername);
+            // Update connected user IDs
+            connectedUserIds = data.users;
+    
+            console.log('Updated connectedUserIds:', connectedUserIds);
+    
+            // Fetch user details and update UI
+            await fetchAndUpdateUserList();
         } else {
             console.error('Expected users to be an array but got:', data.users);
         }
+    });    
+
+    // Handle user connection event
+    socket.on('userConnected', (userId) => {
+        console.log('User connected:', userId);
+        // Optionally update the UI
+        initializeUserMapping(leagueId, connectedUserIds);
     });
 
+    // Handle user disconnection event
+    socket.on('userDisconnected', (userId) => {
+        connectedUserIds = connectedUserIds.filter(id => id !== userId); // Update connected user IDs
+        console.log('User disconnected:', userId);
+        // Optionally update the UI
+        initializeUserMapping(leagueId, connectedUserIds);
+    });
+
+    // Other event handlers
     socket.on('draftUpdate', ({ draftOrder: newDraftOrder, availablePlayers }) => {
         if (Array.isArray(newDraftOrder)) {
             draftOrder = newDraftOrder;
@@ -801,10 +794,12 @@ function initializeSocket() {
         updateAvailablePlayersUI(availablePlayers);
     });
 
-    socket.on('startDraft', (data) => {
-        console.log('Received startDraft event from server:', data);
-        startDraft(data); // Call the startDraft function with the received data
-    });
+    socket.on('message', (data) => {
+        if (data.type === 'startDraft') {
+            startDraft(data); // Ensure the startDraft function handles the data appropriately
+        }
+    });    
+
     socket.on('endDraft', () => {
         endDraft();
     });
@@ -842,9 +837,9 @@ function initializeSocket() {
     return socket;
 }
 
-// Ensure WebSocket is reinitialized on page load
-window.addEventListener('load', () => {
-    const socket = initializeSocket();
-});
+// Ensure Socket.IO is reinitialized on page load
+// window.addEventListener('load', () => {
+//     initializeSocket();
+// });
 
 // #endregion

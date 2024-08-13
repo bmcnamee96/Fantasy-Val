@@ -72,12 +72,30 @@ function broadcastUserList() {
     io.emit('userListUpdate', message); // Emit to all connected clients
 }
 
+// Starting the draft for a league
+function startDraftForLeague(leagueId, draftData) {
+  logger.info(`Starting draft for league: ${leagueId}`);
+
+  // Perform the actual draft starting logic
+  // This function should be implemented similarly to the `startDraft` function you described earlier
+
+  // Example implementation
+  startDraft(leagueId).then(() => {
+      // Broadcast the startDraft message to all users in the league
+      const response = { type: 'startDraft', draftOrder, MAX_TURNS: maxTurns };
+      io.to(leagueId).emit('message', response); // Emit to all clients in the league
+  }).catch(error => {
+      logger.error('Error starting draft:', error);
+  });
+}
+
+
 // Broadcast to league
 function broadcastToLeague(leagueId, message) {
   io.to(leagueId).emit('leagueMessage', message);
 }
 
-// Starting the draft
+// Function to start the draft
 function startDraft(leagueId) {
   logger.info(`Starting draft for league: ${leagueId}`);
 
@@ -121,7 +139,7 @@ function startDraft(leagueId) {
     .then(() => {
       const response = { type: 'startDraft', draftOrder, MAX_TURNS: maxTurns };
       logger.info(`Sending startDraft message to league: ${leagueId} with MAX_TURNS: ${maxTurns}`);
-      broadcastToLeague(leagueId, response);
+      broadcastToLeague(leagueId, response); // Ensure this function is implemented correctly
     })
     .catch(error => {
       logger.error('Error starting draft:', error);
@@ -198,12 +216,13 @@ function startSocketIOServer() {
         const { userId, leagueId } = socket.handshake.query;
     
         if (userId && leagueId) {
+            console.log(`User ${userId} connected to league ${leagueId}`);
             clients.set(userId, { socket, leagueId });
             socket.join(leagueId); // Ensure the user joins the correct room
     
             // Send the updated user list to the newly connected user
             const userList = Array.from(clients.keys());
-            logger.debug('Sending userListUpdate to new client:', userList);
+            console.log('Sending userListUpdate to new client:', userList);
             socket.emit('userListUpdate', { users: userList });
     
             // Broadcast to all clients
@@ -216,41 +235,27 @@ function startSocketIOServer() {
             return;
         }
 
-        // Send the current user mappings to the new client
-        socket.emit('userMappings', users);
-
-        socket.emit('welcome', 'Welcome to the draft');
-
         // Handle incoming messages
         socket.on('message', (data) => {
             try {
                 logger.debug('Received message from client:', data);
 
                 switch (data.type) {
-                    case 'draftUpdate':
-                        logger.debug('Broadcasting draft update:', data);
-                        broadcastDraftUpdate(data);
-                        break;
+                  case 'draftUpdate':
+                      logger.debug('Broadcasting draft update:', data);
+                      io.to(leagueId).emit('draftUpdate', data);
+                      break;
                     case 'userConnected':
                         // Handle user connection logic if needed
                         broadcastUserList();
                         break;
                     case 'startDraft':
-                        logger.debug('Starting draft with league ID:', data.leagueId);
-        
-                        // Log the real data received from the client
-                        console.log('Real draft data:', data.data);
-        
-                        // Validate the structure of the real data
-                        if (!data.data || !data.data.draftOrder || typeof data.data.MAX_TURNS === 'undefined') {
-                            console.error('Invalid draft data received:', data.data);
-                            return; // Exit if data is invalid
-                        }
-        
-                        // Emit the validated data to all clients in the league
-                        io.to(data.leagueId).emit('startDraft', data.data);
-                        logger.debug('Draft data sent to league:', data.leagueId);
-        
+                        logger.debug('Broadcasting draft start:', data);
+                        io.to(leagueId).emit('message', {
+                            type: 'startDraft',
+                            draftOrder: data.draftOrder,
+                            MAX_TURNS: data.MAX_TURNS
+                        });
                         break;
                     default:
                         logger.warn(`Unknown message type: ${data.type}`);

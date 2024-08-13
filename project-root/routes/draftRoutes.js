@@ -262,6 +262,18 @@ router.post('/draft-player', authenticateToken, async (req, res) => {
         // Commit transaction
         await client.query('COMMIT');
 
+        // Fetch updated draft state
+        const availablePlayers = await AvailablePlayers(leagueId);
+        const draftOrder = await DraftOrder(leagueId);
+
+        // Broadcast to all clients
+        io.to(leagueId).emit('draftUpdate', { 
+            availablePlayers, 
+            draftOrder, 
+            playerId, 
+            userId 
+        });
+
         res.json({ status: 'success' });
     } catch (error) {
         // Rollback transaction in case of an error
