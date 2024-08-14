@@ -402,7 +402,7 @@ function hideModal() {
 // #region Draft Handling
 
 function initializeDraft() {
-    if (!draftOrder || typeof MAX_TURNS === 'undefined') {
+    if (!draftOrder || typeof MAX_TURNS === 'undefined' || !leagueId) {
         console.error('Draft data is not available.');
         return;
     }
@@ -411,7 +411,8 @@ function initializeDraft() {
     socket.emit('message', {
         type: 'startDraft',
         draftOrder: draftOrder,
-        MAX_TURNS: MAX_TURNS
+        MAX_TURNS: MAX_TURNS,
+        leagueId: leagueId 
     });
 }
 
@@ -706,9 +707,19 @@ async function fetchDraftDetails() {
         // Log draft order to check its content
         console.log('Draft Order:', draftOrder);
 
-        // Find the MAX_TURNS
-        MAX_TURNS = ((draftOrder.length / 8)*7); 
-        console.log('MAX_TURNS set to:', MAX_TURNS);
+        // Fetch total number of users in the league
+        const usersResponse = await fetch(`/api/leagues/${leagueId}/users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!usersResponse.ok) {
+            throw new Error(`Failed to fetch users: ${usersResponse.status}`);
+        }
+        const usersData = await usersResponse.json();
+        const users = Array.isArray(usersData) ? usersData : [];
+
+        // Calculate MAX_TURNS
+        MAX_TURNS = (users.length * 7);
+        console.log('NEW MAX_TURNS set to:', MAX_TURNS);
 
         // Find current turn index based on the userId
         currentTurnIndex = draftOrder.findIndex(player => player.userId === userId);
@@ -796,7 +807,8 @@ function initializeSocket() {
 
     socket.on('message', (data) => {
         if (data.type === 'startDraft') {
-            startDraft(data); // Ensure the startDraft function handles the data appropriately
+            console.log('Draft starting with data:', data);
+            startDraft(data); 
         }
     });    
 

@@ -62,7 +62,6 @@ function broadcastDraftUpdate(leagueId, data) {
     io.to(leagueId).emit('draftUpdate', response);
 }
 
-
 // Broadcast user list
 function broadcastUserList() {
     const userList = Array.from(clients.keys());
@@ -89,6 +88,46 @@ function startDraftForLeague(leagueId, draftData) {
   });
 }
 
+function setDraftOrder(leagueId) {
+  logger.info(`Setting the draft order for league: ${leagueId}`);
+
+  let draftOrder = [];
+
+  return pool.query(`
+    SELECT ul.user_id, u.username 
+    FROM user_leagues ul
+    JOIN users u ON ul.user_id = u.user_id
+    WHERE ul.league_id = $1
+  `, [leagueId])
+    .then(result => {
+      const userMap = result.rows.reduce((acc, row) => {
+        acc[row.user_id] = row.username;
+        return acc;
+      }, {});
+      const userIds = Object.keys(userMap);
+
+      if (userIds.length === 0) {
+        throw new Error('No users found for league');
+      }
+
+      draftOrder = generateSnakeDraftOrder(userIds, userMap);
+      logger.debug('Draft Order:', draftOrder);
+
+      return pool.query(
+        'INSERT INTO draft_orders (league_id, draft_order) VALUES ($1, $2) ON CONFLICT (league_id) DO UPDATE SET draft_order = EXCLUDED.draft_order',
+        [leagueId, JSON.stringify(draftOrder)]
+      ).then(() => {
+        return pool.query(
+          'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, TRUE, FALSE) ON CONFLICT (league_id) DO UPDATE SET draft_started = TRUE, current_turn_index = EXCLUDED.current_turn_index',
+          [leagueId, 0]
+        ).then(() => draftOrder); // Return draftOrder to use in next then block
+      });
+    })
+    .catch(error => {
+      logger.error('Error setting draft order:', error);
+      throw error; // Rethrow to ensure .catch in the call site handles it
+    });
+}
 
 // Broadcast to league
 function broadcastToLeague(leagueId, message) {
@@ -176,6 +215,48 @@ function startUserTurn(leagueId, userId, turnIndex) {
   }, TIME_UPDATE_INTERVAL);
 }
 
+// Function to handle player drafted
+function handlePlayerDrafted(message) {
+  logger.debug('Handling player drafted:', message);
+
+  if (!message.playerId || !message.userId || !message.leagueId) {
+      logger.error('Invalid playerDrafted message:', message);
+      return Promise.resolve(); // Resolve immediately if invalid
+  }
+
+  return pool.query('SELECT player_name, team_abrev FROM players WHERE player_id = $1', [message.playerId])
+      .then(result => {
+          if (result.rows.length === 0) {
+              throw new Error('Player not found');
+          }
+
+          const playerData = result.rows[0];
+          const playerName = playerData.player_name;
+          const teamAbrev = playerData.team_abrev;
+
+          const draftMessage = `Player drafted: ${teamAbrev} ${playerName}`;
+          logger.info(draftMessage);
+
+          // Broadcast the draft message to the entire league
+          io.to(message.leagueId).emit('draftMessage', { message: draftMessage });
+          logger.debug('Draft message broadcasted to league:', message.leagueId);
+      })
+      .catch(error => {
+          logger.error('Error handling player draft:', error);
+      });
+}
+
+function updateDraftMessage(message) {
+  const draftMessageArea = document.getElementById('draftMessageArea');
+  if (draftMessageArea) {
+      const newMessage = document.createElement('p');
+      newMessage.textContent = message;
+      draftMessageArea.appendChild(newMessage);
+  } else {
+      console.error('Draft message area not found');
+  }
+}
+
 // Moving to the next user
 function moveToNextUser(leagueId) {
   pool.query('SELECT current_turn_index, draft_order FROM draft_status WHERE league_id = $1', [leagueId])
@@ -246,17 +327,37 @@ function startSocketIOServer() {
                       io.to(leagueId).emit('draftUpdate', data);
                       break;
                     case 'userConnected':
-                        // Handle user connection logic if needed
-                        broadcastUserList();
-                        break;
+                      // Handle user connection logic if needed
+                      broadcastUserList();
+                      break;
                     case 'startDraft':
-                        logger.debug('Broadcasting draft start:', data);
-                        io.to(leagueId).emit('message', {
+                      logger.debug('Received startDraft message:', data);
+              
+                      // Call setDraftOrder and only proceed once it completes
+                      setDraftOrder(data.leagueId)
+                        .then(draftOrder => {
+                          // Emit the startDraft message with the draftOrder and MAX_TURNS
+                          io.to(data.leagueId).emit('message', {
                             type: 'startDraft',
-                            draftOrder: data.draftOrder,
+                            draftOrder: draftOrder,
                             MAX_TURNS: data.MAX_TURNS
+                          });
+                          logger.info(`Draft started for league: ${data.leagueId}`);
+                        })
+                        .catch(error => {
+                          logger.error('Error starting draft:', error);
+                          socket.emit('error', 'Error starting draft');
                         });
-                        break;
+                      break;
+                    case 'playerDrafted':
+                      handlePlayerDrafted(data)
+                          .then(() => {
+                              logger.debug('Player draft handled successfully');
+                          })
+                          .catch(error => {
+                              logger.error('Error handling player draft:', error);
+                          });
+                      break;
                     default:
                         logger.warn(`Unknown message type: ${data.type}`);
                 }
