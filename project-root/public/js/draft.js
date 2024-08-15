@@ -552,6 +552,14 @@ async function handlePlayerDrafted(message) {
         // Display the drafted player information in the message box
         updateDraftMessage(`Player drafted: ${teamAbrev} ${playerName}`);
 
+        // Emit the playerDrafted event to the server
+        socket.emit('message', {
+            type: 'playerDrafted',
+            playerId: message.playerId,
+            userId: message.userId,
+            leagueId: leagueId  // Ensure you include the leagueId
+        });
+
     } catch (error) {
         console.error('Error fetching player details:', error);
         updateDraftMessage('Error retrieving player details.');
@@ -763,6 +771,7 @@ function initializeSocket() {
     });
 
     socket.on('connect', () => {
+        console.log('Connected to socket server');
     });
 
     socket.on('userListUpdate', async (data) => {
@@ -806,10 +815,23 @@ function initializeSocket() {
     });
 
     socket.on('message', (data) => {
-        if (data.type === 'startDraft') {
-            console.log('Draft starting with data:', data);
-            startDraft(data); 
+        switch (data.type){
+            case 'startDraft':
+                console.log('Draft starting with data:', data);
+                startDraft(data);
+                break;
+
+            case 'playerDrafted':
+                console.log('Player drafted:', data.draftMessage);
+                updateDraftMessage(data.draftMessage); // Update the UI with the drafted player
+                break;
+
+            case 'availablePlayersUpdate':
+                console.log('Available players updated:', data.availablePlayers);
+                updateAvailablePlayersUI(data.availablePlayers); // Update the UI with the new list of available players
+                break;
         }
+
     });    
 
     socket.on('endDraft', () => {
@@ -828,8 +850,9 @@ function initializeSocket() {
         handleTimeUpdate(message);
     });
 
-    socket.on('playerDrafted', (message) => {
-        handlePlayerDrafted(message);
+    socket.on('playerDrafted', (data) => {
+        console.log('Player drafted:', data.message);
+        updateDraftMessage(data.message); // Display the draft message in the UI
     });
 
     socket.on('disconnect', () => {

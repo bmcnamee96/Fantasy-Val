@@ -219,12 +219,14 @@ function startUserTurn(leagueId, userId, turnIndex) {
 function handlePlayerDrafted(message) {
   logger.debug('Handling player drafted:', message);
 
+  // Validate message fields
   if (!message.playerId || !message.userId || !message.leagueId) {
       logger.error('Invalid playerDrafted message:', message);
       return Promise.resolve(); // Resolve immediately if invalid
   }
 
-  return pool.query('SELECT player_name, team_abrev FROM players WHERE player_id = $1', [message.playerId])
+  // Fetch player details
+  return pool.query('SELECT player_name, team_abrev FROM player WHERE player_id = $1', [message.playerId])
       .then(result => {
           if (result.rows.length === 0) {
               throw new Error('Player not found');
@@ -237,24 +239,36 @@ function handlePlayerDrafted(message) {
           const draftMessage = `Player drafted: ${teamAbrev} ${playerName}`;
           logger.info(draftMessage);
 
-          // Broadcast the draft message to the entire league
-          io.to(message.leagueId).emit('draftMessage', { message: draftMessage });
-          logger.debug('Draft message broadcasted to league:', message.leagueId);
+          // Fetch the updated list of available players for the specific league
+          return pool.query(
+              `SELECT p.player_id, p.player_name, p.team_abrev, p.role
+               FROM player p
+               LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
+               WHERE dp.player_id IS NULL`,
+              [message.leagueId]
+          ).then(result => {
+              const availablePlayers = result.rows;
+
+              // Emit the playerDrafted event to the entire league
+              io.to(message.leagueId).emit('message', {
+                  type: 'playerDrafted',
+                  draftMessage: draftMessage,
+                  playerId: message.playerId,
+                  userId: message.userId
+              });
+
+              // Emit the updated availablePlayers list to the entire league
+              io.to(message.leagueId).emit('message', {
+                  type: 'availablePlayersUpdate',
+                  availablePlayers: availablePlayers
+              });
+
+              logger.debug('Available players updated for league:', message.leagueId);
+          });
       })
       .catch(error => {
           logger.error('Error handling player draft:', error);
       });
-}
-
-function updateDraftMessage(message) {
-  const draftMessageArea = document.getElementById('draftMessageArea');
-  if (draftMessageArea) {
-      const newMessage = document.createElement('p');
-      newMessage.textContent = message;
-      draftMessageArea.appendChild(newMessage);
-  } else {
-      console.error('Draft message area not found');
-  }
 }
 
 // Moving to the next user
@@ -299,7 +313,8 @@ function startSocketIOServer() {
         if (userId && leagueId) {
             console.log(`User ${userId} connected to league ${leagueId}`);
             clients.set(userId, { socket, leagueId });
-            socket.join(leagueId); // Ensure the user joins the correct room
+            socket.join(leagueId);
+            console.log(`User ${userId} joined room ${leagueId}`);
     
             // Send the updated user list to the newly connected user
             const userList = Array.from(clients.keys());
