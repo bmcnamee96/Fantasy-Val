@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 var value = $(this).val().toLowerCase();
                 console.log("Value", value);
         
-                $("#player-stats-table tbody tr").filter(function() {
+                $(".stats-table tbody tr").filter(function() {
                     $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
                 });
             });

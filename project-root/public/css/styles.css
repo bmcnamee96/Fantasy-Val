@@ -1,18 +1,42 @@
-.box {
-    background-color: #ffffff;
-    padding: 20px;
-    margin: 20px 0;
+/* Base formatting */
+
+html, body {
+    height: 100%;
+    margin: 0;
     display: flex;
-    flex-direction: column; /* Stack children vertically */
-    box-sizing: border-box; /* Include padding in width/height calculation */
-    position: relative; /* For absolute positioning of buttons */
-    width: 100%;
-    height: auto; /* Allow height to adjust based on content */
+    flex-direction: column;
 }
 
-/* Style the main content */
+:root {
+    /* Base Colors */
+    --red-dark: #500000;
+    --red-primary: #ff0000;
+    --red-light: #c95e5e;
+
+    --black-primary: #000000;
+    --black-soft: #333333;
+
+    --grey-light: #f2f2f2;
+    --grey-medium: #cccccc;
+    --grey-dark: #666666;
+
+    --white-primary: #ffffff;
+    --white-off: #f9f9f9;
+
+    /* Additional Colors */
+    --gold: #ffd700;
+    --blue-accent: #007bff;
+    --beige: #f5f5dc;
+    --charcoal: #36454f;
+}
+
+body {
+    background-color: var(--grey-dark)
+}
+
 main {
     margin: 20px 0;
+    flex: 1;
 }
 
 main section {
@@ -30,7 +54,7 @@ main section p {
 
 /* #region Navigation */
 nav {
-    background-color: #440000; /* Dark background */
+    background-color: var(--red-dark); /* Dark background */
     color: #ffffff; /* White text */
     padding: 10px 0;
 }
@@ -42,7 +66,7 @@ nav .container {
 }
 
 .logo-section img {
-    max-width: 75px; /* Adjust the maximum width of the logo */
+    max-width: 60px; /* Adjust the maximum width of the logo */
     height: auto; /* Maintain aspect ratio */
     margin-right: 10px; /* Add some spacing between logo and links */
 }
@@ -65,7 +89,7 @@ nav .container {
 }
 
 .nav-links a:hover {
-    background-color: #7e1416; /* Highlight on hover */
+    background-color: var(--red-light); /* Highlight on hover */
     border-radius: 5px;
 }
 
@@ -75,7 +99,7 @@ nav .container {
 }
 
 .auth-buttons button {
-    color: #ffffff;
+    color: var(--white-primary);
     background-color: transparent;
     border: none;
     padding: 10px 15px;
@@ -85,7 +109,7 @@ nav .container {
 }
 
 .auth-buttons button:hover {
-    background-color: #7e1416; /* Highlight on hover */
+    background-color: var(--red-light); /* Highlight on hover */
     border-radius: 5px;
 }
 
@@ -107,7 +131,7 @@ nav .container {
 }
 
 #signoutBtn {
-    background-color: #000000; /* Sign out button color */
+    background-color: var(--black-primary); /* Sign out button color */
     color: white;
     border: none;
     padding: 10px 20px;
@@ -251,107 +275,119 @@ form button:hover {
 /* #region Slider */
 .slider_section {
     position: relative;
-    padding: 50px 0;
-    background: #f8f9fa;
+    padding: 30px 0; /* Reduced padding to make the section more compact */
+    background: var(--grey-dark);;
 }
 
 .carousel-inner {
     position: relative;
     width: 100%;
     overflow: hidden;
+    padding-bottom: 75px;
 }
 
-.carousel-item {
-    text-align: center;
+.img-box {
+    display: flex; /* Use flexbox to center the image */
+    justify-content: center; /* Horizontally center the image */
+    align-items: center; /* Vertically center the image */
+    height: 500px; /* Adjust the height as needed */
 }
 
 .img-box img {
     max-width: 100%;
+    max-height: 100%;
+    height: auto; /* Ensure the image maintains its aspect ratio */
+    object-fit: contain; /* Scale the image to fit within the container */
 }
 
-.carousel_btn-container {
-    display: flex;
-    top: 50%;
-    width: 100%;
-    position: absolute; /* Positions the container absolutely within its parent */
-    display: flex; /* Uses flexbox for layout */
-    justify-content: space-evenly; /* Distributes space evenly between buttons */
-    z-index: 999; /* Ensures the container is above other elements */
-    transform: translateY(-30px); /* Moves the container up by 25% of its own height */
+.carousel-indicators {
+    position: absolute;
+    bottom: 0px; /* Distance from the bottom of the carousel */
+    left: 50%; /* Center the indicators horizontally */
+    transform: translateX(-50%); /* Adjust for the container's width */
+    display: flex; /* Flexbox layout for the indicators */
+    justify-content: center; /* Center the indicators within the container */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+    list-style: none; /* Remove default list styling */
+    z-index: 999; /* Ensure the indicators are above other elements */
 }
 
-/* Styles for both previous and next buttons */
-.carousel-control-prev,
-.carousel-control-next {
-    position: center; /* Positions the buttons relative to their normal position */
-    width: 55px; /* Sets the width of the buttons */
-    height: 55px; /* Sets the height of the buttons */
-    border: none; /* Removes the default border */
-    border-radius: 100%; /* Makes the buttons circular */
-    opacity: 1; /* Sets the opacity to fully visible */
-    background-repeat: no-repeat; /* Prevents background image from repeating */
-    background-size: 30px; /* Sets the size of the background image */
-    background-position: center; /* Centers the background image */
-    background-color: rgb(0, 0, 0); /* Sets the background color to black */
-    margin: 2px; /* Adds a small margin around the buttons */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Adds a shadow to the buttons */
+.carousel-indicators li {
+    background-color: rgb(0, 0, 0); /* Background color for the indicators */
+    width: 40px; /* Width of each indicator */
+    height: 40px; /* Height of each indicator */
+    border-radius: 50%; /* Makes the indicators circular */
+    opacity: 0.7; /* Slightly transparent */
+    margin: 0 5px; /* Space between indicators */
+    cursor: pointer; /* Pointer cursor on hover */
+    display: flex; /* Center the text inside the indicators */
+    justify-content: center; /* Horizontally center the text */
+    align-items: center; /* Vertically center the text */
+    font-size: 16px; /* Font size for the text */
+    color: #fff; /* Text color */
 }
 
-/* Styles for the previous button */
-.carousel-control-prev {
-    background-image: url(../images/prev.png); /* Sets the background image for the previous button */
-}
-
-/* Styles for the next button */
-.carousel-control-next {
-    background-image: url(../images/next.png); /* Sets the background image for the next button */
+.carousel-indicators .active {
+    background-color: rgb(255, 255, 255); /* Background color for the active indicator */
+    opacity: 1; /* Fully opaque */
+    color: #000; /* Text color for the active indicator */
 }
 
 /* #endregion */
 
 /* #region How to Play */
 .how_to_section {
-    background-color: #7f7f7f; /* Background color */
     color: #000000; /* Text color */
-    padding: 50px 0; /* Adjust padding as needed */
+    padding: 25px 0; /* Adjust padding as needed */
     text-align: center; /* Center align text */
 }
 
 .how_to_section .container {
     display: flex; /* Use flexbox for layout */
-    flex-direction: column; /* Stack items vertically */
-    align-items: center; /* Center align items horizontally */
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 20px; /* Adjust the space between the boxes as needed */
 }
 
-.how_to_section .heading_container {
-    margin-bottom: 30px;
-}
-
-.how_to_section h2 {
-    color: #ff1e00; /* Heading color */
-}
-
-.how_to_section p {
-    font-size: 1.1em; /* Adjust font size */
-    line-height: 1.6; /* Adjust line height */
-}
-
-.how_to_section ol {
-    list-style-type: none;
-    padding: 0;
-}
-
-.how_to_section ol li {
-    background-color: #9b9b9b; /* Background color for sections */
+.how_to_section .box {
+    flex: 1 1 30%; /* Adjusts the width of each item to take up about 30% of the row */
+    background-color: #ffffff; /* Box background color */
+    color: #000000; /* Text color inside the box */
     padding: 20px;
-    margin-bottom: 20px;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
-    width: 100%; /* Make boxes take full width of container */
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-.how_to_section ol li strong {
-    color: #000000; /* Strong text color */
+.how_to_section .box .number-circle {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff0000; /* Number circle background color */
+    color: #ffffff; /* Number color */
+    width: 50px;
+    height: 50px;
+    line-height: 50px;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.how_to_section .box h3,
+.how_to_section .box p {
+    margin: 10px 0; /* Adjust spacing between text elements */
+}
+
+.how_to_section .box:hover {
+    transform: translateY(-10px); /* Moves the box up slightly on hover */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Adds a more pronounced shadow on hover */
 }
 
 @media (max-width: 768px) {
@@ -359,10 +395,27 @@ form button:hover {
     .how_to_section .container {
         padding: 0 20px; /* Adjust padding */
     }
+    .how_to_section .box {
+        flex: 1 1 100%; /* Each box takes full width on smaller screens */
+        margin-bottom: 20px; /* Adds space between boxes on small screens */
+    }
 }
+
 /* #endregion */
 
 /* #region Tables */
+.box {
+    padding: 20px;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column; /* Stack children vertically */
+    box-sizing: border-box; /* Include padding in width/height calculation */
+    position: relative; /* For absolute positioning of buttons */
+    width: 100%;
+    height: auto; /* Allow height to adjust based on content */
+    background: var(--grey-dark);
+}
+
 .filter-container {
     display: flex;
     justify-content: space-between; /* Space between the filter items */
@@ -407,8 +460,8 @@ form button:hover {
     display: flex;
     flex-direction: row; /* Align buttons side by side */
     position: absolute; /* Positioning buttons at the bottom right */
-    bottom: 20px; /* Adjust spacing from the bottom */
-    right: 20px; /* Adjust spacing from the right */
+    bottom: 30px; /* Adjust spacing from the bottom */
+    right: 25px; /* Adjust spacing from the right */
 }
 
 .primary-button, .secondary-button {
@@ -555,21 +608,21 @@ th[data-sort="desc"]::after {
 }
 
 .btn-primary {
-    background-color: green;
-    border-color: green;
+    background-color: #007bff;
+    border-color: #007bff;
 }
 
 .btn-primary:hover {
-    background-color: #555;
+    background-color: #16b0ed;
 }
 
 .btn-secondary {
-    background-color: green;
-    border-color: green;
+    background-color: #007bff;
+    border-color: #007bff;
 }
 
 .btn-secondary:hover {
-    background-color: #555;
+    background-color: #16b0ed;
 }
 
 .btn-square {
@@ -602,6 +655,7 @@ th[data-sort="desc"]::after {
     background-color: #000000; /* Secondary color */
     border: none;
     padding: 0.5rem 1rem;
+    margin-left: 15px;
 }
 
 #create-league-form button:hover {
@@ -880,7 +934,7 @@ th[data-sort="desc"]::after {
 
 /* #region Footer */
 footer {
-    background-color: #333;
+    background-color: var(--black-soft);
     color: #fff;
     text-align: center;
     padding: 10px 0;

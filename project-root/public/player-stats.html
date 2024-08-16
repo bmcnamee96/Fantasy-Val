@@ -17,11 +17,11 @@
 
     <title>Fantasy Valorant</title>
 
-        <!--Bootstrap Styles-->
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    
-        <!--Custom Styles-->
-        <link rel="stylesheet" href="css/styles.css">
+    <!--Bootstrap Styles-->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <!--Custom Styles-->
+    <link rel="stylesheet" href="css/styles.css">
         
 </head>
 <!-- Body -->
@@ -31,7 +31,7 @@
     <nav>
         <div class="container">
             <a href="index.html" class="logo-section">
-                <img src="images/logo.png" alt="FV Logo">
+                <img src="images/favicon.png" alt="FV Logo">
             </a>
             <ul class="nav-links">
                 <li><a href="my-dashboard.html">My Dashboard</a></li>
@@ -135,6 +135,14 @@
                             <option value="split1">Split 1</option>
                             <option value="split2">Split 2</option>
                         </select>
+                        <!-- Week Filter -->
+                        <select id="week-filter" class="dropdown-filter">
+                            <option value="">All Weeks</option>
+                            <option value="week1">Week 1</option>
+                            <option value="week2">Week 2</option>
+                            <option value="week3">Week 3</option>
+                            <option value="week4">Week 4</option>
+                        </select>
                     </div>
                     <div class="button-container">
                         <button id="apply-filters" class="col-auto">Apply Filters</button>
@@ -147,7 +155,7 @@
             <div class="table-container">
                 <h1 id="table-heading">Player Stats</h1>
                 <!-- Players table -->
-                <table id="player-stats-table">
+                <table class="stats-table" id="player-stats-table">
                     <thead>
                     <tr>
                         <th data-column="player_name" data-sort="asc">Player Name</th>
@@ -170,7 +178,7 @@
                 </table>
 
                 <!-- Match Stats table -->
-                <table id="match-stats-table">
+                <table class="stats-table" id="match-stats-table">
                     <thead>
                     <tr>
                         <th data-column="split" data-sort="asc">Week</th>

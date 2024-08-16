@@ -1,0 +1,33 @@
+.carousel_btn-container {
+    display: flex;
+    position: absolute; /* Absolute positioning to place the buttons at the bottom */
+    bottom: 10px; /* Distance from the bottom of the carousel */
+    left: 0; /* Align the container to the left */
+    right: 0; /* Align the container to the right */
+    justify-content: center; /* Center the buttons within the container */
+    z-index: 999;
+    padding: 0; /* No extra padding needed */
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    width: 40px; /* Reduced width to make the buttons smaller */
+    height: 40px; /* Reduced height to match the width */
+    border: none;
+    border-radius: 50%; /* Keeps the buttons circular */
+    opacity: 1;
+    background-repeat: no-repeat;
+    background-size: 20px; /* Reduced background image size */
+    background-position: center;
+    background-color: rgb(0, 0, 0);
+    margin: 0 10px; /* Add some margin to space out the buttons */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.carousel-control-prev {
+    background-image: url(../images/prev.png);
+}
+
+.carousel-control-next {
+    background-image: url(../images/next.png);
+}
