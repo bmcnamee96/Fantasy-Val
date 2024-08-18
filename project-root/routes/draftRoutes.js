@@ -272,6 +272,28 @@ router.post('/draft-player', authenticateToken, async (req, res) => {
         client.release(); // Release the client back to the pool
     }
 });
+
+router.get('/leagues/:leagueId/current-turn', authenticateToken, async (req, res) => {
+    const { leagueId } = req.params;
+    
+    try {
+        const result = await pool.query(
+            'SELECT current_turn_index FROM draft_status WHERE league_id = $1', 
+            [leagueId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Draft status not found' });
+        }
+
+        const { current_turn_index } = result.rows[0];
+        res.json({ currentTurnIndex: current_turn_index });
+    } catch (error) {
+        console.error('Error fetching current turn:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
   
 // Endpoint to get all players for a specific team
 router.get('/teams/:teamId/players', authenticateToken, async (req, res) => {

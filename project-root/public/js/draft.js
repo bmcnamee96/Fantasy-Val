@@ -759,6 +759,29 @@ function handleTimeUpdate(message) {
     updateDraftTimerUI(remainingTime);
 }
 
+async function fetchCurrentTurn() {
+    try {
+        const response = await fetch(`/api/draft/leagues/${leagueId}/current-turn`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        currentTurnIndex = (data.currentTurnIndex);
+        updateCurrentTurnUI(draftOrder[currentTurnIndex]);
+        startCountdownTimer(TURN_DURATION / 1000);
+
+        console.log(`Fetched current turn: Index ${data.currentTurnIndex}`);
+    } catch (error) {
+        console.error('Error fetching current turn:', error);
+    }
+}
+
 // #endregion
 
 function initializeSocket() {
@@ -827,8 +850,12 @@ function initializeSocket() {
                 break;
 
             case 'availablePlayersUpdate':
-                console.log('Available players updated:', data.availablePlayers);
                 updateAvailablePlayersUI(data.availablePlayers); // Update the UI with the new list of available players
+                break;
+
+            case 'turnIndexUpdate':
+                console.log('Turn index updated:', data.currentTurnIndex);
+                fetchCurrentTurn(); // Fetch and update the current turn index
                 break;
         }
 

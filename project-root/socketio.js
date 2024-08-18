@@ -225,7 +225,7 @@ function handlePlayerDrafted(message) {
       return Promise.resolve(); // Resolve immediately if invalid
   }
 
-  // Fetch player details
+  // Fetch player details first and log the draft message
   return pool.query('SELECT player_name, team_abrev FROM player WHERE player_id = $1', [message.playerId])
       .then(result => {
           if (result.rows.length === 0) {
@@ -239,6 +239,14 @@ function handlePlayerDrafted(message) {
           const draftMessage = `Player drafted: ${teamAbrev} ${playerName}`;
           logger.info(draftMessage);
 
+          // Emit the playerDrafted event to the entire league
+          io.to(message.leagueId).emit('message', {
+              type: 'playerDrafted',
+              draftMessage: draftMessage,
+              playerId: message.playerId,
+              userId: message.userId
+          });
+
           // Fetch the updated list of available players for the specific league
           return pool.query(
               `SELECT p.player_id, p.player_name, p.team_abrev, p.role
@@ -246,25 +254,37 @@ function handlePlayerDrafted(message) {
                LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
                WHERE dp.player_id IS NULL`,
               [message.leagueId]
-          ).then(result => {
-              const availablePlayers = result.rows;
+          );
+      })
+      .then(result => {
+          const availablePlayers = result.rows;
 
-              // Emit the playerDrafted event to the entire league
-              io.to(message.leagueId).emit('message', {
-                  type: 'playerDrafted',
-                  draftMessage: draftMessage,
-                  playerId: message.playerId,
-                  userId: message.userId
-              });
-
-              // Emit the updated availablePlayers list to the entire league
-              io.to(message.leagueId).emit('message', {
-                  type: 'availablePlayersUpdate',
-                  availablePlayers: availablePlayers
-              });
-
-              logger.debug('Available players updated for league:', message.leagueId);
+          // Emit the updated availablePlayers list to the entire league
+          io.to(message.leagueId).emit('message', {
+              type: 'availablePlayersUpdate',
+              availablePlayers: availablePlayers
           });
+
+          // Fetch the current_turn_index from the draft_status table after emitting player details
+          return pool.query(
+              `SELECT current_turn_index FROM draft_status WHERE league_id = $1`,
+              [message.leagueId]
+          );
+      })
+      .then(result => {
+          if (result.rows.length === 0) {
+              throw new Error('Failed to fetch current_turn_index');
+          }
+
+          const currentTurnIndex = result.rows[0].current_turn_index;
+
+          // Emit the current_turn_index to the entire league
+          io.to(message.leagueId).emit('message', {
+              type: 'turnIndexUpdate',
+              currentTurnIndex: currentTurnIndex
+          });
+
+          logger.debug('Available players and current turn index fetched and broadcasted for league:', message.leagueId);
       })
       .catch(error => {
           logger.error('Error handling player draft:', error);
