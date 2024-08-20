@@ -22,7 +22,7 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 // Helper functions and constants
-const TURN_DURATION = 5000; // 5 seconds for testing
+const TURN_DURATION = 15000; // 5 seconds for testing
 const TIME_UPDATE_INTERVAL = 1000; // Update every second
 
 function shuffleArray(array) {
@@ -53,15 +53,6 @@ const clients = new Map();
 let draftTimers = {};
 let intervalId;
 
-// Broadcast draft updates
-function broadcastDraftUpdate(leagueId, data) {
-    const { draftOrder, availablePlayers } = data;
-    logger.debug('Broadcasting draft update to league:', { leagueId, draftOrder, availablePlayers });
-
-    const response = { type: 'draftUpdate', draftOrder, availablePlayers };
-    io.to(leagueId).emit('draftUpdate', response);
-}
-
 // Broadcast user list
 function broadcastUserList() {
     const userList = Array.from(clients.keys());
@@ -69,23 +60,6 @@ function broadcastUserList() {
     logger.debug('Broadcasting user list:', message);
 
     io.emit('userListUpdate', message); // Emit to all connected clients
-}
-
-// Starting the draft for a league
-function startDraftForLeague(leagueId, draftData) {
-  logger.info(`Starting draft for league: ${leagueId}`);
-
-  // Perform the actual draft starting logic
-  // This function should be implemented similarly to the `startDraft` function you described earlier
-
-  // Example implementation
-  startDraft(leagueId).then(() => {
-      // Broadcast the startDraft message to all users in the league
-      const response = { type: 'startDraft', draftOrder, MAX_TURNS: maxTurns };
-      io.to(leagueId).emit('message', response); // Emit to all clients in the league
-  }).catch(error => {
-      logger.error('Error starting draft:', error);
-  });
 }
 
 function setDraftOrder(leagueId) {
@@ -134,57 +108,6 @@ function broadcastToLeague(leagueId, message) {
   io.to(leagueId).emit('leagueMessage', message);
 }
 
-// Function to start the draft
-function startDraft(leagueId) {
-  logger.info(`Starting draft for league: ${leagueId}`);
-
-  let draftOrder = [];
-  let maxTurns;
-
-  pool.query(`
-    SELECT ul.user_id, u.username 
-    FROM user_leagues ul
-    JOIN users u ON ul.user_id = u.user_id
-    WHERE ul.league_id = $1
-  `, [leagueId])
-    .then(result => {
-      const userMap = result.rows.reduce((acc, row) => {
-        acc[row.user_id] = row.username;
-        return acc;
-      }, {});
-      const userIds = Object.keys(userMap);
-
-      if (userIds.length === 0) {
-        throw new Error('No users found for league');
-      }
-
-      maxTurns = (userIds.length * 7);
-      logger.info(`MAX_TURNS set to ${maxTurns}`);
-
-      draftOrder = generateSnakeDraftOrder(userIds, userMap);
-      logger.debug('Draft Order:', draftOrder);
-
-      return pool.query(
-        'INSERT INTO draft_orders (league_id, draft_order) VALUES ($1, $2) ON CONFLICT (league_id) DO UPDATE SET draft_order = EXCLUDED.draft_order',
-        [leagueId, JSON.stringify(draftOrder)]
-      );
-    })
-    .then(() => {
-      return pool.query(
-        'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, TRUE, FALSE) ON CONFLICT (league_id) DO UPDATE SET draft_started = TRUE, current_turn_index = EXCLUDED.current_turn_index',
-        [leagueId, 0]
-      );
-    })
-    .then(() => {
-      const response = { type: 'startDraft', draftOrder, MAX_TURNS: maxTurns };
-      logger.info(`Sending startDraft message to league: ${leagueId} with MAX_TURNS: ${maxTurns}`);
-      broadcastToLeague(leagueId, response); // Ensure this function is implemented correctly
-    })
-    .catch(error => {
-      logger.error('Error starting draft:', error);
-    });
-}
-
 // Initialize a timer for each user's turn
 function startUserTurn(leagueId, userId, turnIndex) {
   logger.info(`Starting turn for user ${userId} in league ${leagueId} with turnIndex ${turnIndex}`);
@@ -215,7 +138,98 @@ function startUserTurn(leagueId, userId, turnIndex) {
   }, TIME_UPDATE_INTERVAL);
 }
 
-// Function to handle player drafted
+// REFACTORING CODE
+// function fetchPlayerDetails(playerId) {
+//   return pool.query('SELECT player_name, team_abrev FROM player WHERE player_id = $1', [playerId])
+//     .then(result => {
+//       if (result.rows.length === 0) {
+//         throw new Error('Player not found');
+//       }
+//       return result.rows[0];
+//     });
+// }
+// function fetchAndBroadcastAvailablePlayers(leagueId) {
+//   return pool.query(
+//     `SELECT p.player_id, p.player_name, p.team_abrev, p.role
+//      FROM player p
+//      LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
+//      WHERE dp.player_id IS NULL`,
+//     [leagueId]
+//   ).then(result => {
+//     const availablePlayers = result.rows;
+
+//     // Log the available players
+//     logger.debug('Available players fetched:', availablePlayers);
+
+//     // Emit the updated availablePlayers list to the entire league
+//     io.to(leagueId).emit('message', {
+//       type: 'availablePlayersUpdate',
+//       availablePlayers: availablePlayers
+//     });
+
+//     return availablePlayers;
+//   });
+// }
+// function updateAndBroadcastCurrentTurnIndex(leagueId) {
+//   return pool.query(
+//     `UPDATE draft_status
+//      SET current_turn_index = (current_turn_index % (SELECT COUNT(*) FROM user_leagues WHERE league_id = $1)) + 1
+//      WHERE league_id = $1
+//      RETURNING current_turn_index`,
+//     [leagueId]
+//   ).then(result => {
+//     if (result.rows.length === 0) {
+//       throw new Error('Failed to update and fetch current_turn_index');
+//     }
+
+//     const currentTurnIndex = result.rows[0].current_turn_index;
+
+//     // Emit the updated current_turn_index to the entire league
+//     io.to(leagueId).emit('message', {
+//       type: 'turnIndexUpdate',
+//       currentTurnIndex: currentTurnIndex
+//     });
+
+//     logger.debug('Current turn index updated and broadcasted for league:', leagueId);
+
+//     return currentTurnIndex;
+//   });
+// }
+// function handlePlayerDrafted(message) {
+//   logger.debug('Handling player drafted:', message);
+
+//   // Validate message fields
+//   if (!message.playerId || !message.userId || !message.leagueId) {
+//     logger.error('Invalid playerDrafted message:', message);
+//     return Promise.resolve(); // Resolve immediately if invalid
+//   }
+
+//   return fetchPlayerDetails(message.playerId)
+//     .then(playerData => {
+//       const { player_name: playerName, team_abrev: teamAbrev } = playerData;
+//       const draftMessage = `Player drafted: ${teamAbrev} ${playerName}`;
+//       logger.info(draftMessage);
+
+//       // Emit the playerDrafted event to the entire league
+//       io.to(message.leagueId).emit('message', {
+//         type: 'playerDrafted',
+//         draftMessage: draftMessage,
+//         playerId: message.playerId,
+//         userId: message.userId
+//       });
+
+//       logger.debug('Fetching and broadcasting available players');
+//       return fetchAndBroadcastAvailablePlayers(message.leagueId);
+//     })
+//     .then(() => {
+//       logger.debug('Updating and broadcasting current turn index');
+//       return updateAndBroadcastCurrentTurnIndex(message.leagueId);
+//     })
+//     .catch(error => {
+//       logger.error('Error handling player draft:', error);
+//     });
+// }
+
 function handlePlayerDrafted(message) {
   logger.debug('Handling player drafted:', message);
 
@@ -265,20 +279,24 @@ function handlePlayerDrafted(message) {
               availablePlayers: availablePlayers
           });
 
-          // Fetch the current_turn_index from the draft_status table after emitting player details
-          return pool.query(
-              `SELECT current_turn_index FROM draft_status WHERE league_id = $1`,
-              [message.leagueId]
-          );
-      })
-      .then(result => {
-          if (result.rows.length === 0) {
-              throw new Error('Failed to fetch current_turn_index');
-          }
+      //     // Increment the turn index on the server and fetch the updated current_turn_index
+      //     return pool.query(
+      //         `UPDATE draft_status
+      //          SET current_turn_index = (current_turn_index % (SELECT COUNT(*) FROM user_leagues WHERE league_id = $1)) + 1
+      //          WHERE league_id = $1
+      //          RETURNING current_turn_index`,
+      //         [message.leagueId]
+      //     );
+      // })
+      // .then(result => {
+      //     if (result.rows.length === 0) {
+      //         throw new Error('Failed to update and fetch current_turn_index');
+      //     }
 
           const currentTurnIndex = result.rows[0].current_turn_index;
+          console.log(currentTurnIndex, 'on the server')
 
-          // Emit the current_turn_index to the entire league
+          // Emit the updated current_turn_index to the entire league
           io.to(message.leagueId).emit('message', {
               type: 'turnIndexUpdate',
               currentTurnIndex: currentTurnIndex
@@ -357,14 +375,16 @@ function startSocketIOServer() {
                 logger.debug('Received message from client:', data);
 
                 switch (data.type) {
-                  case 'draftUpdate':
-                      logger.debug('Broadcasting draft update:', data);
-                      io.to(leagueId).emit('draftUpdate', data);
-                      break;
+                  // case 'draftUpdate':
+                  //     logger.debug('Broadcasting draft update:', data);
+                  //     io.to(leagueId).emit('draftUpdate', data);
+                  //     break;
+
                     case 'userConnected':
                       // Handle user connection logic if needed
                       broadcastUserList();
                       break;
+
                     case 'startDraft':
                       logger.debug('Received startDraft message:', data);
               
@@ -384,7 +404,9 @@ function startSocketIOServer() {
                           socket.emit('error', 'Error starting draft');
                         });
                       break;
+
                     case 'playerDrafted':
+                      logger.debug('Received playerDrafted event:', data);
                       handlePlayerDrafted(data)
                           .then(() => {
                               logger.debug('Player draft handled successfully');
@@ -393,6 +415,7 @@ function startSocketIOServer() {
                               logger.error('Error handling player draft:', error);
                           });
                       break;
+                      
                     default:
                         logger.warn(`Unknown message type: ${data.type}`);
                 }
@@ -401,6 +424,19 @@ function startSocketIOServer() {
                 socket.emit('error', 'Invalid message format');
             }
         });
+
+      //   socket.on('playerDrafted', async ({ playerId, userId, leagueId }) => {
+      //     try {
+      //         // Update the draft state on the server
+      //         const draftUpdate = await handlePlayerDrafted(playerId, userId, leagueId);
+  
+      //         // Emit the draft update to all connected clients
+      //         io.emit('draftUpdate', draftUpdate);
+      //     } catch (error) {
+      //         console.error('Error handling draft turn:', error);
+      //         socket.emit('draftError', { message: 'An error occurred while processing the draft.' });
+      //     }
+      // });
 
         socket.on('requestCurrentState', () => {
             const userList = Array.from(clients.keys());

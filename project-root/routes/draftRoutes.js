@@ -194,7 +194,7 @@ router.post('/leagues/:leagueId/draft-status', authenticateToken, async (req, re
 
         // Calculate the current round based on the number of users
         const turnsPerRound = numberOfUsers; // Each round consists of one turn per user
-        const roundNumber = Math.floor((currentTurnIndex-1) / turnsPerRound) + 1;
+        const roundNumber = Math.floor((currentTurnIndex-1) / turnsPerRound)+1;
 
         // Check if draft status already exists
         const existingStatus = await pool.query('SELECT * FROM draft_status WHERE league_id = $1', [leagueId]);
