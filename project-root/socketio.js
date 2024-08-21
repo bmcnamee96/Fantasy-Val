@@ -7,6 +7,9 @@ const { Pool } = require('pg'); // Database connection
 const { JWT_SECRET } = require('./utils/auth');
 const logger = require('./utils/logger');
 const users = {};
+const clients = new Map();
+let draftTimers = {};
+let intervalId;
 
 // Create a new pool instance for database connection
 const pool = new Pool({
@@ -178,19 +181,6 @@ function startSocketIOServer() {
               socket.emit('error', 'Invalid message format');
           }
       });
-
-    //   socket.on('playerDrafted', async ({ playerId, userId, leagueId }) => {
-    //     try {
-    //         // Update the draft state on the server
-    //         const draftUpdate = await handlePlayerDrafted(playerId, userId, leagueId);
-
-    //         // Emit the draft update to all connected clients
-    //         io.emit('draftUpdate', draftUpdate);
-    //     } catch (error) {
-    //         console.error('Error handling draft turn:', error);
-    //         socket.emit('draftError', { message: 'An error occurred while processing the draft.' });
-    //     }
-    // });
 
       socket.on('requestCurrentState', () => {
           const userList = Array.from(clients.keys());
