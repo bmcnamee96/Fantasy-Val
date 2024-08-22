@@ -3,7 +3,7 @@
 // Variable declarations
 let intervalId;
 let draftOrder = [];
-let MAX_TURNS = null;
+let maxTurns = null;
 let currentTurnIndex; // Initialize here
 const draftInterval = 15000; // Interval time in milliseconds
 let draftTimer = null;
@@ -11,17 +11,13 @@ let remainingTime = 0;
 const TURN_DURATION = 15000;
 let countdownTimer = null; // Timer reference for countdown
 let userIdToUsername = {}; // Initialize the mapping
-let connectedUserIds = [];
+let connectedUserIds = {};
+let cachedUsers = null;  // Variable to store the fetched user details
+const users = {};
 
 const token = localStorage.getItem('token');
 const leagueId = getLeagueIdFromUrl();
 const userId = getUserIdFromToken(token);
-
-// Initialize Socket.IO
-const socket = io(`http://localhost:8080`, {
-    query: { userId, leagueId },
-    transports: ['websocket']
-});
 
 // initialize DOM
 document.addEventListener('DOMContentLoaded', async () => {
@@ -65,10 +61,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    init();
+    init(); // initialize the draft
+
+    // Event listener for the start button
+    const startTimerButton = document.getElementById('startDraftButton');
+    if (startTimerButton) {
+        startTimerButton.addEventListener('click', () => {
+            // Fetch remaining time from server or use a predefined value
+            const remainingTime = 45; // This should be replaced with actual server data if available
+            startCountdown(remainingTime);
+        });
+    } else {
+        console.error('Start timer button element not found');
+    }
+
 
     console.log('End of the DOM')
 });
+
+// -------------------------------------------------------------------------- //
 
 // grab the leagueId from the url
 function getLeagueIdFromUrl() {
@@ -94,17 +105,24 @@ function getUserIdFromToken(token) {
 
 async function init() {
     try {
-        initializeSocket();
-        await fetchDraftDetails(leagueId); 
-        await initializeUserMapping(leagueId, connectedUserIds);
-        fetchUserDetails(leagueId);
+        await fetchUserDetails(leagueId);
+        await initialDraftDetails(leagueId); 
+        await initializeSocket();
     } catch (error) {
         console.error('Initialization error:', error);
     }
 }
 
-// fetch all user details from the server
+// -------------------------------------------------------------------------- //
+
+// fetch all user details from the server for the correct league
 async function fetchUserDetails(leagueId) {
+    // Check if users have already been fetched
+    if (cachedUsers) {
+        console.log('Returning cached users:', cachedUsers);
+        return cachedUsers;
+    }
+
     try {
         const response = await fetch(`/api/leagues/${leagueId}/users`, {
             method: 'GET',
@@ -118,11 +136,10 @@ async function fetchUserDetails(leagueId) {
             throw new Error(`Network response was not ok: ${response.statusText}`);
         }
 
-        const users = await response.json();
-        console.log('Fetched users:', users);
+        cachedUsers = await response.json();  // Store the fetched users in cachedUsers
+        console.log('League users:', cachedUsers);
 
-        // No need to filter here, as the API should already return users for the specific league
-        return users;
+        return cachedUsers;
 
     } catch (error) {
         console.error('Error fetching user details:', error);
@@ -130,39 +147,118 @@ async function fetchUserDetails(leagueId) {
     }
 }
 
-// map the userId to the username for each member in the league
-async function initializeUserMapping(leagueId, connectedUserIds) {
-    // Convert strings to numbers
-    connectedUserIds = connectedUserIds.map(id => Number(id));
-    console.log('UserIds connected', connectedUserIds);
-
-    // make sure we are in the correct league
-    if (!leagueId) {
-        console.error('League ID is not defined');
-        return;
-    }
-
+// map the userId to the username
+async function userMapping() {
+    // if cachedUsers is null then call fetchUserDetails
     try {
-        // Fetch users directly filtered by leagueId
-        const leagueUsers = await fetchUserDetails(leagueId);
-
-        // Ensure connectedUserIds are numbers
-        const connectedLeagueUsers = leagueUsers.filter(user => connectedUserIds.includes(user.user_id));
-
-        // Create the mapping of user IDs to usernames
-        const userIdToUsername = connectedLeagueUsers.reduce((acc, user) => {
+        let userDetails = cachedUsers;
+        if (!userDetails) {
+            userDetails = await fetchUserDetails(leagueId);
+        }
+        
+        // map the userId to the username
+        userIdToUsername = userDetails.reduce((acc, user) => {
             acc[user.user_id] = user.username;
             return acc;
         }, {});
 
-        updateUserListUI(userIdToUsername); // Update UI after mapping is initialized
     } catch (error) {
-        console.error('Error initializing user mapping:', error);
+        console.error('Error fetching user details:', error);
     }
 }
 
+// -------------------------------------------------------------------------- //
+
+async function initialDraftDetails() {
+    fetchDraftOrder();
+    fetchMaxTurns();
+    fetchCurrentTurn();
+}  
+
+async function fetchDraftOrder() {
+    try {
+        // Ensure leagueId and token are correctly set
+        if (!leagueId || !token) {
+            throw new Error('Missing leagueId or token');
+        }
+
+        // Fetch draft order
+        const draftOrderResponse = await fetch(`/api/draft/leagues/${leagueId}/draft-order`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!draftOrderResponse.ok) {
+            throw new Error(`Failed to fetch draft order: ${draftOrderResponse.status}`);
+        }
+        const draftOrderData = await draftOrderResponse.json();
+        draftOrder = Array.isArray(draftOrderData) ? draftOrderData : [];
+
+        // Log draft order to check its content
+        console.log('Draft Order:', draftOrder);
+    } catch (error) {
+        console.error('Failed to fetch draft details:', error);
+    }
+}
+
+async function fetchMaxTurns() {
+    maxTurns = (cachedUsers.length * 7);
+    console.log('Max turns:', maxTurns);
+}
+
+async function fetchCurrentTurn() {
+    try {
+        const response = await fetch(`/api/draft/leagues/${leagueId}/current-turn`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        currentTurnIndex = (data.currentTurnIndex);
+        console.log('Current turn on server:', currentTurnIndex)
+        // updateCurrentTurnUI(draftOrder[currentTurnIndex]);
+
+    } catch (error) {
+        console.error('Error fetching current turn:', error);
+    }
+}
+
+// Function to start the countdown timer
+function startCountdown(remainingTime) {
+    const timerElement = document.getElementById('turn-timer');
+
+    if (!timerElement) {
+        console.error('Timer element not found');
+        return;
+    }
+
+    let timeLeft = remainingTime;
+
+    const intervalId = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(intervalId);
+            timerElement.textContent = 'Time’s up!';
+        } else {
+            timerElement.textContent = formatTime(timeLeft);
+            timeLeft -= 1;
+        }
+    }, 1000);
+}
+
+// Format seconds into "X seconds"
+function formatTime(seconds) {
+    return `${seconds} seconds`;
+}
+
+// -------------------------------------------------------------------------- //
+
 // show the users that are connected to the draft
-function updateUserListUI(userIdToUsername) {
+function updateUserListUI() {
+    // call the userMapping function to get the username
+    userMapping();
     const userListElement = document.getElementById('user-list');
     if (userListElement) {
         // Generate user list HTML
@@ -179,25 +275,80 @@ function updateUserListUI(userIdToUsername) {
     }
 }
 
-// update the userListUI
-async function fetchAndUpdateUserList() {
-    try {
-        const userDetails = await fetchUserDetails(leagueId);
-        
-        // Update the userIdToUsername mapping
-        userIdToUsername = userDetails.reduce((acc, user) => {
-            acc[user.user_id] = user.username;
-            return acc;
-        }, {});
+// show the updated availabale players
+function updateAvailablePlayersUI(availablePlayers) {
+    const availablePlayersElement = document.getElementById('available-players');
+    if (availablePlayersElement) {
+        if (Array.isArray(availablePlayers)) {
+            // Clear previous content
+            availablePlayersElement.innerHTML = '';
 
-        console.log('Updated User ID to Username Mapping:', userIdToUsername);
+            // Create new cards with default picture handling
+            const cardsHTML = availablePlayers.map(player => {
+                const pictureUrl = player.pictureUrl || 'images/Blank.png'; 
 
-        // Update the UI
-        updateUserListUI(userIdToUsername);
-    } catch (error) {
-        console.error('Error fetching user details:', error);
+                return `
+                    <div class="col-md-4 player-card">
+                        <div class="card">
+                            <img src="${pictureUrl}" class="card-img-top" alt="${player.name}" style="min-height: 50px; max-height: 100px;">
+                            <div class="card-body">
+                                <h5 class="card-title">${player.team_abrev} ${player.name} (${player.role || 'Unknown Role'})</h5>
+                                <button class="btn btn-secondary"
+                                        data-player-id="${player.id}"
+                                        onclick="showDraftConfirmation('${player.id}', '${player.team_abrev}', '${player.name}', '${player.role || 'Unknown Role'}')">
+                                    Draft
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            availablePlayersElement.innerHTML = `<div class="row">${cardsHTML}</div>`;
+
+            // // Attach event listeners to the parent element (event delegation)
+            // availablePlayersElement.addEventListener('click', (event) => {
+            //     if (event.target && event.target.classList.contains('btn-secondary')) {
+            //         const playerId = event.target.getAttribute('data-player-id');
+            //         const teamAbrev = event.target.getAttribute('data-team-abrev');
+            //         const playerName = event.target.getAttribute('data-player-name');
+            //         const playerRole = event.target.getAttribute('data-player-role');
+            //         showDraftConfirmation(playerId, teamAbrev, playerName, playerRole);
+            //     }
+            // });
+            
+        } else {
+            console.error('Data is not an array:', availablePlayers);
+        }
+    } else {
+        console.error('Available players element not found');
     }
 }
+
+// update the current turn
+function updateCurrentTurnUI(currentIndex) {
+    const currentTurnElement = document.getElementById('current-turn-user');
+    if (currentTurnElement) {
+        // Find the userId based on currentIndex
+        const userId = draftOrder[currentIndex] || null;
+        console.log('Current turn:', userId)
+        currentTurnElement.textContent = userId ? `${userId}` : 'Waiting for draft to start...';
+    } else {
+        console.error('Current turn element not found');
+    }
+}
+
+// update the draft timer UI
+function updateDraftTimerUI(time) {
+    const timerElement = document.getElementById('turn-timer');
+    if (timerElement) {
+        timerElement.textContent = `${time} seconds`;
+    } else {
+        console.error('Draft timer element not found');
+    }
+}
+
+// -------------------------------------------------------------------------- //
 
 function initializeSocket() {
     console.log('Initializing socket...');
@@ -213,96 +364,57 @@ function initializeSocket() {
     });
 
     socket.on('userListUpdate', async (data) => {
+        console.log('userListUpdate received:', data)
         if (data.users && Array.isArray(data.users)) {
             // Update connected user IDs
             connectedUserIds = data.users;
     
-            console.log('Updated connectedUserIds:', connectedUserIds);
+            console.log('ConnectedUserIds:', connectedUserIds);
     
             // Fetch user details and update UI
-            await fetchAndUpdateUserList();
+            updateUserListUI();
         } else {
             console.error('Expected users to be an array but got:', data.users);
         }
     });    
 
-    // Handle user connection event
-    socket.on('userConnected', (userId) => {
-        console.log('User connected:', userId);
-        // Optionally update the UI
-        initializeUserMapping(leagueId, connectedUserIds);
-    });
-
-    // Handle user disconnection event
-    socket.on('userDisconnected', (userId) => {
-        connectedUserIds = connectedUserIds.filter(id => id !== userId); // Update connected user IDs
-        console.log('User disconnected:', userId);
-        // Optionally update the UI
-        initializeUserMapping(leagueId, connectedUserIds);
-    });
-
-    // Other event handlers
-    socket.on('draftUpdate', ({ draftOrder: newDraftOrder, availablePlayers }) => {
-        if (Array.isArray(newDraftOrder)) {
-            draftOrder = newDraftOrder;
+    socket.on('draftStatusUpdate', (data) => {
+        console.log('draftStatusUpdate', data);
+    
+        // Ensure the data structure is as expected
+        if (data && typeof data.currentIndex === 'number') {
+            updateCurrentTurnUI(data.currentIndex);
         } else {
-            console.warn('Received draft order is not an array:', newDraftOrder);
+            console.error('Invalid data format for draft status:', data);
         }
-        updateAvailablePlayersUI(availablePlayers);
-    });
-
-    socket.on('message', (data) => {
-        switch (data.type){
-            case 'startDraft':
-                console.log('Draft starting with data:', data);
-                startDraft(data);
-                break;
-
-            case 'playerDrafted':
-                updateDraftMessage(data.draftMessage); // Update the UI with the drafted player
-                break;
-
-            case 'availablePlayersUpdate':
-                console.log('Available players update received')
-                updateAvailablePlayersUI(data.availablePlayers); // Update the UI with the new list of available players
-                break;
-
-            case 'turnIndexUpdate':
-                fetchCurrentTurn();
-                // updateCurrentTurnUI(data.currentTurnIndex); // Directly use the provided turn index
-                break;
-        }
-
     });    
+    
+    // Socket listener for available players update
+    socket.on('availablePlayersUpdate', (data) => {
+        console.log('availablePlayersUpdate', data);
 
-    socket.on('endDraft', () => {
-        endDraft();
+        // Ensure the data structure is as expected
+        if (data && Array.isArray(data.players)) {
+            updateAvailablePlayersUI(data.players);
+        } else {
+            console.error('Invalid data format for available players:', data);
+        }
     });
 
-    socket.on('userTurn', (message) => {
-        handleUserTurn(message);
-    });
+    socket.on('turnTimeUpdate', (data) => {
+        console.log('turnTimeUpdate', data);
 
-    socket.on('updateRound', (round) => {
-        updateCurrentRound(round);
-    });
+        // Ensure the data structure is as expected
+        if (data && typeof data.remainingTime === 'number') {
+            updateDraftTimerUI(data.remainingTime);
+        } else {
+            console.error('Invalid data format for draft timer:', data);
+        }
 
-    socket.on('timeUpdate', (message) => {
-        handleTimeUpdate(message);
-    });
-
-    socket.on('playerDrafted', (data) => {
-        updateDraftMessage(data.message); // Display the draft message in the UI
-    });
+    })
 
     socket.on('disconnect', () => {
         console.log('Socket.IO connection closed');
-    });
-
-    socket.on('reconnect', () => {
-        console.log('Reconnected to the server');
-        // Fetch current draft state
-        fetchDraftDetails();
     });
 
     socket.on('error', (error) => {

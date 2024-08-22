@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS drafted_players (
     CONSTRAINT unique_drafted_player UNIQUE(league_id, player_id)
 );
 
+-- turn timers table
+CREATE TABLE IF NOT EXISTS turn_timers (
+    league_id INT PRIMARY KEY,         -- References the league for which the turn timer is set
+    current_turn_start TIMESTAMP,      -- Timestamp when the current turn started
+    turn_duration INT NOT NULL DEFAULT 60  -- Duration of each turn in seconds
+);
+
 -- Password reset token
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     token_id SERIAL PRIMARY KEY,

@@ -25,3 +25,17 @@ VALUES (6, '[]');
 SELECT draft_order[0] AS first_element
 FROM draft_orders
 WHERE league_id = 3;
+
+-- Initialize timer
+INSERT INTO turn_timers (league_id, current_turn_start, turn_duration)
+VALUES (1, NOW(), 20000)
+ON CONFLICT (league_id) DO UPDATE
+SET current_turn_start = EXCLUDED.current_turn_start;
+
+-- get remaining time
+SELECT league_id,
+       EXTRACT(EPOCH FROM (NOW() - current_turn_start)) AS elapsed_time,
+       turn_duration - EXTRACT(EPOCH FROM (NOW() - current_turn_start)) AS remaining_time
+FROM turn_timers
+WHERE league_id = 1;
+

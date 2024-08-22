@@ -4,12 +4,13 @@ const http = require('http');
 const express = require('express');
 const socketIo = require('socket.io');
 const { Pool } = require('pg'); // Database connection
-const { JWT_SECRET } = require('./utils/auth');
 const logger = require('./utils/logger');
-const users = {};
 const clients = new Map();
-let draftTimers = {};
-let intervalId;
+
+let draftStarted = false;
+let draftEnded = false;
+let currentTurnIndex = 0; // Index of the current turn
+
 
 // Create a new pool instance for database connection
 const pool = new Pool({
@@ -24,27 +25,42 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// show the users within the league
-function broadcastUserList() {
-  const userList = Array.from(clients.keys());
-  const message = { users: userList };
-  logger.debug('Broadcasting user list:', message);
-
-  io.emit('userListUpdate', message); // Emit to all connected clients
+// Function to get userId from socketId
+function getUserIdFromSocketId(socketId) {
+  for (let [userId, clientInfo] of clients.entries()) {
+      if (clientInfo.socket.id === socketId) {
+          return userId; // Return the userId corresponding to this socketId
+      }
+  }
+  return null; // Return null if no userId is found for the given socketId
 }
 
-// work on the draft order
-const TURN_DURATION = 15000; // 5 seconds for testing
-const TIME_UPDATE_INTERVAL = 1000; // Update every second
+// Broadcast the user list within a specific league (room)
+function broadcastUserList(leagueId) {
+  // Get the set of socket IDs for the specified league
+  const socketIds = Array.from(io.sockets.adapter.rooms.get(leagueId) || []);
 
+  // Map socket IDs to user IDs using the getUserIdFromSocketId function
+  const userList = socketIds.map(socketId => getUserIdFromSocketId(socketId)).filter(userId => userId !== null);
+
+  const message = { users: userList };
+  logger.debug(`Broadcasting user list for league ${leagueId}:`, message);
+
+  // Emit the updated user list to all clients in the specified league
+  io.to(leagueId).emit('userListUpdate', message);
+}
+
+// draft order functions
 function shuffleArray(array) {
+  // randomize the users in the league
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
 }
-
+// create a snake draft
+// ex. [1, 2, 3, 3, 2, 1, etc]
 function generateSnakeDraftOrder(userIds, userMap) {
   const shuffledUserIds = shuffleArray(userIds.slice());
   const draftOrder = [];
@@ -104,26 +120,187 @@ function setDraftOrder(leagueId) {
     });
 }
 
+// Function to get draft status from the database
+async function getDraftStatus(leagueId) {
+  const query = `
+      SELECT current_turn_index, draft_started, draft_ended
+      FROM draft_status
+      WHERE league_id = $1
+  `;
+
+  try {
+      const result = await pool.query(query, [leagueId]);
+      if (result.rows.length === 0) {
+          throw new Error(`No draft status found for league ${leagueId}`);
+      }
+
+      return result.rows[0]; // Assuming league_id is unique
+  } catch (error) {
+      console.error('Error fetching draft status:', error);
+      return null;
+  }
+}
+
+async function getAvailablePlayers(leagueId) {
+  const query = `
+    SELECT p.player_id, p.player_name, p.team_abrev, p.role
+    FROM player p
+    LEFT JOIN drafted_players dp
+    ON p.player_id = dp.player_id AND dp.league_id = $1
+    WHERE p.team_abrev IN (
+        SELECT team_abrev
+        FROM league_teams
+        WHERE league_id = $1
+    ) AND dp.player_id IS NULL
+  `;
+
+  try {
+      const result = await pool.query(query, [leagueId]);
+      return result.rows.map(player => ({
+          id: player.player_id,
+          name: player.player_name,
+          team_abrev: player.team_abrev,
+          role: player.role || 'unknown role' // Default to 'unknown role' if not available
+      }));
+  } catch (error) {
+      console.error('Error fetching available players:', error);
+      return [];
+  }
+}
+
+// Function to broadcast draft status
+function broadcastDraftStatus(leagueId) {
+  const draftStatus = {
+      currentIndex: currentTurnIndex,
+      draftStarted: draftStarted,
+      draftEnded: draftEnded
+  };
+
+  logger.debug(`Broadcasting draft status for league ${leagueId}:`, draftStatus);
+  io.to(leagueId).emit('draftStatusUpdate', draftStatus);
+}
+
+async function draftState(socket, leagueId) {
+  try {
+      // Fetch and send the current draft status
+      const draftStatus = await getDraftStatus(leagueId);
+      socket.emit('draftStatusUpdate', {
+        currentIndex: draftStatus ? draftStatus.current_turn_index : 0,
+        draftStarted: draftStatus ? draftStatus.draft_started : false,
+        draftEnded: draftStatus ? draftStatus.draft_ended : false
+      });
+
+      // Send the available players
+      const availablePlayers = await getAvailablePlayers(leagueId);
+      socket.emit('availablePlayersUpdate', { players: availablePlayers });
+
+      // Check the remaining time of the current turn
+      if (draftStarted && !draftEnded) {
+        const turnTimerResult = await checkTurnTimer(leagueId); // Ensure this is awaited if it's a promise
+
+        const now = new Date();
+        let remainingTime = 0;
+
+        if (turnTimerResult && turnTimerResult.rows && turnTimerResult.rows.length > 0) {
+          const turnEndTime = new Date(turnTimerResult.rows[0].turn_end_time);
+
+          if (now < turnEndTime) {
+            remainingTime = Math.max(0, (turnEndTime - now) / 1000); // Remaining time in seconds
+          }
+        }
+
+          socket.emit('turnTimeUpdate', { remainingTime });
+        } else {
+          // If the draft hasn't started or has ended, you may want to set remainingTime to 0 or another value
+          socket.emit('turnTimeUpdate', { remainingTime: 45 });
+        }
+
+  } catch (error) {
+      console.error('Error sending state:', error);
+  }
+}
+
+async function startTurnTimer(leagueId, turnDuration) {
+  const startTime = new Date();
+  const endTime = new Date(startTime.getTime() + turnDuration * 45 * 1000); // Duration in milliseconds
+
+  try {
+      await pool.query(`
+          INSERT INTO turn_timers (league_id, turn_start_time, turn_end_time)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (league_id) DO UPDATE
+          SET turn_start_time = EXCLUDED.turn_start_time, turn_end_time = EXCLUDED.turn_end_time
+      `, [leagueId, startTime, endTime]);
+  } catch (error) {
+      console.error('Error initializing turn timer:', error);
+  }
+}
+
+async function checkTurnTimer(leagueId) {
+  try {
+      const result = await pool.query(`
+          SELECT turn_end_time FROM turn_timers WHERE league_id = $1
+      `, [leagueId]);
+
+      if (result.rows.length > 0) {
+          const turnEndTime = new Date(result.rows[0].turn_end_time);
+          const now = new Date();
+
+          if (now >= turnEndTime) {
+              console.log('Turn expired');
+          }
+      }
+  } catch (error) {
+      console.error('Error checking turn timer:', error);
+  }
+}
+
+async function handleTurnExpiry(leagueId) {
+  // Move to the next turn
+  currentTurnIndex = (currentTurnIndex + 1) % MAX_TURNS;
+
+  try {
+      await pool.query(`
+          UPDATE draft_status
+          SET current_turn_index = $1
+          WHERE league_id = $2
+      `, [currentTurnIndex, leagueId]);
+
+      // Broadcast updated draft status
+      broadcastDraftStatus(leagueId);
+
+      // Start a new turn timer if needed
+      startTurnTimer(leagueId, TURN_DURATION);
+  } catch (error) {
+      console.error('Error handling turn expiry:', error);
+  }
+}
+
 
 // Starting the Socket.IO server
 function startSocketIOServer() {
   io.on('connection', (socket) => {
       const { userId, leagueId } = socket.handshake.query;
-  
+
       if (userId && leagueId) {
           console.log(`User ${userId} connected to league ${leagueId}`);
           clients.set(userId, { socket, leagueId });
           socket.join(leagueId);
-          console.log(`User ${userId} joined room ${leagueId}`);
-  
-          // Send the updated user list to the newly connected user
-          const userList = Array.from(clients.keys());
-          console.log('Sending userListUpdate to new client:', userList);
+
+          // 1. Send the list of connected users
+          const socketIds = Array.from(io.sockets.adapter.rooms.get(leagueId) || []);
+          const userList = socketIds.map(socketId => getUserIdFromSocketId(socketId)).filter(userId => userId !== null);
           socket.emit('userListUpdate', { users: userList });
-  
-          // Broadcast to all clients
-          broadcastUserList();
-  
+          
+          // Broadcast the updated user list to all clients in the specified league
+          broadcastUserList(leagueId);
+
+          // Send the current draft state
+          // draftStatusUpdate
+          // availablePlayersUpdate
+          const draftUpdate = draftState(socket, leagueId);
+          socket.emit('draftUpdate', draftUpdate);
+
       } else {
           logger.error('User ID or League ID missing');
           socket.emit('error', 'User ID or League ID missing');
@@ -131,68 +308,66 @@ function startSocketIOServer() {
           return;
       }
 
-      // Handle incoming messages
-      socket.on('message', (data) => {
-          try {
-              logger.debug('Received message from client:', data);
+      // Handle incoming messages from the client
+      socket.on('message', async (data) => {
+        try {
+            logger.debug('Received message from client:', data);
 
-              switch (data.type) {
-                  case 'userConnected':
-                    // Handle user connection logic if needed
-                    broadcastUserList();
+            switch (data.type) {
+                case 'startDraft':
+                    draftStarted = true;
+                    draftEnded = false;
+                    currentTurnIndex = 0;
+
+                    // Update the database
+                    await pool.query(
+                        'UPDATE draft_status SET draft_started = TRUE, draft_ended = FALSE, current_turn_index = $1 WHERE league_id = $2',
+                        [currentTurnIndex, leagueId]
+                    );
+
+                    broadcastDraftStatus(leagueId);
                     break;
 
-                  case 'startDraft':
-                    logger.debug('Received startDraft message:', data);
-            
-                    // Call setDraftOrder and only proceed once it completes
-                    setDraftOrder(data.leagueId)
-                      .then(draftOrder => {
-                        // Emit the startDraft message with the draftOrder and MAX_TURNS
-                        io.to(data.leagueId).emit('message', {
-                          type: 'startDraft',
-                          draftOrder: draftOrder,
-                          MAX_TURNS: data.MAX_TURNS
-                        });
-                        logger.info(`Draft started for league: ${data.leagueId}`);
-                      })
-                      .catch(error => {
-                        logger.error('Error starting draft:', error);
-                        socket.emit('error', 'Error starting draft');
-                      });
+                case 'endDraft':
+                    draftEnded = true;
+
+                    // Update the database
+                    await pool.query(
+                        'UPDATE draft_status SET draft_ended = TRUE WHERE league_id = $1',
+                        [leagueId]
+                    );
+
+                    broadcastDraftStatus(leagueId);
                     break;
 
-                  case 'playerDrafted':
-                    logger.debug('Received playerDrafted event:', data);
-                    handlePlayerDrafted(data)
-                        .then(() => {
-                            logger.debug('Player draft handled successfully');
-                        })
-                        .catch(error => {
-                            logger.error('Error handling player draft:', error);
-                        });
-                    break;
-                    
-                  default:
-                      logger.warn(`Unknown message type: ${data.type}`);
-              }
-          } catch (error) {
-              logger.error('Error processing message:', error);
-              socket.emit('error', 'Invalid message format');
-          }
-      });
+                case 'nextTurn':
+                    if (!draftEnded) {
+                        currentTurnIndex = (currentTurnIndex + 1) % MAX_TURNS;
 
-      socket.on('requestCurrentState', () => {
-          const userList = Array.from(clients.keys());
-          socket.emit('userListUpdate', { users: userList });
-          // Optionally, include other state information here
+                        // Update the database
+                        await pool.query(
+                            'UPDATE draft_status SET current_turn_index = $1 WHERE league_id = $2',
+                            [currentTurnIndex, leagueId]
+                        );
+
+                        broadcastDraftStatus(leagueId);
+                    }
+                    break;
+
+                default:
+                    logger.warn(`Unknown message type: ${data.type}`);
+            }
+        } catch (error) {
+            logger.error('Error processing message:', error);
+            socket.emit('error', 'Invalid message format');
+        }
       });
 
       // Handle disconnection
       socket.on('disconnect', () => {
-          logger.info('Client disconnected:', socket.id);
+          console.log(`User ${userId} disconnected from league ${leagueId}`);
           clients.delete(userId);
-          broadcastUserList();
+          broadcastUserList(leagueId);
       });
 
       // Handle socket errors
