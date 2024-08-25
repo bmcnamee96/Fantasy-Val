@@ -19,6 +19,9 @@ const token = localStorage.getItem('token');
 const leagueId = getLeagueIdFromUrl();
 const userId = getUserIdFromToken(token);
 
+// Initialize the socket globally
+const socket = initializeSocket();
+
 // initialize DOM
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for draft.js');
@@ -33,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('League ID:', leagueId);
     console.log('User ID:', userId);
 
-    // determine who the league owner is
+    // Determine who the league owner is
     let leagueOwnerId;
     try {
         const leagueResponse = await fetch(`/api/draft/leagues/${leagueId}`, {
@@ -43,13 +46,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         leagueOwnerId = league.owner_id;
         console.log('League Owner ID:', leagueOwnerId);
 
-        // if the user is the league owner, give them the startDraftButton
+        // If the user is the league owner, give them the startDraftButton
         if (userId === leagueOwnerId) {
             const startDraftButton = document.getElementById('startDraftButton');
             if (startDraftButton) {
-                // only display the button to the league owner
+                // Only display the button to the league owner
                 startDraftButton.style.display = 'block';
                 console.log('Start Draft button displayed for league owner');
+
+                // Add event listener for the start button
+                startDraftButton.addEventListener('click', startDraft);
             } else {
                 console.error('Start Draft button element not found');
             }
@@ -62,32 +68,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     init(); // initialize the draft
-
-    // Event listener for the start button
-    const startTimerButton = document.getElementById('startDraftButton');
-    if (startTimerButton) {
-        startTimerButton.addEventListener('click', () => {
-            // Fetch remaining time from server or use a predefined value
-            const remainingTime = 45; // This should be replaced with actual server data if available
-            startCountdown(remainingTime);
-        });
-    } else {
-        console.error('Start timer button element not found');
-    }
-
-
-    console.log('End of the DOM')
 });
 
 // -------------------------------------------------------------------------- //
 
-// grab the leagueId from the url
 function getLeagueIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('leagueId');
 }
 
-// return the userId from the token in local storage
 function getUserIdFromToken(token) {
     if (!token) {
         console.error('No token provided');
@@ -115,7 +104,6 @@ async function init() {
 
 // -------------------------------------------------------------------------- //
 
-// fetch all user details from the server for the correct league
 async function fetchUserDetails(leagueId) {
     // Check if users have already been fetched
     if (cachedUsers) {
@@ -147,7 +135,6 @@ async function fetchUserDetails(leagueId) {
     }
 }
 
-// map the userId to the username
 async function userMapping() {
     // if cachedUsers is null then call fetchUserDetails
     try {
@@ -226,7 +213,6 @@ async function fetchCurrentTurn() {
     }
 }
 
-// Function to start the countdown timer
 function startCountdown(remainingTime) {
     const timerElement = document.getElementById('turn-timer');
 
@@ -248,14 +234,28 @@ function startCountdown(remainingTime) {
     }, 1000);
 }
 
-// Format seconds into "X seconds"
 function formatTime(seconds) {
     return `${seconds} seconds`;
 }
 
+function startDraft() {
+    if (!socket) {
+        console.error('Socket is not initialized.');
+        return;
+    }
+
+    socket.emit('message', { type: 'startDraft' });
+    
+    const startDraftButton = document.getElementById('startDraftButton');
+    if (startDraftButton) {
+        startDraftButton.style.display = 'none';
+    } else {
+        console.error('Start Draft button element not found when trying to hide it.');
+    }
+}
+
 // -------------------------------------------------------------------------- //
 
-// show the users that are connected to the draft
 function updateUserListUI() {
     // call the userMapping function to get the username
     userMapping();
@@ -275,7 +275,6 @@ function updateUserListUI() {
     }
 }
 
-// show the updated availabale players
 function updateAvailablePlayersUI(availablePlayers) {
     const availablePlayersElement = document.getElementById('available-players');
     if (availablePlayersElement) {
@@ -325,7 +324,6 @@ function updateAvailablePlayersUI(availablePlayers) {
     }
 }
 
-// update the current turn
 function updateCurrentTurnUI(currentIndex) {
     const currentTurnElement = document.getElementById('current-turn-user');
     if (currentTurnElement) {
@@ -338,7 +336,6 @@ function updateCurrentTurnUI(currentIndex) {
     }
 }
 
-// update the draft timer UI
 function updateDraftTimerUI(time) {
     const timerElement = document.getElementById('turn-timer');
     if (timerElement) {
@@ -401,6 +398,10 @@ function initializeSocket() {
         }
     });
 
+    socket.on('draftStarted', (data) => {
+        console.log('draftStarted', data)
+    })
+
     socket.on('turnTimeUpdate', (data) => {
         console.log('turnTimeUpdate', data);
 
@@ -410,6 +411,8 @@ function initializeSocket() {
         } else {
             console.error('Invalid data format for draft timer:', data);
         }
+
+        startCountdown(data.remainingTime);
 
     })
 

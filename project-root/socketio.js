@@ -10,6 +10,7 @@ const clients = new Map();
 let draftStarted = false;
 let draftEnded = false;
 let currentTurnIndex = 0; // Index of the current turn
+let turnDuration = 45;
 
 
 // Create a new pool instance for database connection
@@ -199,65 +200,121 @@ async function draftState(socket, leagueId) {
         const turnTimerResult = await checkTurnTimer(leagueId); // Ensure this is awaited if it's a promise
 
         const now = new Date();
-        let remainingTime = 0;
+        let remainingTime = 45; // Default duration if no timer is found
 
-        if (turnTimerResult && turnTimerResult.rows && turnTimerResult.rows.length > 0) {
-          const turnEndTime = new Date(turnTimerResult.rows[0].turn_end_time);
+        if (turnTimerResult) {
+          // Calculate the remaining time based on the timer result
+          const startTime = new Date(turnTimerResult.current_turn_start);
+          const endTime = new Date(startTime.getTime() + turnTimerResult.turn_duration * 1000); // Duration in milliseconds
 
-          if (now < turnEndTime) {
-            remainingTime = Math.max(0, (turnEndTime - now) / 1000); // Remaining time in seconds
+          if (now < endTime) {
+            remainingTime = Math.max(0, (endTime - now) / 1000); // Remaining time in seconds
           }
         }
 
-          socket.emit('turnTimeUpdate', { remainingTime });
-        } else {
-          // If the draft hasn't started or has ended, you may want to set remainingTime to 0 or another value
-          socket.emit('turnTimeUpdate', { remainingTime: 45 });
-        }
+        socket.emit('turnTimeUpdate', { remainingTime });
+      } else {
+        // If the draft hasn't started or has ended, you may want to set remainingTime to 0 or another value
+        socket.emit('turnTimeUpdate', { remainingTime: 45 });
+      }
 
   } catch (error) {
       console.error('Error sending state:', error);
   }
 }
 
-async function startTurnTimer(leagueId, turnDuration) {
-  const startTime = new Date();
-  const endTime = new Date(startTime.getTime() + turnDuration * 45 * 1000); // Duration in milliseconds
-
+async function startDraft(leagueId, turnDuration, io) {
   try {
-      await pool.query(`
-          INSERT INTO turn_timers (league_id, turn_start_time, turn_end_time)
-          VALUES ($1, $2, $3)
-          ON CONFLICT (league_id) DO UPDATE
-          SET turn_start_time = EXCLUDED.turn_start_time, turn_end_time = EXCLUDED.turn_end_time
-      `, [leagueId, startTime, endTime]);
+      // Emit the 'draftStarted' message to all users in the league
+      io.to(leagueId).emit('draftStarted', { message: 'The draft has started!', turnDuration });
+
+      // Set draftStarted to true and draftEnded to false
+      draftStarted = true;
+      draftEnded = false;
+      currentTurnIndex = 0;
+
+      // Update the database with the draft started status
+      await pool.query(
+          'UPDATE draft_status SET draft_started = TRUE, draft_ended = FALSE, current_turn_index = $1 WHERE league_id = $2',
+          [currentTurnIndex, leagueId]
+      );
+
+      // Start the first turn timer
+      await initializeTurnTimer(leagueId, turnDuration);
+
+      console.log('Draft started and message emitted to all users.');
   } catch (error) {
-      console.error('Error initializing turn timer:', error);
+      console.error('Error starting the draft:', error);
   }
+}
+
+async function initializeTurnTimer(leagueId, turnDuration, io) {
+  const startTime = new Date();
+  
+  try {
+    // Insert or update the turn timer in the database
+    await pool.query(`
+      INSERT INTO turn_timers (league_id, current_turn_start, turn_duration)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (league_id) DO UPDATE
+      SET current_turn_start = EXCLUDED.current_turn_start, turn_duration = EXCLUDED.turn_duration
+    `, [leagueId, startTime, turnDuration]);
+
+  } catch (error) {
+    console.error('Error initializing turn timer:', error);
+  }
+
+  await checkTurnTimer(leagueId);
 }
 
 async function checkTurnTimer(leagueId) {
+  const query = `
+    SELECT current_turn_start,
+           turn_duration
+    FROM turn_timers
+    WHERE league_id = $1;
+  `;
+
   try {
-      const result = await pool.query(`
-          SELECT turn_end_time FROM turn_timers WHERE league_id = $1
-      `, [leagueId]);
+    const result = await pool.query(query, [leagueId]);
 
-      if (result.rows.length > 0) {
-          const turnEndTime = new Date(result.rows[0].turn_end_time);
-          const now = new Date();
+    if (result.rows.length > 0) {
+      const { current_turn_start, turn_duration } = result.rows[0];
+      const now = new Date();
+      const startTime = new Date(current_turn_start);
+      const endTime = new Date(startTime.getTime() + turn_duration * 1000); // Duration in milliseconds
 
-          if (now >= turnEndTime) {
-              console.log('Turn expired');
-          }
+      // Calculate the remaining time
+      const remainingTime = Math.max(0, (endTime - now) / 1000); // Remaining time in seconds
+
+      // Emit the 'draftStarted' message to all users in the league
+      io.to(leagueId).emit('turnTimeUpdate', { message: 'Checking the remaining time:', remainingTime });
+
+      // If the remaining time is less than or equal to 0, handle turn expiry
+      if (remainingTime <= 0) {
+        await handleTurnExpiry(leagueId);
       }
+
+      // Log the calculated times for debugging purposes
+      console.log(`Current turn start: ${current_turn_start}`);
+      console.log(`Turn duration: ${turn_duration} seconds`);
+      console.log(`Remaining time: ${remainingTime} seconds`);
+
+      return remainingTime; // Return remaining time for further use
+    } else {
+      console.error(`No turn timer found for league ${leagueId}`);
+      return null; // Return null if no timer is found
+    }
   } catch (error) {
-      console.error('Error checking turn timer:', error);
+    console.error('Error checking turn timer:', error);
+    return null; // Handle errors gracefully and return null
   }
 }
 
+const maxTurns = 49
 async function handleTurnExpiry(leagueId) {
   // Move to the next turn
-  currentTurnIndex = (currentTurnIndex + 1) % MAX_TURNS;
+  currentTurnIndex = (currentTurnIndex + 1) % maxTurns;
 
   try {
       await pool.query(`
@@ -270,7 +327,7 @@ async function handleTurnExpiry(leagueId) {
       broadcastDraftStatus(leagueId);
 
       // Start a new turn timer if needed
-      startTurnTimer(leagueId, TURN_DURATION);
+      initializeTurnTimer(leagueId, turnDuration);
   } catch (error) {
       console.error('Error handling turn expiry:', error);
   }
@@ -315,43 +372,16 @@ function startSocketIOServer() {
 
             switch (data.type) {
                 case 'startDraft':
-                    draftStarted = true;
-                    draftEnded = false;
-                    currentTurnIndex = 0;
-
-                    // Update the database
-                    await pool.query(
-                        'UPDATE draft_status SET draft_started = TRUE, draft_ended = FALSE, current_turn_index = $1 WHERE league_id = $2',
-                        [currentTurnIndex, leagueId]
-                    );
-
-                    broadcastDraftStatus(leagueId);
-                    break;
+                  startDraft(leagueId, turnDuration, io);
+                  console.log('startDraft message received on server!')
+                  break;
 
                 case 'endDraft':
-                    draftEnded = true;
 
-                    // Update the database
-                    await pool.query(
-                        'UPDATE draft_status SET draft_ended = TRUE WHERE league_id = $1',
-                        [leagueId]
-                    );
-
-                    broadcastDraftStatus(leagueId);
                     break;
 
                 case 'nextTurn':
-                    if (!draftEnded) {
-                        currentTurnIndex = (currentTurnIndex + 1) % MAX_TURNS;
 
-                        // Update the database
-                        await pool.query(
-                            'UPDATE draft_status SET current_turn_index = $1 WHERE league_id = $2',
-                            [currentTurnIndex, leagueId]
-                        );
-
-                        broadcastDraftStatus(leagueId);
-                    }
                     break;
 
                 default:
