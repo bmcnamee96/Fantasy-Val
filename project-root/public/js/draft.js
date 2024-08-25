@@ -20,7 +20,7 @@ const leagueId = getLeagueIdFromUrl();
 const userId = getUserIdFromToken(token);
 
 // Initialize the socket globally
-const socket = initializeSocket();
+// const socket = initializeSocket();
 
 // initialize DOM
 document.addEventListener('DOMContentLoaded', async () => {
@@ -221,7 +221,7 @@ function startCountdown(remainingTime) {
         return;
     }
 
-    let timeLeft = remainingTime;
+    let timeLeft = Math.round(remainingTime);
 
     const intervalId = setInterval(() => {
         if (timeLeft <= 0) {
@@ -399,21 +399,43 @@ function initializeSocket() {
     });
 
     socket.on('draftStarted', (data) => {
-        console.log('draftStarted', data)
-    })
+        console.log('draftStarted', data);
+    
+        if (data) {
+            // Start the countdown with the provided remaining time
+            if (typeof Math.round(data.remainingTime) === 'number') {
+                startCountdown(data.remainingTime);
+            }
+    
+            // Update the current turn and round UI
+            if (typeof data.currentTurnIndex === 'number') {
+                updateCurrentTurnUI(data.currentTurnIndex);
+            }
+        } else {
+            console.error('Invalid data format for draft start:', data);
+        }
+    });
+
+    socket.on('turnUpdate', (data) => {
+        console.log('turnUpdate', data);
+
+        // if (data && typeof data.currentTurnIndex === 'number') {
+        //     updateCurrentTurnUI(data.currentTurnIndex);
+        //     startCountdown(data.turnDuration);
+        // } else {
+        //     console.error('Invalid data format for turn update:', data);
+        // }
+    });
 
     socket.on('turnTimeUpdate', (data) => {
         console.log('turnTimeUpdate', data);
 
-        // Ensure the data structure is as expected
-        if (data && typeof data.remainingTime === 'number') {
-            updateDraftTimerUI(data.remainingTime);
-        } else {
-            console.error('Invalid data format for draft timer:', data);
-        }
-
-        startCountdown(data.remainingTime);
-
+        // // Ensure the data structure is as expected
+        // if (data && typeof Math.round(data.remainingTime) === 'number') {
+        //     updateDraftTimerUI(Math.round(data.remainingTime));
+        // } else {
+        //     console.error('Invalid data format for draft timer:', data);
+        // }
     })
 
     socket.on('disconnect', () => {
