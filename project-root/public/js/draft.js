@@ -2,6 +2,7 @@
 
 // Variable declarations
 let intervalId;
+let socket;
 let draftOrder = [];
 let maxTurns = null;
 let currentTurnIndex; // Initialize here
@@ -19,8 +20,7 @@ const token = localStorage.getItem('token');
 const leagueId = getLeagueIdFromUrl();
 const userId = getUserIdFromToken(token);
 
-// Initialize the socket globally
-// const socket = initializeSocket();
+// -------------------------------------------------------------------------- //
 
 // initialize DOM
 document.addEventListener('DOMContentLoaded', async () => {
@@ -67,7 +67,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    init(); // initialize the draft
+    try {
+        await init(); // initialize the draft
+    } catch (error) {
+        console.error('Initialization error:', error);
+    }
 });
 
 // -------------------------------------------------------------------------- //
@@ -154,43 +158,43 @@ async function userMapping() {
     }
 }
 
-// -------------------------------------------------------------------------- //
-
-async function initialDraftDetails() {
-    fetchDraftOrder();
+async function initDraftDetails() {
+    // fetchDraftOrder();
     fetchMaxTurns();
     fetchCurrentTurn();
 }  
 
-async function fetchDraftOrder() {
-    try {
-        // Ensure leagueId and token are correctly set
-        if (!leagueId || !token) {
-            throw new Error('Missing leagueId or token');
-        }
+// can use this function if I come up with a way to set the draftOrder before draft starts
+// async function fetchDraftOrder() {
+//     try {
+//         // Ensure leagueId and token are correctly set
+//         if (!leagueId || !token) {
+//             throw new Error('Missing leagueId or token');
+//         }
 
-        // Fetch draft order
-        const draftOrderResponse = await fetch(`/api/draft/leagues/${leagueId}/draft-order`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!draftOrderResponse.ok) {
-            throw new Error(`Failed to fetch draft order: ${draftOrderResponse.status}`);
-        }
-        const draftOrderData = await draftOrderResponse.json();
-        draftOrder = Array.isArray(draftOrderData) ? draftOrderData : [];
+//         // Fetch draft order
+//         const draftOrderResponse = await fetch(`/api/draft/leagues/${leagueId}/draft-order`, {
+//             headers: { 'Authorization': `Bearer ${token}` }
+//         });
+//         if (!draftOrderResponse.ok) {
+//             throw new Error(`Failed to fetch draft order: ${draftOrderResponse.status}`);
+//         }
+//         const draftOrderData = await draftOrderResponse.json();
+//         draftOrder = Array.isArray(draftOrderData) ? draftOrderData : [];
 
-        // Log draft order to check its content
-        console.log('Draft Order:', draftOrder);
-    } catch (error) {
-        console.error('Failed to fetch draft details:', error);
-    }
-}
+//         // Log draft order to check its content
+//         console.log('Draft Order:', draftOrder);
+//     } catch (error) {
+//         console.error('Failed to fetch draft details:', error);
+//     }
+// }
 
 async function fetchMaxTurns() {
     maxTurns = (cachedUsers.length * 7);
     console.log('Max turns:', maxTurns);
 }
 
+// 🚩 can probably delete
 async function fetchCurrentTurn() {
     try {
         const response = await fetch(`/api/draft/leagues/${leagueId}/current-turn`, {
@@ -213,30 +217,7 @@ async function fetchCurrentTurn() {
     }
 }
 
-function startCountdown(remainingTime) {
-    const timerElement = document.getElementById('turn-timer');
-
-    if (!timerElement) {
-        console.error('Timer element not found');
-        return;
-    }
-
-    let timeLeft = Math.round(remainingTime);
-
-    const intervalId = setInterval(() => {
-        if (timeLeft <= 0) {
-            clearInterval(intervalId);
-            timerElement.textContent = 'Time’s up!';
-        } else {
-            timerElement.textContent = formatTime(timeLeft);
-            timeLeft -= 1;
-        }
-    }, 1000);
-}
-
-function formatTime(seconds) {
-    return `${seconds} seconds`;
-}
+// -------------------------------------------------------------------------- //
 
 function startDraft() {
     if (!socket) {
@@ -252,6 +233,38 @@ function startDraft() {
     } else {
         console.error('Start Draft button element not found when trying to hide it.');
     }
+}
+
+function startCountdown(remainingTime) {
+    const timerElement = document.getElementById('turn-timer');
+
+    if (!timerElement) {
+        console.error('Timer element not found');
+        return;
+    }
+
+    // Validate remainingTime
+    if (isNaN(remainingTime) || remainingTime === null || remainingTime === undefined) {
+        console.error('Invalid remaining time:', remainingTime);
+        timerElement.textContent = 'Invalid time';
+        return;
+    }
+
+    let timeLeft = Math.round(remainingTime)-1;
+
+    const intervalId = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(intervalId);
+            timerElement.textContent = 'Time’s up!';
+        } else {
+            timerElement.textContent = formatTime(timeLeft);
+            timeLeft -= 1;
+        }
+    }, 1000);
+}
+
+function formatTime(seconds) {
+    return `${seconds} seconds`;
 }
 
 // -------------------------------------------------------------------------- //
@@ -345,106 +358,143 @@ function updateDraftTimerUI(time) {
     }
 }
 
+function updateCurrentRoundUI(currentIndex) {
+    const currentRoundElement = document.getElementById('current-round-text');
+
+    if (currentRoundElement) {
+        // Calculate the current round
+        // Use Math.floor to get the correct round number (1-based)
+        const currentRound = Math.floor(currentIndex / 7) + 1;
+        console.log('Current round:', currentRound);
+        currentRoundElement.textContent = currentRound ? `${currentRound}` : 'Waiting for draft to start...';
+    } else {
+        console.error('Current round element not found');
+    }
+}
+
 // -------------------------------------------------------------------------- //
 
-function initializeSocket() {
+async function initializeSocket() {
     console.log('Initializing socket...');
 
-    // Initialize socket connection
-    const socket = io('http://localhost:8080', {
-        query: { userId, leagueId },
-        transports: ['websocket']
-    });
+    return new Promise((resolve, reject) => {
+        const socketInstance = io('http://localhost:8080', {
+            query: { userId, leagueId },
+            transports: ['websocket']
+        });
 
-    socket.on('connect', () => {
-        console.log('Connected to socket server');
-    });
+        // Log when the socket connects
+        socketInstance.on('connect', () => {
+            console.log('Connected to socket server', socketInstance);
+            socket = socketInstance;  // Assign to global variable
+            resolve(socketInstance);
+        });
 
-    socket.on('userListUpdate', async (data) => {
-        console.log('userListUpdate received:', data)
-        if (data.users && Array.isArray(data.users)) {
-            // Update connected user IDs
-            connectedUserIds = data.users;
-    
-            console.log('ConnectedUserIds:', connectedUserIds);
-    
-            // Fetch user details and update UI
-            updateUserListUI();
-        } else {
-            console.error('Expected users to be an array but got:', data.users);
-        }
-    });    
+        // Handle connection errors
+        socketInstance.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            reject(error);
+        });
 
-    socket.on('draftStatusUpdate', (data) => {
-        console.log('draftStatusUpdate', data);
-    
-        // Ensure the data structure is as expected
-        if (data && typeof data.currentIndex === 'number') {
-            updateCurrentTurnUI(data.currentIndex);
-        } else {
-            console.error('Invalid data format for draft status:', data);
-        }
-    });    
-    
-    // Socket listener for available players update
-    socket.on('availablePlayersUpdate', (data) => {
-        console.log('availablePlayersUpdate', data);
+        // Handle disconnections
+        socketInstance.on('disconnect', () => {
+            console.log('Socket.IO connection closed', socketInstance);
+        });
 
-        // Ensure the data structure is as expected
-        if (data && Array.isArray(data.players)) {
-            updateAvailablePlayersUI(data.players);
-        } else {
-            console.error('Invalid data format for available players:', data);
-        }
-    });
+        // Handle generic errors
+        socketInstance.on('error', (error) => {
+            console.error('Socket.IO error:', error);
+        });
 
-    socket.on('draftStarted', (data) => {
-        console.log('draftStarted', data);
-    
-        if (data) {
-            // Start the countdown with the provided remaining time
-            if (typeof Math.round(data.remainingTime) === 'number') {
-                startCountdown(data.remainingTime);
+        // Event handler for user list updates
+        socketInstance.on('userListUpdate', (data) => {
+            if (data.users && Array.isArray(data.users)) {
+                // Update connected user IDs
+                connectedUserIds = data.users;
+                console.log('ConnectedUserIds:', connectedUserIds);
+
+                // Fetch user details and update UI
+                updateUserListUI();
+            } else {
+                console.error('Expected users to be an array but got:', data.users);
             }
-    
-            // Update the current turn and round UI
-            if (typeof data.currentTurnIndex === 'number') {
-                updateCurrentTurnUI(data.currentTurnIndex);
+        });
+
+        // Event handler for draft status updates
+        socketInstance.on('draftStatusUpdate', (data) => {
+            console.log('draftStatusUpdate', data);
+
+            if (data && typeof data.currentIndex === 'number') {
+                updateCurrentTurnUI(data.currentIndex);
+                updateCurrentRoundUI(data.currentIndex);
+            } else {
+                console.error('Invalid data format for draft status:', data);
             }
-        } else {
-            console.error('Invalid data format for draft start:', data);
-        }
+        });
+
+        // Event handler for available players updates
+        socketInstance.on('availablePlayersUpdate', (data) => {
+            console.log('availablePlayersUpdate', data);
+
+            if (data && Array.isArray(data.players)) {
+                updateAvailablePlayersUI(data.players);
+            } else {
+                console.error('Invalid data format for available players:', data);
+            }
+        });
+        
+        // Event handler for draft started event
+        socketInstance.on('draftStarted', async (data) => {
+            console.log('draftStarted event data:', data);
+        
+            if (data) {
+                // Handle draftOrder first
+                if (Array.isArray(data.draftOrder)) {
+                    draftOrder = data.draftOrder;
+        
+                    // Handle remainingTime if defined
+                    if (typeof data.remainingTime === 'number' && !isNaN(data.remainingTime)) {
+                        startCountdown(data.remainingTime);
+                    } else {
+                        console.error('Invalid remainingTime:', data.remainingTime);
+                    }
+        
+                    // Handle currentTurnIndex if defined
+                    if (typeof data.currentTurnIndex === 'number' && !isNaN(data.currentTurnIndex)) {
+                        updateCurrentTurnUI(data.currentTurnIndex);
+                        updateCurrentRoundUI(data.currentTurnIndex);
+                    } else {
+                        console.error('Invalid currentTurnIndex:', data.currentTurnIndex);
+                    }
+                } else {
+                    console.error('Invalid draftOrder:', data.draftOrder);
+                }
+            } else {
+                console.error('Invalid data format for draft start:', data);
+            }
+        });
+        
+        socketInstance.on('turnUpdate', (data) => {
+            console.log(data.message);
+            startCountdown(data.remainingTime);
+            updateCurrentTurnUI(data.currentTurnIndex);
+            updateCurrentRoundUI(data.currentTurnIndex);
+        });
+
+        socketInstance.on('turnEnded', (data) => {
+            console.log(data.message)
+        })
+        
+        // Event handler for draft ended event
+        socketInstance.on('draftEnded', (data) => {
+            console.log(data.message);
+          
+            if (data.redirectUrl) {
+              // Redirect to the league dashboard
+              window.location.href = data.redirectUrl;
+            } else {
+              console.error('Redirect URL not provided in draftEnded event.');
+            }
+          });
     });
-
-    socket.on('turnUpdate', (data) => {
-        console.log('turnUpdate', data);
-
-        // if (data && typeof data.currentTurnIndex === 'number') {
-        //     updateCurrentTurnUI(data.currentTurnIndex);
-        //     startCountdown(data.turnDuration);
-        // } else {
-        //     console.error('Invalid data format for turn update:', data);
-        // }
-    });
-
-    socket.on('turnTimeUpdate', (data) => {
-        console.log('turnTimeUpdate', data);
-
-        // // Ensure the data structure is as expected
-        // if (data && typeof Math.round(data.remainingTime) === 'number') {
-        //     updateDraftTimerUI(Math.round(data.remainingTime));
-        // } else {
-        //     console.error('Invalid data format for draft timer:', data);
-        // }
-    })
-
-    socket.on('disconnect', () => {
-        console.log('Socket.IO connection closed');
-    });
-
-    socket.on('error', (error) => {
-        console.error('Socket.IO error:', error);
-    });
-
-    return socket;
 }

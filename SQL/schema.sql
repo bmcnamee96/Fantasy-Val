@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS drafted_players (
 -- turn timers table
 CREATE TABLE IF NOT EXISTS turn_timers (
     league_id INT PRIMARY KEY,         -- References the league for which the turn timer is set
-    current_turn_start TIMESTAMP,      -- Timestamp when the current turn started
+    current_turn_start TIMESTAMP, -- Timestamp when the current turn started
+    current_turn_end TIMESTAMP,   -- Timestamp for when the current turn will end
     turn_duration INT NOT NULL DEFAULT 60  -- Duration of each turn in seconds
 );
 
