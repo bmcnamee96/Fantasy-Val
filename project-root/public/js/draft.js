@@ -464,14 +464,18 @@ async function initializeSocket() {
 
         // Event handler for available players updates
         socketInstance.on('availablePlayersUpdate', (data) => {
-            console.log('availablePlayersUpdate', data);
-
+            console.log('Received availablePlayersUpdate:', data);
             if (data && Array.isArray(data.players)) {
                 updateAvailablePlayersUI(data.players);
             } else {
-                console.error('Invalid data format for available players:', data);
+                console.error('Invalid data format:', data);
             }
         });
+
+        socketInstance.on('availablePlayers', (data) => {
+            console.log('Received availablePlayers:', data);
+        });
+        
         
         // Event handler for draft started event
         socketInstance.on('draftStarted', async (data) => {

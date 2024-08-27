@@ -61,11 +61,6 @@ async function getDraftStatus(leagueId) {
 async function getAvailablePlayers(leagueId) {
   // Convert leagueId to an integer and check for NaN
   const leagueIdInt = parseInt(leagueId, 10);
-  
-  if (Number.isNaN(leagueIdInt)) {
-      console.error('Invalid leagueId:', leagueId);
-      return [];
-  }
 
   console.log('Fetching available players for leagueId:', leagueIdInt);
 
@@ -194,16 +189,18 @@ function emitDraftStatus(draftStatus) {
   io.emit('draftStatusUpdate', draftStatus);
 }
 
-function emitAvailablePlayers(leagueId) {
-  return async function() {
-      try {
-          const availablePlayers = await getAvailablePlayers(leagueId);
-          io.to(leagueId).emit('availablePlayersUpdate', { players: availablePlayers });
-          console.log(`Available players updated for league ${leagueId}`);
-      } catch (error) {
-          console.error('Error emitting available players:', error);
-      }
-  };
+async function emitAvailablePlayers(leagueId) {
+  try {
+    // Fetch available players for the given leagueId
+    const availablePlayers = await getAvailablePlayers(leagueId);
+
+    // Emit the available players to the specified room
+    io.to(String(leagueId)).emit('availablePlayersUpdate', { players: availablePlayers });
+  } catch (error) {
+    console.error('Error fetching or emitting available players:', error);
+    // Optionally emit an error event to the room
+    io.to(String(leagueId)).emit('availablePlayersError', { error: 'Error fetching players' });
+  }
 }
 
 function broadcastTurnUpdate(leagueId, turnData) {
@@ -222,8 +219,7 @@ async function draftState(socket, leagueId, draftStarted, draftEnded, turnDurati
     };
     emitDraftStatus(draftStatus);
 
-    const availablePlayers = await getAvailablePlayers(leagueId);
-    emitAvailablePlayers(availablePlayers);
+    emitAvailablePlayers(leagueId);
 
     let remainingTime = turnDuration;
 
@@ -337,11 +333,8 @@ async function draftPlayer(userId, leagueId, playerId) {
 
       console.log(`Player ${playerIdInt} drafted successfully in league ${leagueIdInt}`);
 
-      // Fetch the updated list of available players
-      const updatedPlayers = await getAvailablePlayers(leagueIdInt);
-
       // Emit updated list to all clients in the league
-      emitAvailablePlayers(updatedPlayers);
+      emitAvailablePlayers(leagueId);
 
   } catch (error) {
       console.error('Error drafting player:', error);
