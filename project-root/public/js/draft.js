@@ -78,7 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function getLeagueIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('leagueId');
+    const leagueId = urlParams.get('leagueId');
+    return parseInt(leagueId, 10); // Convert to integer
 }
 
 function getUserIdFromToken(token) {
@@ -99,7 +100,7 @@ function getUserIdFromToken(token) {
 async function init() {
     try {
         await fetchUserDetails(leagueId);
-        await initialDraftDetails(leagueId); 
+        await initDraftDetails(leagueId); 
         await initializeSocket();
     } catch (error) {
         console.error('Initialization error:', error);
@@ -317,18 +318,6 @@ function updateAvailablePlayersUI(availablePlayers) {
             }).join('');
 
             availablePlayersElement.innerHTML = `<div class="row">${cardsHTML}</div>`;
-
-            // // Attach event listeners to the parent element (event delegation)
-            // availablePlayersElement.addEventListener('click', (event) => {
-            //     if (event.target && event.target.classList.contains('btn-secondary')) {
-            //         const playerId = event.target.getAttribute('data-player-id');
-            //         const teamAbrev = event.target.getAttribute('data-team-abrev');
-            //         const playerName = event.target.getAttribute('data-player-name');
-            //         const playerRole = event.target.getAttribute('data-player-role');
-            //         showDraftConfirmation(playerId, teamAbrev, playerName, playerRole);
-            //     }
-            // });
-            
         } else {
             console.error('Data is not an array:', availablePlayers);
         }
@@ -370,6 +359,47 @@ function updateCurrentRoundUI(currentIndex) {
     } else {
         console.error('Current round element not found');
     }
+}
+
+// -------------------------------------------------------------------------- //
+
+function draftPlayer(playerId) {
+    const userId = getUserIdFromToken(token); 
+    const leagueId = getLeagueIdFromUrl();
+
+    // Emit the draftPlayer event with necessary data
+    socket.emit('draftPlayer', {
+        userId: userId,
+        leagueId: leagueId,
+        playerId: playerId,
+    });
+}
+
+
+function showDraftConfirmation(playerId, teamAbrev, playerName, playerRole) {
+    // Set the confirmation message with the player's details
+    document.getElementById('confirmationMessage').textContent = `Are you sure you want to draft ${teamAbrev} ${playerName} (${playerRole})?`;
+
+    // Display the modal
+    document.getElementById('confirmationModal').style.display = 'block';
+
+    // Assign the confirmDraft function to the confirm button
+    document.getElementById('confirmDraftButton').onclick = function() {
+        confirmDraft(playerId);
+    };
+}
+
+function confirmDraft(playerId) {
+    // Emit to the server with the player's draft information
+    draftPlayer(playerId);
+
+    // Hide the modal after confirmation
+    hideModal();
+}
+
+function hideModal() {
+    // Hide the modal
+    document.getElementById('confirmationModal').style.display = 'none';
 }
 
 // -------------------------------------------------------------------------- //
@@ -472,6 +502,10 @@ async function initializeSocket() {
             } else {
                 console.error('Invalid data format for draft start:', data);
             }
+        });
+
+        socketInstance.on('draftConfirmed', (data) => {
+            console.log('draftConfirmed', data.message)
         });
         
         socketInstance.on('turnUpdate', (data) => {

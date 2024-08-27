@@ -59,25 +59,36 @@ async function getDraftStatus(leagueId) {
 }
 
 async function getAvailablePlayers(leagueId) {
+  // Convert leagueId to an integer and check for NaN
+  const leagueIdInt = parseInt(leagueId, 10);
+  
+  if (Number.isNaN(leagueIdInt)) {
+      console.error('Invalid leagueId:', leagueId);
+      return [];
+  }
+
+  console.log('Fetching available players for leagueId:', leagueIdInt);
+
   const query = `
-    SELECT p.player_id, p.player_name, p.team_abrev, p.role
-    FROM player p
-    LEFT JOIN drafted_players dp
-    ON p.player_id = dp.player_id AND dp.league_id = $1
-    WHERE p.team_abrev IN (
-        SELECT team_abrev
-        FROM league_teams
-        WHERE league_id = $1
-    ) AND dp.player_id IS NULL
+      SELECT p.player_id, p.player_name, p.team_abrev, p.role
+      FROM player p
+      LEFT JOIN drafted_players dp
+      ON p.player_id = dp.player_id AND dp.league_id = $1
+      WHERE p.team_abrev IN (
+          SELECT team_abrev
+          FROM league_teams
+          WHERE league_id = $1
+      ) AND dp.player_id IS NULL
   `;
 
   try {
-      const result = await pool.query(query, [leagueId]);
+      // Execute the query with the integer leagueId
+      const result = await pool.query(query, [leagueIdInt]);
       return result.rows.map(player => ({
           id: player.player_id,
           name: player.player_name,
           team_abrev: player.team_abrev,
-          role: player.role || 'unknown role' // Default to 'unknown role' if not available
+          role: player.role || 'unknown role'
       }));
   } catch (error) {
       console.error('Error fetching available players:', error);
@@ -183,10 +194,16 @@ function emitDraftStatus(draftStatus) {
   io.emit('draftStatusUpdate', draftStatus);
 }
 
-function emitAvailablePlayers(availablePlayers) {
-  logger.debug('Broadcasting available players:', availablePlayers)
-
-  io.emit('availablePlayersUpdate', { players: availablePlayers });
+function emitAvailablePlayers(leagueId) {
+  return async function() {
+      try {
+          const availablePlayers = await getAvailablePlayers(leagueId);
+          io.to(leagueId).emit('availablePlayersUpdate', { players: availablePlayers });
+          console.log(`Available players updated for league ${leagueId}`);
+      } catch (error) {
+          console.error('Error emitting available players:', error);
+      }
+  };
 }
 
 function broadcastTurnUpdate(leagueId, turnData) {
@@ -297,6 +314,38 @@ function startTurnTimer(leagueId, turnDuration, io) {
     await handleTurnEnd(leagueId, io);
     checkEndOfDraft(currentTurnIndex, leagueId, io);
   }, turnDuration * 1000);
+}
+
+async function draftPlayer(userId, leagueId, playerId) {
+  try {
+      // Parse IDs and validate
+      const leagueIdInt = parseInt(leagueId, 10);
+      const playerIdInt = parseInt(playerId, 10);
+
+      if (Number.isNaN(leagueIdInt) || Number.isNaN(playerIdInt)) {
+          console.error('Invalid leagueId or playerId:', { leagueId, playerId });
+          return;
+      }
+
+      // Insert into drafted_players table
+      await pool.query(
+          `INSERT INTO drafted_players (league_id, player_id, league_team_id)
+           VALUES ($1, $2, (SELECT league_team_id FROM league_team_players WHERE player_id = $2 LIMIT 1))
+           ON CONFLICT (league_id, player_id) DO NOTHING`,
+          [leagueIdInt, playerIdInt]
+      );
+
+      console.log(`Player ${playerIdInt} drafted successfully in league ${leagueIdInt}`);
+
+      // Fetch the updated list of available players
+      const updatedPlayers = await getAvailablePlayers(leagueIdInt);
+
+      // Emit updated list to all clients in the league
+      emitAvailablePlayers(updatedPlayers);
+
+  } catch (error) {
+      console.error('Error drafting player:', error);
+  }
 }
 
 async function handleTurnEnd(leagueId, io) {
@@ -438,14 +487,6 @@ function startSocketIOServer() {
                   console.log('startDraft message received on server!')
                   break;
 
-                case 'endDraft':
-
-                    break;
-
-                case 'nextTurn':
-
-                    break;
-
                 default:
                     logger.warn(`Unknown message type: ${data.type}`);
             }
@@ -454,6 +495,17 @@ function startSocketIOServer() {
             socket.emit('error', 'Invalid message format');
         }
       });
+
+      socket.on('draftPlayer', async (data) => {
+        console.log('Draft Confirmed:', data);
+
+        // Ensure data contains necessary fields
+        if (data && data.userId && data.leagueId && data.playerId) {
+            await draftPlayer(data.userId, data.leagueId, data.playerId);
+        } else {
+            console.error('Invalid draftPlayer data:', data);
+        }
+    });
 
       // Handle disconnection
       socket.on('disconnect', () => {
