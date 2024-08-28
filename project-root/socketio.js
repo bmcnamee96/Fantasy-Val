@@ -91,6 +91,123 @@ async function getAvailablePlayers(leagueId) {
   }
 }
 
+async function getUsernameFromId(userId) {
+  try {
+    const { rows: userRows } = await pool.query(
+      `SELECT username 
+       FROM users 
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (userRows.length === 0) {
+      console.error('User not found:', userId);
+      return null; // Return null if user is not found
+    }
+
+    return userRows[0].username;
+  } catch (error) {
+    console.error('Error fetching username:', error);
+    throw error; // Propagate the error
+  }
+}
+
+async function getPlayerNameFromId(playerId) {
+  try {
+    // Query the database for the player's name
+    const { rows: playerRows } = await pool.query(
+      `SELECT player_name 
+       FROM player 
+       WHERE player_id = $1`,
+      [playerId]
+    );
+
+    // Check if player was found
+    if (playerRows.length === 0) {
+      console.error('Player not found:', playerId);
+      return null; // Return null if player is not found
+    }
+
+    // Return the player's name
+    return playerRows[0].player_name;
+  } catch (error) {
+    console.error('Error fetching player name:', error);
+    throw error; // Propagate the error
+  }
+}
+
+async function getTeamAbrevFromPlayerId(playerId) {
+  try {
+    // Query the database for the player's name
+    const { rows: teamAbrevRows } = await pool.query(
+      `SELECT team_abrev 
+       FROM player 
+       WHERE player_id = $1`,
+      [playerId]
+    );
+
+    // Check if player was found
+    if (teamAbrevRows.length === 0) {
+      console.error('No team_abrev found for:', playerId);
+      return null; // Return null if player is not found
+    }
+
+    // Return the player's name
+    return teamAbrevRows[0].team_abrev;
+  } catch (error) {
+    console.error('Error fetching team_abrev:', error);
+    throw error; // Propagate the error
+  }
+}
+
+async function getCurrentTurnIndex(leagueId) {
+  try {
+    // Query the database for the current turn index
+    const { rows: statusRows } = await pool.query(
+      `SELECT current_turn_index 
+       FROM draft_status 
+       WHERE league_id = $1`,
+      [leagueId]
+    );
+
+    // Check if draft status was found
+    if (statusRows.length === 0) {
+      console.error('Draft status not found for league:', leagueId);
+      return null; // Return null if draft status is not found
+    }
+
+    // Return the current turn index
+    return statusRows[0].current_turn_index;
+  } catch (error) {
+    console.error('Error fetching current turn index:', error);
+    throw error; // Propagate the error
+  }
+}
+
+async function getDraftOrder(leagueId) {
+  try {
+    // Query the database for the draft order
+    const { rows: orderRows } = await pool.query(
+      `SELECT draft_order 
+       FROM draft_orders 
+       WHERE league_id = $1`,
+      [leagueId]
+    );
+
+    // Check if draft order was found
+    if (orderRows.length === 0) {
+      console.error('Draft order not found for league:', leagueId);
+      return null; // Return null if draft order is not found
+    }
+
+    // Return the draft order (assuming it's stored as JSONB and needs parsing)
+    return orderRows[0].draft_order;
+  } catch (error) {
+    console.error('Error fetching draft order:', error);
+    throw error; // Propagate the error
+  }
+}
+
 // -------------------------------------------------------------------------- //
 
 // draft order functions
@@ -203,6 +320,11 @@ async function emitAvailablePlayers(leagueId) {
   }
 }
 
+function emitDraftMessage(leagueId, message) {
+  console.log(message);
+  io.to(String(leagueId)).emit('updateMessageArea', message);
+}
+
 function broadcastTurnUpdate(leagueId, turnData) {
   io.to(leagueId).emit('turnUpdate', turnData);
 }
@@ -217,7 +339,7 @@ async function draftState(socket, leagueId, draftStarted, draftEnded, turnDurati
       draftStarted: draftStatus ? draftStatus.draft_started : false,
       draftEnded: draftStatus ? draftStatus.draft_ended : false
     };
-    emitDraftStatus(draftStatus);
+    broadcastDraftStatus(leagueId, draftStatus);
 
     emitAvailablePlayers(leagueId);
 
@@ -323,6 +445,43 @@ async function draftPlayer(userId, leagueId, playerId) {
           return;
       }
 
+      // Fetch username associated with userId
+      const username = await getUsernameFromId(userId);
+      if (!username) {
+        console.error('Username could not be fetched');
+        return;
+      }
+
+      // Fetch the current turn index for the league
+      const currentTurnIndex = await getCurrentTurnIndex(leagueIdInt);
+      if (currentTurnIndex === null) {
+        console.error('Current turn index could not be fetched');
+        return;
+      }
+
+      // Fetch the draft order to get the expected user for the current turn
+      const draftOrder = await getDraftOrder(leagueIdInt);
+      if (!draftOrder) {
+        console.error('Draft order could not be fetched');
+        return;
+      }
+
+      // Determine the username who should be drafting in the current turn
+      const currentUsername = draftOrder[currentTurnIndex];
+
+      // Validate the user making the draft
+      if (currentUsername !== username) {
+          console.error('User is not authorized to draft at this turn:', { username, leagueId, playerId });
+          return;
+      }
+
+      // Fetch player name from the player table
+      const playerName = await getPlayerNameFromId(playerIdInt);
+      if (!playerName) {
+        console.error('Player name could not be fetched');
+        return;
+      }
+
       // Insert into drafted_players table
       await pool.query(
           `INSERT INTO drafted_players (league_id, player_id, league_team_id)
@@ -335,6 +494,17 @@ async function draftPlayer(userId, leagueId, playerId) {
 
       // Emit updated list to all clients in the league
       emitAvailablePlayers(leagueId);
+
+      // Fetch player name from the player table
+      const teamAbrev = await getTeamAbrevFromPlayerId(playerIdInt);
+      if (!teamAbrev) {
+        console.error('Team abreviation could not be fetched');
+        return;
+      }
+
+      // Emit the drafted player message to all clients
+      const draftMessage = `${teamAbrev} ${playerName} was drafted by ${username}`;
+      emitDraftMessage(leagueId, draftMessage);
 
   } catch (error) {
       console.error('Error drafting player:', error);
@@ -421,7 +591,7 @@ function endDraft(leagueId, io) {
 }
 
 // I will probably need to do more cleaning up in the future
-// for now, I delete the data within the turn_timers data.
+// for now, I delete the data within the turn_timers table.
 function cleanupDraftData(leagueId) {
   // Delete turn timers for this league
   pool.query('DELETE FROM turn_timers WHERE league_id = $1', [leagueId])
@@ -490,7 +660,7 @@ function startSocketIOServer() {
       });
 
       socket.on('draftPlayer', async (data) => {
-        console.log('Draft Confirmed:', data);
+        console.log('Draft Requested:', data);
 
         // Ensure data contains necessary fields
         if (data && data.userId && data.leagueId && data.playerId) {

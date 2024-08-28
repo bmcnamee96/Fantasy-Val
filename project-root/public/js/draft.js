@@ -361,6 +361,18 @@ function updateCurrentRoundUI(currentIndex) {
     }
 }
 
+function updateDraftMessageUI(message) {
+    // Get the message area element
+    const messageArea = document.getElementById('draft-message');
+    
+    if (messageArea) {
+        // Update the message area with the received message
+        messageArea.innerText = message;
+    } else {
+        console.error('Message area element not found');
+    }
+}
+
 // -------------------------------------------------------------------------- //
 
 function draftPlayer(playerId) {
@@ -413,9 +425,13 @@ async function initializeSocket() {
             transports: ['websocket']
         });
 
+        // socketInstance.onAny((event, data) => {
+        //     console.log(`Received event: ${event}`, data);
+        // });
+
         // Log when the socket connects
         socketInstance.on('connect', () => {
-            console.log('Connected to socket server', socketInstance);
+            console.log('Connected to socket server', socketInstance.id);
             socket = socketInstance;  // Assign to global variable
             resolve(socketInstance);
         });
@@ -472,11 +488,12 @@ async function initializeSocket() {
             }
         });
 
-        socketInstance.on('availablePlayers', (data) => {
-            console.log('Received availablePlayers:', data);
+        socketInstance.on('updateMessageArea', (data) => {
+            console.log('updateMessageArea:', data);
+
+            updateDraftMessageUI(data);
         });
-        
-        
+                
         // Event handler for draft started event
         socketInstance.on('draftStarted', async (data) => {
             console.log('draftStarted event data:', data);
