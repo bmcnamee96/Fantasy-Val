@@ -387,6 +387,35 @@ function draftPlayer(playerId) {
     });
 }
 
+// Get modal elements
+const successModal = document.getElementById('successModal');
+const errorModal = document.getElementById('errorModal');
+const successMessage = document.getElementById('successMessage');
+const errorMessage = document.getElementById('errorMessage');
+const successCloseBtn = document.getElementById('successCloseBtn');
+const errorCloseBtn = document.getElementById('errorCloseBtn');
+
+// Function to show modal with a message
+function showModal(modal, message) {
+    modal.style.display = 'block';
+    const messageElement = modal === successModal ? successMessage : errorMessage;
+    messageElement.textContent = message;
+}
+
+// Function to close modal
+function closeModal(modal) {
+    modal.style.display = 'none';
+}
+
+// Event listeners for close buttons
+successCloseBtn.onclick = () => closeModal(successModal);
+errorCloseBtn.onclick = () => closeModal(errorModal);
+
+// Click outside of modal closes it
+window.onclick = (event) => {
+    if (event.target === successModal) closeModal(successModal);
+    if (event.target === errorModal) closeModal(errorModal);
+};
 
 function showDraftConfirmation(playerId, teamAbrev, playerName, playerRole) {
     // Set the confirmation message with the player's details
@@ -524,10 +553,6 @@ async function initializeSocket() {
                 console.error('Invalid data format for draft start:', data);
             }
         });
-
-        socketInstance.on('draftConfirmed', (data) => {
-            console.log('draftConfirmed', data.message)
-        });
         
         socketInstance.on('turnUpdate', (data) => {
             console.log(data.message);
@@ -535,6 +560,16 @@ async function initializeSocket() {
             updateCurrentTurnUI(data.currentTurnIndex);
             updateCurrentRoundUI(data.currentTurnIndex);
         });
+
+        socketInstance.on('draftSuccess', (data) => {
+            console.log('draftSuccess', data)
+            showModal(successModal, data);
+        });
+
+        socketInstance.on('draftError', (data) => {
+            console.log('draftError', data)
+            showModal(errorModal, data);
+        })
 
         socketInstance.on('turnEnded', (data) => {
             console.log(data.message)

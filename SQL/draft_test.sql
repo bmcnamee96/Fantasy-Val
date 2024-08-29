@@ -45,3 +45,12 @@ SELECT league_id,
 FROM turn_timers
 WHERE league_id = 3;
 
+-- checktTeamComposition
+SELECT p.role 
+FROM league_team_players ltp
+JOIN player p ON ltp.player_id = p.player_id
+WHERE ltp.league_team_id = 1;
+
+
+
+

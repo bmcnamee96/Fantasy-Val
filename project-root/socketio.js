@@ -152,13 +152,141 @@ async function getTeamAbrevFromPlayerId(playerId) {
       return null; // Return null if player is not found
     }
 
-    // Return the player's name
+    // Return the player's team
     return teamAbrevRows[0].team_abrev;
   } catch (error) {
     console.error('Error fetching team_abrev:', error);
     throw error; // Propagate the error
   }
 }
+
+async function getRoleFromPlayerId(playerId) {
+  try {
+    // Query the database for the player's name
+    const { rows: roleRows } = await pool.query(
+      `SELECT role 
+       FROM player 
+       WHERE player_id = $1`,
+      [playerId]
+    );
+
+    // Check if player was found
+    if (roleRows.length === 0) {
+      console.error('No role found for:', playerId);
+      return null; // Return null if no role is found
+    }
+
+    // Return the player's role
+    return roleRows[0].role;
+  } catch (error) {
+    console.error('Error fetching role:', error);
+    throw error; // Propagate the error
+  }
+}
+
+async function getLeagueTeamId(userId, leagueId) {
+  try {
+      const result = await pool.query(`
+          SELECT lt.league_team_id
+          FROM league_teams lt
+          JOIN users u ON lt.user_id = u.user_id
+          WHERE u.user_id = $1 AND lt.league_id = $2
+          LIMIT 1
+      `, [userId, leagueId]);
+
+      if (result.rows.length === 0) {
+          console.error('League team ID could not be found for user:', { userId, leagueId });
+          return null;
+      }
+
+      console.log(result.rows[0].league_team_id);
+
+      return result.rows[0].league_team_id;
+  } catch (error) {
+      console.error('Error fetching league team ID:', error);
+      return null;
+  }
+}
+
+async function checkTeamComposition(leagueTeamId, newPlayerRole) {
+  try {
+      // Get the current team composition by querying the league_team_players table
+      const result = await pool.query(`
+          SELECT p.role 
+          FROM league_team_players ltp
+          JOIN player p ON ltp.player_id = p.player_id
+          WHERE ltp.league_team_id = $1
+      `, [leagueTeamId]);
+
+      console.log(result.rows);
+
+      // Initialize the role counts
+      const roleCount = {
+          fragger: 0,
+          support: 0,
+          anchor: 0,
+      };
+
+      // Count the roles in the current team
+      result.rows.forEach(row => {
+        const role = row.role.toLowerCase(); // Ensure the role is in lowercase for matching
+        if (roleCount.hasOwnProperty(role)) {
+            roleCount[role]++;
+        } else {
+            console.error(`Unexpected role: ${role}`);
+        }
+      });
+
+      console.log(roleCount);
+
+      // Check if adding the new player would exceed the role limits
+      switch (newPlayerRole) {
+          case 'Fragger':
+              if (roleCount.fragger >= 2) {
+                  return false;  // Team already has 2 fraggers
+              }
+              break;
+          case 'Support':
+              if (roleCount.support >= 3) {
+                  return false;  // Team already has 3 supports
+              }
+              break;
+          case 'Anchor':
+              if (roleCount.anchor >= 2) {
+                  return false;  // Team already has 2 anchors
+              }
+              break;
+          default:
+              throw new Error('Invalid role provided');
+      }
+
+      return true;  // Player can be added to the team
+
+  } catch (error) {
+      console.error('Error checking team composition:', error);
+      return false;
+  }
+}
+
+async function getTeamLength(leagueTeamId) {
+  try {
+      // Query to count the number of players in the team
+      const result = await pool.query(`
+          SELECT COUNT(*) AS player_count
+          FROM league_team_players
+          WHERE league_team_id = $1
+      `, [leagueTeamId]);
+
+      // Extract the count from the result
+      const playerCount = parseInt(result.rows[0].player_count, 10);
+      return playerCount;
+
+  } catch (error) {
+      console.error('Error fetching team length:', error);
+      return null;
+  }
+}
+
 
 async function getCurrentTurnIndex(leagueId) {
   try {
@@ -441,29 +569,33 @@ async function draftPlayer(userId, leagueId, playerId) {
       const playerIdInt = parseInt(playerId, 10);
 
       if (Number.isNaN(leagueIdInt) || Number.isNaN(playerIdInt)) {
-          console.error('Invalid leagueId or playerId:', { leagueId, playerId });
-          return;
+          const errorMsg = 'Invalid leagueId or playerId.';
+          console.error(errorMsg, { leagueId, playerId });
+          return { success: false, message: errorMsg };
       }
 
       // Fetch username associated with userId
       const username = await getUsernameFromId(userId);
       if (!username) {
-        console.error('Username could not be fetched');
-        return;
+          const errorMsg = 'Username could not be fetched.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
       }
 
       // Fetch the current turn index for the league
       const currentTurnIndex = await getCurrentTurnIndex(leagueIdInt);
       if (currentTurnIndex === null) {
-        console.error('Current turn index could not be fetched');
-        return;
+          const errorMsg = 'Current turn index could not be fetched.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
       }
 
       // Fetch the draft order to get the expected user for the current turn
       const draftOrder = await getDraftOrder(leagueIdInt);
       if (!draftOrder) {
-        console.error('Draft order could not be fetched');
-        return;
+          const errorMsg = 'Draft order could not be fetched.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
       }
 
       // Determine the username who should be drafting in the current turn
@@ -471,23 +603,63 @@ async function draftPlayer(userId, leagueId, playerId) {
 
       // Validate the user making the draft
       if (currentUsername !== username) {
-          console.error('User is not authorized to draft at this turn:', { username, leagueId, playerId });
-          return;
+          const errorMsg = 'User is not authorized to draft at this turn.';
+          console.error(errorMsg, { username, leagueId, playerId });
+          return { success: false, message: errorMsg };
       }
 
-      // Fetch player name from the player table
+      // Fetch player name and role from the player table
       const playerName = await getPlayerNameFromId(playerIdInt);
-      if (!playerName) {
-        console.error('Player name could not be fetched');
-        return;
+      const playerRole = await getRoleFromPlayerId(playerIdInt);
+      if (!playerName || !playerRole) {
+          const errorMsg = 'Player name or role could not be fetched.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
+      }
+
+      // Get the league_team_id for the user
+      const leagueTeamId = await getLeagueTeamId(userId, leagueIdInt);
+      if (!leagueTeamId) {
+          const errorMsg = 'League team ID could not be fetched.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
+      }
+
+      // Check if the team length allows this draft
+      const teamLength = await getTeamLength(leagueTeamId);
+      if (teamLength === null) {
+          const errorMsg = 'Error fetching team length.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
+      }
+      if (teamLength >= 7) {
+          const errorMsg = 'Cannot draft this player; team size limit reached.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
+      }
+
+      // Check if the team composition allows this draft
+      const canDraft = await checkTeamComposition(leagueTeamId, playerRole);
+      if (!canDraft) {
+          const errorMsg = 'Cannot draft this player; team composition limits exceeded.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
       }
 
       // Insert into drafted_players table
       await pool.query(
           `INSERT INTO drafted_players (league_id, player_id, league_team_id)
-           VALUES ($1, $2, (SELECT league_team_id FROM league_team_players WHERE player_id = $2 LIMIT 1))
+           VALUES ($1, $2, $3)
            ON CONFLICT (league_id, player_id) DO NOTHING`,
-          [leagueIdInt, playerIdInt]
+          [leagueIdInt, playerIdInt, leagueTeamId]
+      );
+
+      // Insert into league_team_players table
+      await pool.query(
+          `INSERT INTO league_team_players (league_team_id, player_id)
+           VALUES ($1, $2)
+           ON CONFLICT (league_team_id, player_id) DO NOTHING`,
+          [leagueTeamId, playerIdInt]
       );
 
       console.log(`Player ${playerIdInt} drafted successfully in league ${leagueIdInt}`);
@@ -495,19 +667,24 @@ async function draftPlayer(userId, leagueId, playerId) {
       // Emit updated list to all clients in the league
       emitAvailablePlayers(leagueId);
 
-      // Fetch player name from the player table
+      // Fetch team abbreviation for the drafted player
       const teamAbrev = await getTeamAbrevFromPlayerId(playerIdInt);
       if (!teamAbrev) {
-        console.error('Team abreviation could not be fetched');
-        return;
+          const errorMsg = 'Team abbreviation could not be fetched.';
+          console.error(errorMsg);
+          return { success: false, message: errorMsg };
       }
 
       // Emit the drafted player message to all clients
       const draftMessage = `${teamAbrev} ${playerName} was drafted by ${username}`;
       emitDraftMessage(leagueId, draftMessage);
 
+      // Return success message
+      return { success: true, message: `Player ${playerIdInt} drafted successfully.` };
+
   } catch (error) {
       console.error('Error drafting player:', error);
+      return { success: false, message: 'An unexpected error occurred while drafting the player.' };
   }
 }
 
@@ -661,14 +838,24 @@ function startSocketIOServer() {
 
       socket.on('draftPlayer', async (data) => {
         console.log('Draft Requested:', data);
-
+    
         // Ensure data contains necessary fields
         if (data && data.userId && data.leagueId && data.playerId) {
-            await draftPlayer(data.userId, data.leagueId, data.playerId);
+            const result = await draftPlayer(data.userId, data.leagueId, data.playerId);
+    
+            if (result.success) {
+                // Handle successful draft
+                socket.emit('draftSuccess', result.message);
+            } else {
+                // Send the error message to the client
+                socket.emit('draftError', result.message);
+            }
         } else {
-            console.error('Invalid draftPlayer data:', data);
+            const errorMsg = 'Invalid draftPlayer data.';
+            console.error(errorMsg, data);
+            socket.emit('draftError', errorMsg);
         }
-    });
+      });  
 
       // Handle disconnection
       socket.on('disconnect', () => {
