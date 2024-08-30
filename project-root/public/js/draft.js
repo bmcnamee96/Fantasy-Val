@@ -555,7 +555,7 @@ async function initializeSocket() {
         });
         
         socketInstance.on('turnUpdate', (data) => {
-            console.log(data.message);
+            console.log('turnUpdate', data.message);
             startCountdown(data.remainingTime);
             updateCurrentTurnUI(data.currentTurnIndex);
             updateCurrentRoundUI(data.currentTurnIndex);

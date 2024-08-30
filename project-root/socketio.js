@@ -10,7 +10,7 @@ const clients = new Map();
 let draftStarted = false;
 let draftEnded = false;
 let currentTurnIndex = 0; // Index of the current turn
-let turnDuration = 10;
+let turnDuration = 20;
 let turnTimer = null;
 
 
@@ -199,8 +199,6 @@ async function getLeagueTeamId(userId, leagueId) {
           return null;
       }
 
-      console.log(result.rows[0].league_team_id);
-
       return result.rows[0].league_team_id;
   } catch (error) {
       console.error('Error fetching league team ID:', error);
@@ -218,8 +216,6 @@ async function checkTeamComposition(leagueTeamId, newPlayerRole) {
           WHERE ltp.league_team_id = $1
       `, [leagueTeamId]);
 
-      console.log(result.rows);
-
       // Initialize the role counts
       const roleCount = {
           fragger: 0,
@@ -236,8 +232,6 @@ async function checkTeamComposition(leagueTeamId, newPlayerRole) {
             console.error(`Unexpected role: ${role}`);
         }
       });
-
-      console.log(roleCount);
 
       // Check if adding the new player would exceed the role limits
       switch (newPlayerRole) {
@@ -286,7 +280,6 @@ async function getTeamLength(leagueTeamId) {
       return null;
   }
 }
-
 
 async function getCurrentTurnIndex(leagueId) {
   try {
@@ -527,7 +520,9 @@ async function startDraft(leagueId, turnDuration, io) {
   }
 }
 
-function startTurnTimer(leagueId, turnDuration, io) {
+let currentTurnTimer = null; // Variable to store the active timer
+
+async function startTurnTimer(leagueId, turnDuration, io) {
   const startTime = Date.now();
   const endTime = startTime + turnDuration * 1000;
 
@@ -536,7 +531,9 @@ function startTurnTimer(leagueId, turnDuration, io) {
       INSERT INTO turn_timers (league_id, current_turn_start, turn_duration, current_turn_end)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (league_id) DO UPDATE
-      SET current_turn_start = EXCLUDED.current_turn_start, turn_duration = EXCLUDED.turn_duration, current_turn_end = EXCLUDED.current_turn_end
+      SET current_turn_start = EXCLUDED.current_turn_start,
+          turn_duration = EXCLUDED.turn_duration,
+          current_turn_end = EXCLUDED.current_turn_end
   `, [leagueId, new Date(startTime), turnDuration, new Date(endTime)])
   .then(() => {
       console.log('Turn timer initialized.');
@@ -553,10 +550,16 @@ function startTurnTimer(leagueId, turnDuration, io) {
   };
 
   // Broadcast turn update to all users in the league
+  console.log('Broadcasting turn update:', turnData);
   broadcastTurnUpdate(leagueId, turnData);
 
+  // Clear any existing timer
+  if (currentTurnTimer) {
+    clearTimeout(currentTurnTimer);
+  }
+
   // Set the countdown to end when the turnDuration expires
-  turnTimer = setTimeout(async () => {
+  currentTurnTimer = setTimeout(async () => {
     await handleTurnEnd(leagueId, io);
     checkEndOfDraft(currentTurnIndex, leagueId, io);
   }, turnDuration * 1000);
@@ -679,6 +682,8 @@ async function draftPlayer(userId, leagueId, playerId) {
       const draftMessage = `${teamAbrev} ${playerName} was drafted by ${username}`;
       emitDraftMessage(leagueId, draftMessage);
 
+      await handleTurnEnd(leagueId, io);
+
       // Return success message
       return { success: true, message: `Player ${playerIdInt} drafted successfully.` };
 
@@ -689,25 +694,31 @@ async function draftPlayer(userId, leagueId, playerId) {
 }
 
 async function handleTurnEnd(leagueId, io) {
-  // Handle the end of the turn (e.g., move to the next turn, update the database, etc.)
+  try {
+    // Increment the current turn index
+    currentTurnIndex += 1;
 
-  currentTurnIndex += 1;
+    // Update the current turn index in the database
+    await pool.query(`
+        UPDATE draft_status 
+        SET current_turn_index = $1
+        WHERE league_id = $2
+    `, [currentTurnIndex, leagueId]);
 
-  // Update the current turn index in the database
-  await pool.query(`
-      UPDATE draft_status 
-      SET current_turn_index = $1
-      WHERE league_id = $2
-  `, [currentTurnIndex, leagueId]);
+    console.log(`Turn ended. New turn index: ${currentTurnIndex}`);
 
-  // Notify all users about the turn end and the next turn start
-  io.to(leagueId).emit('turnEnded', {
-      message: 'The turn has ended!',
-      currentTurnIndex
-  });
+    // Notify all users about the turn end and the next turn start
+    io.to(leagueId).emit('turnEnded', {
+        message: 'The turn has ended!',
+        currentTurnIndex
+    });
 
-  // Start the next countdown
-  startTurnTimer(leagueId, turnDuration, io);
+    // Start the next countdown
+    await startTurnTimer(leagueId, turnDuration, io);
+
+  } catch (error) {
+    console.error('Error ending the turn:', error);
+  }
 }
 
 async function checkEndOfDraft(currentTurnIndex, leagueId, io) {
