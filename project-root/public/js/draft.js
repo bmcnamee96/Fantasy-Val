@@ -236,12 +236,19 @@ function startDraft() {
     }
 }
 
+let countdownIntervalId = null; // Store the interval ID globally
+
 function startCountdown(remainingTime) {
     const timerElement = document.getElementById('turn-timer');
 
     if (!timerElement) {
         console.error('Timer element not found');
         return;
+    }
+
+    // Clear any existing timer
+    if (countdownIntervalId) {
+        clearInterval(countdownIntervalId);
     }
 
     // Validate remainingTime
@@ -251,11 +258,12 @@ function startCountdown(remainingTime) {
         return;
     }
 
-    let timeLeft = Math.round(remainingTime)-1;
+    let timeLeft = Math.round(remainingTime);
 
-    const intervalId = setInterval(() => {
+    countdownIntervalId = setInterval(() => {
         if (timeLeft <= 0) {
-            clearInterval(intervalId);
+            clearInterval(countdownIntervalId);
+            countdownIntervalId = null; // Reset the interval ID
             timerElement.textContent = 'Time’s up!';
         } else {
             timerElement.textContent = formatTime(timeLeft);
@@ -349,16 +357,14 @@ function updateDraftTimerUI(time) {
 
 function updateCurrentRoundUI(currentIndex) {
     const currentRoundElement = document.getElementById('current-round-text');
-
-    if (currentRoundElement) {
-        // Calculate the current round
-        // Use Math.floor to get the correct round number (1-based)
-        const currentRound = Math.floor(currentIndex / 7) + 1;
-        console.log('Current round:', currentRound);
-        currentRoundElement.textContent = currentRound ? `${currentRound}` : 'Waiting for draft to start...';
-    } else {
-        console.error('Current round element not found');
+    if (!currentRoundElement) {
+        return console.error('Current round element not found');
     }
+
+    // Calculate the current round
+    const currentRound = Math.floor(currentIndex / 7) + 1;
+    console.log('Updating current round to:', currentRound, 'for turn index:', currentIndex);
+    currentRoundElement.textContent = currentRound ? `${currentRound}` : 'Waiting for draft to start...';
 }
 
 function updateDraftMessageUI(message) {
@@ -569,10 +575,6 @@ async function initializeSocket() {
         socketInstance.on('draftError', (data) => {
             console.log('draftError', data)
             showModal(errorModal, data);
-        })
-
-        socketInstance.on('turnEnded', (data) => {
-            console.log(data.message)
         })
         
         // Event handler for draft ended event
