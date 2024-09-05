@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS drafted_players (
     league_id INTEGER,
     player_id INTEGER,
     league_team_id INTEGER,
+	turn_index INTEGER,
     FOREIGN KEY (league_id) REFERENCES leagues(league_id),
     FOREIGN KEY (player_id) REFERENCES player(player_id),
     FOREIGN KEY (league_team_id) REFERENCES league_teams(league_team_id),

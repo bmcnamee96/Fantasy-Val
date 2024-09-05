@@ -10,7 +10,7 @@ const clients = new Map();
 let draftStarted = false;
 let draftEnded = false;
 let currentTurnIndex = 0; // Index of the current turn
-let turnDuration = 4;
+let turnDuration = 10;
 let turnTimer = null;
 let currentTurnTimer = null; // Variable to store the active timer
 
@@ -112,6 +112,27 @@ async function getUsernameFromId(userId) {
   }
 }
 
+async function getIdFromUsername(username) {
+  try {
+    const { rows: userRows } = await pool.query(
+      `SELECT user_id 
+       FROM users 
+       WHERE username = $1`,
+      [username]
+    );
+
+    if (userRows.length === 0) {
+      console.error('User not found:', username);
+      return null; // Return null if user is not found
+    }
+
+    return userRows[0].user_id; // Correct way to access the user_id field
+  } catch (error) {
+    console.error('Error fetching user ID:', error);
+    throw error; // Propagate the error
+  }
+}
+
 async function getPlayerNameFromId(playerId) {
   try {
     // Query the database for the player's name
@@ -186,13 +207,15 @@ async function getRoleFromPlayerId(playerId) {
 
 async function getLeagueTeamId(userId, leagueId) {
   try {
+      const leagueIdInt = parseInt(leagueId, 10);
+
       const result = await pool.query(`
           SELECT lt.league_team_id
           FROM league_teams lt
           JOIN users u ON lt.user_id = u.user_id
           WHERE u.user_id = $1 AND lt.league_id = $2
           LIMIT 1
-      `, [userId, leagueId]);
+      `, [userId, leagueIdInt]);
 
       if (result.rows.length === 0) {
           console.error('League team ID could not be found for user:', { userId, leagueId });
@@ -326,6 +349,74 @@ async function getDraftOrder(leagueId) {
   } catch (error) {
     console.error('Error fetching draft order:', error);
     throw error; // Propagate the error
+  }
+}
+
+async function getTeamNeeds(leagueId, username) {
+  try {
+
+    const userId = await getIdFromUsername(username);
+
+    const currentTeam = await getLeagueTeamId(userId, leagueId)
+    
+    // Fetch the number of players drafted by the team, grouped by their role
+    const result = await pool.query(`
+      SELECT role, COUNT(*) as count
+      FROM drafted_players
+      JOIN player ON drafted_players.player_id = player.player_id
+      WHERE drafted_players.league_team_id = $1
+      GROUP BY role
+    `, [currentTeam]);
+
+    // Define the required number of players per role
+    const requiredRoles = {
+      Fragger: 2,
+      Support: 3,
+      Anchor: 2
+    };
+
+    // Count the drafted players by role
+    const draftedCounts = {};
+    result.rows.forEach(row => {
+      draftedCounts[row.role] = parseInt(row.count, 10);
+    });
+
+    // Calculate the needs for each role
+    const teamNeeds = {};
+    for (const [role, requiredCount] of Object.entries(requiredRoles)) {
+      const draftedCount = draftedCounts[role] || 0;
+      if (draftedCount < requiredCount) {
+        teamNeeds[role] = requiredCount - draftedCount;
+      }
+    }
+
+    return teamNeeds;
+
+  } catch (error) {
+    console.error('Error fetching team needs:', error);
+    return null;
+  }
+}
+
+async function getPlayerRankings() {
+  try {
+    // Query the database for preseason rankings
+    const { rows } = await pool.query(
+      `SELECT player_id, preseason_ranking
+       FROM player
+       WHERE preseason_ranking IS NOT NULL`
+    );
+
+    // Format the rankings into a map of player_id to ranking
+    const rankings = rows.reduce((acc, row) => {
+      acc[row.player_id] = row.preseason_ranking;
+      return acc;
+    }, {});
+
+    return rankings;
+  } catch (error) {
+    console.error('Error fetching player rankings:', error);
+    return {};
   }
 }
 
@@ -579,6 +670,15 @@ async function handleTurnEnd(leagueId, io) {
       return;
     }
 
+    // Check if a player was drafted this turn
+    const draftOccurred = await checkIfDraftOccurred(leagueId, currentTurnIndex);
+
+    if (!draftOccurred) {
+      console.log('No draft occured, autodrafting')
+      // Autodraft if no player was drafted
+      await autodraftPlayer(leagueId, io);
+    }
+
     // Increment the current turn index
     const newTurnIndex = currentTurnIndex + 1;
 
@@ -689,11 +789,11 @@ async function draftPlayer(userId, leagueId, playerId) {
 
       // Insert into drafted_players table
       await pool.query(
-          `INSERT INTO drafted_players (league_id, player_id, league_team_id)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (league_id, player_id) DO NOTHING`,
-          [leagueIdInt, playerIdInt, leagueTeamId]
-      );
+        `INSERT INTO drafted_players (league_id, player_id, league_team_id, turn_index)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (league_id, player_id) DO NOTHING`,
+        [leagueIdInt, playerIdInt, leagueTeamId, currentTurnIndex]
+    );
 
       // Insert into league_team_players table
       await pool.query(
@@ -732,6 +832,86 @@ async function draftPlayer(userId, leagueId, playerId) {
   } catch (error) {
       console.error('Error drafting player:', error);
       return { success: false, message: 'An unexpected error occurred while drafting the player.' };
+  }
+}
+
+async function checkIfDraftOccurred(leagueId, turnIndex) {
+  try {
+    // Query to check if a draft occurred for this turn in the league
+    const result = await pool.query(`
+      SELECT COUNT(*) AS draft_count 
+      FROM drafted_players 
+      WHERE league_id = $1 AND turn_index = $2
+    `, [leagueId, turnIndex]);
+
+    // Return true if a draft occurred (at least one player was drafted)
+    return result.rows[0].draft_count > 0;
+  } catch (error) {
+    console.error('Error checking draft occurrence:', error);
+    return false;
+  }
+}
+
+async function autodraftPlayer(leagueId, io) {
+  try {
+    const leagueIdInt = parseInt(leagueId, 10);
+    if (isNaN(leagueIdInt)) {
+      throw new Error(`Invalid league ID: ${leagueId}`);
+    }
+
+    // Reset variables to ensure fresh data
+    let currentUsername = null;
+    let teamNeeds = null;
+    let availablePlayers = null;
+    let playerRankings = null;
+
+    // Fetch the draft order to get the expected user for the current turn
+    const draftOrder = await getDraftOrder(leagueIdInt);
+    if (!draftOrder) {
+      const errorMsg = 'Draft order could not be fetched.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
+
+    const currentTurnIndex = await getCurrentTurnIndex(leagueId);
+
+    // Determine the username who should be drafting in the current turn
+    currentUsername = draftOrder[currentTurnIndex];
+
+    // Fetch the team needs and available players
+    teamNeeds = await getTeamNeeds(leagueId, currentUsername);
+    console.log(`Team needs for user ${currentUsername}`, teamNeeds);
+    availablePlayers = await getAvailablePlayers(leagueId);
+
+    // Get preseason rankings for all players
+    playerRankings = await getPlayerRankings();
+
+    // Combine available players with their preseason rankings
+    const playersWithRankings = availablePlayers.map(player => {
+      return {
+        ...player,
+        ranking: playerRankings[player.id] || Infinity // Use Infinity if ranking is not found
+      };
+    });
+
+    // Order players by preseason ranking (highest rank first)
+    const orderedPlayers = playersWithRankings.sort((a, b) => a.ranking - b.ranking);
+
+    const userId = await getIdFromUsername(currentUsername);
+
+    // Try to draft the top-ranked player that fits the team needs
+    for (const player of orderedPlayers) {
+      const roleFits = teamNeeds[player.role] > 0;
+      if (roleFits) {
+        await draftPlayer(userId, leagueId, player.id);
+        console.log(`Autodrafted player ${player.id} for user ${currentUsername} in league ${leagueId}`);
+        return;
+      }
+    }
+
+    console.error('No suitable player found for autodraft.');
+  } catch (error) {
+    console.error('Error during autodraft:', error);
   }
 }
 

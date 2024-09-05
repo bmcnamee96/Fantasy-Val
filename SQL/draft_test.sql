@@ -11,9 +11,26 @@ SELECT * FROM league_team_players;
 SELECT * FROM draft_orders;
 SELECT * FROM draft_status;
 SELECT * FROM turn_timers;
+SELECT * FROM league_teams;
+SELECT * FROM users;
 
 INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended)
 VALUES (3, -1, FALSE, FALSE);  -- Example for league with ID 1
+
+INSERT INTO league_teams (league_id, team_name, user_id)
+	VALUES (3, 'Test Team', 1); 
+INSERT INTO league_teams (league_id, team_name, user_id)
+	VALUES (3, 'Test 1 Team', 3); 
+INSERT INTO league_teams (league_id, team_name, user_id)
+	VALUES (3, 'Test 2 Team', 10); 
+INSERT INTO league_teams (league_id, team_name, user_id)
+	VALUES (3, 'Test 3 Team', 5);
+INSERT INTO league_teams (league_id, team_name, user_id)
+	VALUES (3, 'Test 4 Team', 6);
+INSERT INTO league_teams (league_id, team_name, user_id)
+	VALUES (3, 'Test 5 Team', 7);
+INSERT INTO league_teams (league_id, team_name, user_id)
+	VALUES (3, 'Test 6 Team', 8);
 
 UPDATE draft_status
 SET current_turn_index = -1  -- Example: move to the next user's turn
