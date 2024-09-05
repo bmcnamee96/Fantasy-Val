@@ -68,6 +68,8 @@ FROM league_team_players ltp
 JOIN player p ON ltp.player_id = p.player_id
 WHERE ltp.league_team_id = 1;
 
+SELECT * FROM player
+ORDER BY preseason_ranking;
 
 
 
