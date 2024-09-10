@@ -279,4 +279,42 @@ router.get('/:leagueId/teams', authenticateToken, async (req, res) => {
   }
 });
 
+// API to get the user's team for a specific league
+router.get('/my-team/:leagueId', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  const userId = req.user.userId; // Assuming the token contains the user ID
+
+  try {
+    // Query to get the league_team_id for the user
+    const leagueTeamQuery = `
+      SELECT league_team_id
+      FROM league_teams
+      WHERE user_id = $1 AND league_id = $2
+    `;
+
+    const leagueTeamResult = await pool.query(leagueTeamQuery, [userId, leagueId]);
+
+    if (leagueTeamResult.rows.length === 0) {
+      return res.status(404).json({ error: `No team found for the ${userId} in this league.` });
+    }
+
+    const leagueTeamId = leagueTeamResult.rows[0].league_team_id;
+
+    // Query to get the players for the league_team_id
+    const playerQuery = `
+      SELECT p.player_name, p.role, p.team_abrev
+      FROM league_team_players ltp
+      JOIN player p ON ltp.player_id = p.player_id
+      WHERE ltp.league_team_id = $1
+    `;
+    const playerResult = await pool.query(playerQuery, [leagueTeamId]);
+
+    // Send the player's data back to the client
+    res.json(playerResult.rows);
+  } catch (error) {
+    console.error('Error fetching team data:', error);
+    res.status(500).json({ error: 'An error occurred while fetching team data.' });
+  }
+});
+
 module.exports = router;

@@ -106,15 +106,15 @@
         <p id="league-description" class="card-text center-text">League Description</p>
 
         <!-- Create Team Button -->
-        <button id="create-team-btn">Create My Team</button>
+        <!-- <button id="create-team-btn">Create My Team</button> -->
         <!-- Team Creation Form -->
-        <div id="team-creation-form" style="display: none;">
+        <!-- <div id="team-creation-form" style="display: none;">
             <form id="team-form">
                 <input type="text" id="team-name" placeholder="Enter team name" required>
                 <button type="submit">Create Team</button>
                 <button type="button" id="cancel-btn">Cancel</button>
             </form>
-        </div>
+        </div> -->
 
         <div class="main-content">
             <div class="left-section">
@@ -125,35 +125,8 @@
                 </div>
                 <div id="my-team-content" class="tab-content active">
                     <button class="edit-btn">Edit Team</button>
-                    <div class="players">
-                        <div class="player starter">
-                            <span>Starter Player 1</span>
-                            <span>10 pts</span>
-                        </div>
-                        <div class="player starter">
-                            <span>Starter Player 2</span>
-                            <span>12 pts</span>
-                        </div>
-                        <div class="player starter">
-                            <span>Starter Player 3</span>
-                            <span>15 pts</span>
-                        </div>
-                        <div class="player starter">
-                            <span>Starter Player 4</span>
-                            <span>8 pts</span>
-                        </div>
-                        <div class="player starter">
-                            <span>Starter Player 5</span>
-                            <span>20 pts</span>
-                        </div>
-                        <div class="player bench">
-                            <span>Bench Player 1</span>
-                            <span>5 pts</span>
-                        </div>
-                        <div class="player bench">
-                            <span>Bench Player 2</span>
-                            <span>7 pts</span>
-                        </div>
+                    <div class="players" id="players-container">
+                        <!-- Players will be dynamically inserted here -->
                     </div>
                 </div>
                 <div id="trades-content" class="tab-content">

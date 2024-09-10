@@ -67,6 +67,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+      // Emit an event to request team data when the "My Team" tab is clicked
+    document.getElementById('my-team-tab').addEventListener('click', () => {
+        socket.emit('requestMyTeam');
+    });
+
     try {
         await init(); // initialize the draft
     } catch (error) {
@@ -379,6 +384,30 @@ function updateDraftMessageUI(message) {
     }
 }
 
+function renderTeam(teamData) {
+    const teamContainer = document.getElementById('team-container');
+    teamContainer.innerHTML = ''; // Clear any existing content
+  
+    if (teamData.length === 0) {
+      teamContainer.innerHTML = '<p>No players drafted yet.</p>';
+      return;
+    }
+  
+    teamData.forEach(player => {
+      const playerElement = document.createElement('div');
+      playerElement.classList.add('player-card');
+      playerElement.innerHTML = `
+        <div class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">${player.team_abrev} ${player.player_name}</h5>
+            <p class="card-text">Role: ${player.role}</p>
+          </div>
+        </div>
+      `;
+      teamContainer.appendChild(playerElement);
+    });
+}
+
 // -------------------------------------------------------------------------- //
 
 function draftPlayer(playerId) {
@@ -499,6 +528,10 @@ async function initializeSocket() {
             } else {
                 console.error('Expected users to be an array but got:', data.users);
             }
+        });
+
+        socketInstance.on('myTeamData', (data) => {
+            renderTeam(data);
         });
 
         // Event handler for draft status updates

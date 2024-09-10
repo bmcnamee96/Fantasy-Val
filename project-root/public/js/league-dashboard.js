@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for league-dashboard.js');
     const token = localStorage.getItem('token')
-    console.log('User details fetched:', token)
+    console.log('Token:', token)
 
     // Function to show a modal with a message
     function showModal(message) {
@@ -227,6 +227,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // #endregion
 
+    async function fetchMyTeam() {
+        try {
+            const response = await fetch(`/api/leagues/my-team/${leagueId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming the token is stored in localStorage
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch team data.');
+            
+            const teamData = await response.json();
+            renderTeam(teamData);
+        } catch (error) {
+            console.error('Error fetching team data:', error);
+        }
+    }
+    
+    function renderTeam(teamData) {
+    const playersContainer = document.getElementById('players-container');
+    playersContainer.innerHTML = ''; // Clear any existing content
+
+    if (teamData.length === 0) {
+        playersContainer.innerHTML = '<p>No players drafted yet.</p>';
+        return;
+    }
+
+    teamData.forEach(player => {
+        const playerElement = document.createElement('div');
+        playerElement.classList.add('player');
+        playerElement.classList.add(player.role === 'Bench' ? 'bench' : 'starter');
+        playerElement.innerHTML = `
+        <span>${player.team_abrev} ${player.player_name}</span>
+        <span>${player.points} pts</span>
+        `;
+        playersContainer.appendChild(playerElement);
+    });
+    }
+    
+
     // #region Leave League
     // Function to show the confirmation modal
     function showConfirmLeaveModal() {
@@ -320,4 +358,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         draftButton.addEventListener('click', openDraft);
     }
     // #endregion
+
+    // Fetch the team data when the "My Team" tab is clicked
+    document.querySelector('.tab[onclick*="my-team-content"]').addEventListener('click', fetchMyTeam);
+
+    // Fetch the team data on page load
+    window.addEventListener('load', () => {
+        console.log('Window load event triggered'); // Debugging line
+        fetchMyTeam();
+    });;
 });

@@ -10,7 +10,8 @@ const clients = new Map();
 let draftStarted = false;
 let draftEnded = false;
 let currentTurnIndex = 0; // Index of the current turn
-let turnDuration = 10;
+let turnDuration = 5;
+let maxRounds = 6;
 let turnTimer = null;
 let currentTurnTimer = null; // Variable to store the active timer
 
@@ -677,6 +678,8 @@ async function handleTurnEnd(leagueId, io) {
       console.log('No draft occured, autodrafting')
       // Autodraft if no player was drafted
       await autodraftPlayer(leagueId, io);
+
+      return // exit the function
     }
 
     // Increment the current turn index
@@ -863,7 +866,6 @@ async function autodraftPlayer(leagueId, io) {
     let currentUsername = null;
     let teamNeeds = null;
     let availablePlayers = null;
-    let playerRankings = null;
 
     // Fetch the draft order to get the expected user for the current turn
     const draftOrder = await getDraftOrder(leagueIdInt);
@@ -883,24 +885,13 @@ async function autodraftPlayer(leagueId, io) {
     console.log(`Team needs for user ${currentUsername}`, teamNeeds);
     availablePlayers = await getAvailablePlayers(leagueId);
 
-    // Get preseason rankings for all players
-    playerRankings = await getPlayerRankings();
-
-    // Combine available players with their preseason rankings
-    const playersWithRankings = availablePlayers.map(player => {
-      return {
-        ...player,
-        ranking: playerRankings[player.id] || Infinity // Use Infinity if ranking is not found
-      };
-    });
-
-    // Order players by preseason ranking (highest rank first)
-    const orderedPlayers = playersWithRankings.sort((a, b) => a.ranking - b.ranking);
+    // Shuffle available players to randomize the selection
+    const shuffledPlayers = shuffleArray(availablePlayers);
 
     const userId = await getIdFromUsername(currentUsername);
 
-    // Try to draft the top-ranked player that fits the team needs
-    for (const player of orderedPlayers) {
+    // Try to draft a random player that fits the team needs
+    for (const player of shuffledPlayers) {
       const roleFits = teamNeeds[player.role] > 0;
       if (roleFits) {
         await draftPlayer(userId, leagueId, player.id);
@@ -934,7 +925,7 @@ async function checkEndOfDraft(currentTurnIndex, leagueId, io) {
 
     // For testing: end the draft after round 1
     // Adjust to currentRound > 7 for full implementation
-    if (currentRound > 2) { 
+    if (currentRound > maxRounds) { 
       endDraft(leagueId, io);
     }
   } catch (error) {
@@ -987,6 +978,41 @@ function cleanupDraftData(leagueId) {
 
 // -------------------------------------------------------------------------- //
 
+async function getTeamDataForUser(userId, leagueId) {
+  try {
+    // Query to get the league_team_id for the user
+    const leagueTeamQuery = `
+      SELECT league_team_id
+      FROM league_teams
+      WHERE user_id = $1 AND league_id = $2
+    `;
+    const leagueTeamResult = await pool.query(leagueTeamQuery, [userId, leagueId]);
+
+    if (leagueTeamResult.rows.length === 0) {
+      throw new Error('No team found for the user in this league.');
+    }
+
+    const leagueTeamId = leagueTeamResult.rows[0].league_team_id;
+
+    // Query to get the players for the league_team_id
+    const playerQuery = `
+      SELECT p.player_name, p.role, p.team_abrev
+      FROM league_team_players ltp
+      JOIN player p ON ltp.player_id = p.player_id
+      WHERE ltp.league_team_id = $1
+    `;
+    const playerResult = await pool.query(playerQuery, [leagueTeamId]);
+
+    // Return the player's data
+    return playerResult.rows; // This will be an array of players
+  } catch (error) {
+    console.error('Error fetching team data:', error);
+    throw error;
+  }
+}
+
+// -------------------------------------------------------------------------- //
+
 // Starting the Socket.IO server
 function startSocketIOServer() {
   io.on('connection', (socket) => {
@@ -1020,6 +1046,17 @@ function startSocketIOServer() {
           socket.disconnect();
           return;
           }
+
+      socket.on('requestMyTeam', async () => {
+        try {
+          const teamData = await getTeamDataForUser(userId, leagueId);
+
+          // Emit the team data back to the client
+          socket.emit('myTeamData', teamData);
+        } catch (error) {
+          console.error('Error fetching team data:', error);
+        }
+      });
 
       // Handle incoming messages from the client
       socket.on('message', async (data) => {
