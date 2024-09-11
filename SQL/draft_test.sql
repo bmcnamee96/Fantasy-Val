@@ -15,10 +15,10 @@ SELECT * FROM league_teams;
 SELECT * FROM users;
 
 INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended)
-VALUES (3, -1, FALSE, FALSE);  -- Example for league with ID 1
+VALUES (6, -1, FALSE, FALSE);  -- Example for league with ID 1
 
 INSERT INTO league_teams (league_id, team_name, user_id)
-	VALUES (3, 'Test Team', 1); 
+	VALUES (6, 'Test Team', 1); 
 INSERT INTO league_teams (league_id, team_name, user_id)
 	VALUES (3, 'Test 1 Team', 3); 
 INSERT INTO league_teams (league_id, team_name, user_id)

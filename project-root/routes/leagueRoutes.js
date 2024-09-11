@@ -317,4 +317,55 @@ router.get('/my-team/:leagueId', authenticateToken, async (req, res) => {
   }
 });
 
+// Get available players
+router.get('/:leagueId/available-players', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+      // Optionally check if the league exists
+      const leagueCheck = await pool.query('SELECT 1 FROM leagues WHERE league_id = $1', [leagueId]);
+      if (leagueCheck.rowCount === 0) {
+          return res.status(404).json({ error: 'League not found' });
+      }
+
+      const result = await pool.query(
+          `SELECT p.player_id, p.player_name, p.team_abrev, p.role
+           FROM player p
+           LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
+           WHERE dp.player_id IS NULL`,
+          [leagueId]
+      );
+
+      const availablePlayers = result.rows;
+      res.json(availablePlayers);
+  } catch (error) {
+      logger.error('Error fetching available players:', error);
+      res.status(500).json({ error: 'Failed to fetch available players' });
+  }
+});
+
+// Draft Status
+router.get('/:leagueId/draft-status', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+      // Fetch draft status from the database
+      const result = await pool.query(
+          'SELECT current_turn_index, draft_started, draft_ended FROM draft_status WHERE league_id = $1',
+          [leagueId]
+      );
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Draft status not found' });
+      }
+
+      const draftStatus = result.rows[0];
+      res.status(200).json(draftStatus);
+  } catch (error) {
+      logger.error('Error fetching draft status:', error);
+      res.status(500).json({ error: 'Failed to fetch draft status' });
+  }
+});
+
+
 module.exports = router;

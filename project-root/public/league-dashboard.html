@@ -123,7 +123,7 @@
                     <div class="tab" onclick="openTab(event, 'trades-content')">Trades</div>
                     <div class="tab" onclick="openTab(event, 'free-agents-content')">Free Agents</div>
                 </div>
-                <div id="my-team-content" class="tab-content active">
+                <div id="my-team-content" class="tab-content">
                     <button class="edit-btn">Edit Team</button>
                     <div class="players" id="players-container">
                         <!-- Players will be dynamically inserted here -->
@@ -140,18 +140,8 @@
                     </div>
                 </div>
                 <div id="free-agents-content" class="tab-content">
-                    <div class="free-agent">
-                        <span>Free Agent Player 1 (Fragger)</span>
-                        <span>100 pts</span>
-                    </div>
-                    <div class="free-agent">
-                        <span>Free Agent Player 2 (Support)</span>
-                        <span>90 pts</span>
-                    </div>
-                    <div class="free-agent">
-                        <span>Free Agent Player 3 (Anchor)</span>
-                        <span>80 pts</span>
-                    </div>
+                    <div id="free-agents-container"></div>
+                        <!-- Players will be dynamically inserted here -->
                 </div>
                 <div class="schedule">
                     <h2>League Schedule</h2>
