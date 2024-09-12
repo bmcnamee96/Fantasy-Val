@@ -105,16 +105,11 @@
         <h1 id="league-name" class="card-title">League Name</h1>
         <p id="league-description" class="card-text center-text">League Description</p>
 
-        <!-- Create Team Button -->
-        <!-- <button id="create-team-btn">Create My Team</button> -->
-        <!-- Team Creation Form -->
-        <!-- <div id="team-creation-form" style="display: none;">
-            <form id="team-form">
-                <input type="text" id="team-name" placeholder="Enter team name" required>
-                <button type="submit">Create Team</button>
-                <button type="button" id="cancel-btn">Cancel</button>
-            </form>
-        </div> -->
+        <div class="top-left">
+            <div id="currentWeek">Current Week: 1</div>
+            <hr id="divider-line"> <!-- The horizontal line -->
+            <div class="timer" id="countdown"></div>
+        </div>
 
         <div class="main-content">
             <div class="left-section">
@@ -122,6 +117,7 @@
                     <div class="tab active" onclick="openTab(event, 'my-team-content')">My Team</div>
                     <div class="tab" onclick="openTab(event, 'trades-content')">Trades</div>
                     <div class="tab" onclick="openTab(event, 'free-agents-content')">Free Agents</div>
+                    <div class="tab" onclick="openTab(event, 'league-schedule')">League Schedule</div>
                 </div>
                 <div id="my-team-content" class="tab-content">
                     <button class="edit-btn">Edit Team</button>
@@ -143,7 +139,7 @@
                     <div id="free-agents-container"></div>
                         <!-- Players will be dynamically inserted here -->
                 </div>
-                <div class="schedule">
+                <div id="league-schedule" class="tab-content">
                     <h2>League Schedule</h2>
                     <p>Week 1: User A vs User B</p>
                     <p>Week 1: User C vs User D</p>
@@ -152,8 +148,9 @@
                 </div>
             </div>
             <div class="right-section">
-                <button id="draft-button">Draft Your Team</button>
-                <div class="timer">Draft Timer: 00:00</div>
+                <button id="draft-button">Enter the Draft</button>
+                <!-- <div id="currentWeek">Current Week: 1</div>
+                <div class="timer" id="countdown"></div> -->
                 <div class="opponent">
                     <h2>Next Opponent</h2>
                     <p>Opponent Name</p>

@@ -18,7 +18,7 @@ document.getElementById('button1').addEventListener('click', function() {
     alert('Button 1 clicked! This is from tScript.js');
 });
 
-// Array of target Fridays in UTC (adjust these dates as needed)
+// Array of targets in UTC (adjust these dates as needed)
 const targetFridaysUTC = [
     new Date(Date.UTC(2024, 8, 11, 19, 0, 0)), // Next Friday at 5 PM UTC
     new Date(Date.UTC(2024, 8, 11, 19, 10, 0)), // Following Friday at 5 PM UTC

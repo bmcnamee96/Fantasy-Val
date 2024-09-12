@@ -55,6 +55,17 @@ router.post('/create-league', authenticateToken, async (req, res) => {
       [league_id, JSON.stringify(initialDraftOrder)]
     );
 
+    // Initialize draft status
+    const currentTurnIndex = -1;
+    const draftStarted = false;
+    const draftEnded = false;
+    
+    // Insert draft status entry
+    await pool.query(
+      'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)', 
+      [league_id, currentTurnIndex, draftStarted, draftEnded]
+    );
+
     // Commit the transaction
     await pool.query('COMMIT');
 
@@ -147,6 +158,29 @@ router.post('/join-league', authenticateToken, async (req, res) => {
   }
 });
 
+// Endpoint to create a team
+router.post('/create-team', authenticateToken, async (req, res) => {
+  const { team_name, league_id, user_id } = req.body;
+
+  if (!team_name || !league_id || !user_id) {
+      return res.status(400).json({ success: false, message: 'Team name, league ID, and user ID are required' });
+  }
+
+  logger.debug('Request Body:', req.body);
+
+  try {
+      logger.debug('Inserting into league_teams table');
+      // Insert into league_teams table
+      await pool.query('INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)', [league_id, team_name, user_id]);
+      logger.info('Insert into league_teams table successful');
+
+      res.json({ success: true, message: 'Team created successfully' });
+  } catch (error) {
+      logger.error('Error creating team:', error);
+      res.status(500).json({ success: false, message: 'Failed to create team' });
+  }
+});
+
 // Leave League Endpoint
 router.post('/leave-league', authenticateToken, async (req, res) => {
   logger.info('API request received for leave-league'); // Log when the API request is received
@@ -205,6 +239,36 @@ router.post('/leave-league', authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to leave league', error: error.message });
   }
 });
+
+// Express route to handle fetching league ID by name
+router.get('/get-league-id', authenticateToken, async (req, res) => {
+  const leagueName = req.query.leagueName;
+
+  try {
+      // Ensure leagueName is provided
+      if (!leagueName) {
+          return res.status(400).json({ success: false, message: 'League name is required' });
+      }
+
+      // Query to get the league ID based on the league name
+      const result = await pool.query(
+          'SELECT league_id FROM leagues WHERE league_name = $1',
+          [leagueName]
+      );
+
+      // Check if any rows were returned
+      if (result.rows.length === 0) {
+          return res.status(404).json({ success: false, message: 'League not found' });
+      }
+
+      // Return the league ID
+      res.json({ success: true, league_id: result.rows[0].league_id });
+  } catch (error) {
+      console.error('Error fetching league ID:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch league ID', error: error.message });
+  }
+});
+
 
 // Endpoint to get leagues for a user
 router.get('/user-leagues', authenticateToken, async (req, res) => {

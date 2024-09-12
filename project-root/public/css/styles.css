@@ -825,12 +825,28 @@ th[data-sort="desc"]::after {
     cursor: pointer;
 }
 
-.timer {
-    margin-bottom: 20px;
+.top-left {
+    position: absolute;
+    top: 92px; /* Adjust as needed */
+    left: 50px; /* Adjust as needed */
+    z-index: 10; /* Ensure it stays on top */
+    padding: 10px; /* Padding for aesthetics */
+    border-radius: 5px; /* Rounded corners */
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    align-items: center; /* Center horizontally */
+    min-width: 150px; /* Optional */
+    min-height: 100px; /* Optional */
 }
 
-#time-remaining-label {
-    margin-right: 10px; /* Adjust the value as needed */
+#currentWeek {
+    font-size: 1.5em; /* Increase text size */
+    font-weight: bold; /* Make text bold */
+}
+
+.timer {
+    font-size: 1em; /* Increase text size */
+    font-weight: bold; /* Make text bold */
 }
 
 .schedule, .ranking {
