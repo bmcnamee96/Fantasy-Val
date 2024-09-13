@@ -16,6 +16,8 @@ WHERE league_id <> 3;
 DELETE FROM leagues
 WHERE league_id <> 3;
 
+ALTER TABLE league_team_players ADD COLUMN starter BOOLEAN DEFAULT FALSE;
+
 
 
 

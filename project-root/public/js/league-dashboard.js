@@ -316,12 +316,38 @@ async function fetchMyTeam() {
         if (!response.ok) throw new Error('Failed to fetch team data.');
         
         const teamData = await response.json();
+        console.log('My Team Fetched', teamData);
         renderTeam(teamData);
     } catch (error) {
         console.error('Error fetching team data:', error);
     }
 }
 
+async function fetchPlayerIdsByName(playerNames) {
+    try {
+        const response = await fetch('/api/leagues/player-names-to-id', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ playerNames })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            return data.playerMap;
+        } else {
+            throw new Error(data.message || 'Failed to fetch player IDs');
+        }
+    } catch (error) {
+        console.error('Error fetching player IDs by name:', error);
+        return {};
+    }
+}
+
+// THIS NEEDS TO BE FIXED.  FETCH FROM LEAGUETEAMPLAYERS NOT DRAFTED PLAYERS
 async function fetchAvailablePlayers() {
     try {
         const response = await fetch(`/api/leagues/${leagueId}/available-players`, {
@@ -339,7 +365,105 @@ async function fetchAvailablePlayers() {
     }
 }
 
+async function updateTeamStatus(starters, bench) {
+    try {
+        const response = await fetch('/api/leagues/update-lineup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ starters, bench })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update team status.');
+        }
+
+        console.log('Team status updated successfully');
+    } catch (error) {
+        console.error('Error updating team status:', error);
+    }
+}
+
 // -------------------------------------------------------------------------- //
+
+async function autoAdjustLineup() {
+    try {
+        const response = await fetch(`/api/leagues/my-team/${leagueId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch team data.');
+
+        const teamData = await response.json();
+        console.log('Fetched team data:', teamData);
+
+        const starters = teamData.filter(player => player.starter);
+        const bench = teamData.filter(player => !player.starter);
+
+        if (starters.length > 5) {
+            const excessStarters = starters.slice(5);
+            const adjustedStarters = starters.slice(0, 5);
+            const newBench = [...bench, ...excessStarters];
+            
+            console.log('Adjusted starters:', adjustedStarters);
+            console.log('New bench:', newBench);
+
+            await updateTeamStatus(
+                adjustedStarters.map(player => player.player_id),
+                newBench.map(player => player.player_id)
+            );
+        } else if (starters.length < 5) {
+            const neededStarters = 5 - starters.length;
+            const additionalStarters = bench.slice(0, neededStarters);
+            const remainingBench = bench.slice(neededStarters);
+            
+            console.log('Starters from autoAdjust:', additionalStarters);
+            console.log('Bench from autoAdjust:', remainingBench);
+
+            // Map player names to IDs
+            const allPlayers = [...additionalStarters, ...remainingBench];
+            const playerDetails = await mapPlayerNamesToIds(allPlayers);
+
+            // Extract player IDs from the mapped details
+            const starterIds = additionalStarters.map(player => 
+                playerDetails.find(p => p.player_name === player.player_name)?.player_id
+            );
+            const benchIds = remainingBench.map(player => 
+                playerDetails.find(p => p.player_name === player.player_name)?.player_id
+            );
+
+            console.log('starterIds:', starterIds);
+            console.log('benchIds:', benchIds);
+
+            await updateTeamStatus(starterIds, benchIds);
+
+            return { startingLineup: [...starters, ...additionalStarters], bench: remainingBench };
+        }
+
+        // If no adjustments are needed, return the existing lineup
+        return { startingLineup: starters, bench: bench };
+
+    } catch (error) {
+        console.error('Error adjusting lineup:', error);
+    }
+}
+
+async function mapPlayerNamesToIds(players) {
+    const playerNames = players.map(player => player.player_name);
+    const playerMap = await fetchPlayerIdsByName(playerNames);
+
+    console.log('playerMap:', playerMap); // Log the playerMap for debugging
+
+    return players.map(player => ({
+        ...player,
+        player_id: playerMap[player.player_name] || null // Use player name to find player_id
+    }));
+}
 
 function renderTeam(teamData) {
     const playersContainer = document.getElementById('players-container');
@@ -351,9 +475,10 @@ function renderTeam(teamData) {
     }
 
     teamData.forEach(player => {
+        console.log(`Player: ${player.player_name}, Starter: ${player.starter}`); // Debugging
         const playerElement = document.createElement('div');
         playerElement.classList.add('player');
-        playerElement.classList.add(player.role === 'Bench' ? 'bench' : 'starter');
+        playerElement.classList.add(player.starter ? 'starter' : 'bench'); // Apply class based on 'starter' property
         playerElement.innerHTML = `
         <span>${player.team_abrev} ${player.player_name}</span>
         <span>${player.points} pts</span>
@@ -389,6 +514,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log('Token:', token);
     console.log('Extracted League ID:', leagueId); // Log the leagueId for debugging
+
+    const status = await fetchDraftStatus();
+
+    if (status.draft_ended) {
+        removeDraftButton();
+    }
+
+    if (status.draft_ended) {
+        const { startingLineup, bench } = await autoAdjustLineup();
+
+        console.log({ startingLineup, bench} )
+    }
 
     // Fetch league details
     await fetchLeagueDetails(leagueId);
@@ -446,8 +583,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateCountdown();
     updateWeekDisplay();
 
-    const status = await fetchDraftStatus();
-    if (status.draft_ended) {
-        removeDraftButton();
-    }
+
 });

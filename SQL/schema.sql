@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS league_team_players (
     league_team_player_id SERIAL PRIMARY KEY,
     league_team_id INTEGER,
     player_id INTEGER,
+    starter BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (league_team_id) REFERENCES league_teams(league_team_id),
     FOREIGN KEY (player_id) REFERENCES player(player_id),
     CONSTRAINT unique_player_per_team UNIQUE(league_team_id, player_id)

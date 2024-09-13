@@ -22,14 +22,12 @@ const pool = new Pool({
 // API endpoint to create a league
 router.post('/create-league', authenticateToken, async (req, res) => {
   logger.info('API request received for create-league'); // Log when the API request is received
-  const { league_name, league_pass, description } = req.body;
+  const { league_name, league_pass, description, team_name } = req.body;
   const owner_id = req.user.userId; // Get the user ID from the JWT token
-
-  logger.info('Received data for create-league:', { league_name, league_pass, description });
 
   try {
     // Ensure all required fields are provided
-    if (!league_name || !league_pass || !description || !owner_id) {
+    if (!league_name || !league_pass || !description || !owner_id || !team_name) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
@@ -66,36 +64,40 @@ router.post('/create-league', authenticateToken, async (req, res) => {
       [league_id, currentTurnIndex, draftStarted, draftEnded]
     );
 
+    // Insert team into league_teams table
+    await pool.query(
+      'INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)',
+      [league_id, team_name, owner_id]
+    );
+
     // Commit the transaction
     await pool.query('COMMIT');
 
-    res.status(201).json({ success: true, league: { league_id, league_name, description, owner_id } });
+    res.status(201).json({ success: true, league: { league_id, league_name, description, owner_id }, team: { team_name, owner_id } });
   } catch (error) {
     // Rollback the transaction in case of error
     await pool.query('ROLLBACK');
     logger.error('Error creating league:', error);
-    res.status(500).json({ success: false, message: 'Failed to create league', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to create league and team', error: error.message });
   }
 });
 
-// Join League Endpoint
+// Join League and Create Team Endpoint
 router.post('/join-league', authenticateToken, async (req, res) => {
   logger.info('API request received for join-league'); // Log when the API request is received
-  const { league_name, passcode } = req.body;
+  const { league_name, passcode, team_name } = req.body;
   const user_id = req.user.userId; // Get the user ID from the JWT token
-
-  logger.info('Received data for join-league:', { league_name, passcode });
 
   try {
     // Ensure all required fields are provided
-    if (!league_name || !passcode || !user_id) {
+    if (!league_name || !passcode || !user_id || !team_name) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     // Start a transaction
     await pool.query('BEGIN');
 
-    // Check if the league exists and get its ID
+    // Check if the league exists and get its ID and password
     const leagueResult = await pool.query(
       'SELECT league_id, league_pass FROM leagues WHERE league_name = $1',
       [league_name]
@@ -140,44 +142,38 @@ router.post('/join-league', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'League has reached the maximum number of users (7)' });
     }
 
+    // Check if the team name is unique within the league
+    const teamNameCheck = await pool.query(
+      'SELECT * FROM league_teams WHERE league_id = $1 AND LOWER(team_name) = LOWER($2)',
+      [league.league_id, team_name]
+    );
+
+    if (teamNameCheck.rows.length > 0) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'Team name already exists within this league' });
+    }
+
     // Add the user to the league
     await pool.query(
       'INSERT INTO user_leagues (user_id, league_id) VALUES ($1, $2)',
       [user_id, league.league_id]
     );
 
+    // Create the team for the user within the league
+    await pool.query(
+      'INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)',
+      [league.league_id, team_name, user_id]
+    );
+
     // Commit the transaction
     await pool.query('COMMIT');
 
-    res.status(200).json({ success: true, message: 'Successfully joined the league' });
+    res.status(200).json({ success: true, message: 'Successfully joined the league and created a team' });
   } catch (error) {
     // Rollback the transaction in case of error
     await pool.query('ROLLBACK');
-    logger.error('Error joining league:', error);
-    res.status(500).json({ success: false, message: 'Failed to join league', error: error.message });
-  }
-});
-
-// Endpoint to create a team
-router.post('/create-team', authenticateToken, async (req, res) => {
-  const { team_name, league_id, user_id } = req.body;
-
-  if (!team_name || !league_id || !user_id) {
-      return res.status(400).json({ success: false, message: 'Team name, league ID, and user ID are required' });
-  }
-
-  logger.debug('Request Body:', req.body);
-
-  try {
-      logger.debug('Inserting into league_teams table');
-      // Insert into league_teams table
-      await pool.query('INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)', [league_id, team_name, user_id]);
-      logger.info('Insert into league_teams table successful');
-
-      res.json({ success: true, message: 'Team created successfully' });
-  } catch (error) {
-      logger.error('Error creating team:', error);
-      res.status(500).json({ success: false, message: 'Failed to create team' });
+    logger.error('Error joining league and creating team:', error);
+    res.status(500).json({ success: false, message: 'Failed to join league or create team', error: error.message });
   }
 });
 
@@ -268,7 +264,6 @@ router.get('/get-league-id', authenticateToken, async (req, res) => {
       res.status(500).json({ success: false, message: 'Failed to fetch league ID', error: error.message });
   }
 });
-
 
 // Endpoint to get leagues for a user
 router.get('/user-leagues', authenticateToken, async (req, res) => {
@@ -366,7 +361,7 @@ router.get('/my-team/:leagueId', authenticateToken, async (req, res) => {
 
     // Query to get the players for the league_team_id
     const playerQuery = `
-      SELECT p.player_name, p.role, p.team_abrev
+      SELECT p.player_name, p.role, p.team_abrev, ltp.starter
       FROM league_team_players ltp
       JOIN player p ON ltp.player_id = p.player_id
       WHERE ltp.league_team_id = $1
@@ -428,6 +423,80 @@ router.get('/:leagueId/draft-status', authenticateToken, async (req, res) => {
   } catch (error) {
       logger.error('Error fetching draft status:', error);
       res.status(500).json({ error: 'Failed to fetch draft status' });
+  }
+});
+
+router.post('/update-lineup', authenticateToken, async (req, res) => {
+  const { starters, bench } = req.body;
+  const userId = req.user.userId; // Get userId from the authenticated token
+
+  if (!Array.isArray(starters) || !Array.isArray(bench)) {
+    return res.status(400).json({ success: false, message: 'Invalid request format' });
+  }
+
+  try {
+      // Get the user's league_team_id
+      const leagueTeamResult = await pool.query(
+          'SELECT league_team_id FROM league_teams WHERE user_id = $1',
+          [userId]
+      );
+
+      if (leagueTeamResult.rows.length === 0) {
+          return res.status(404).json({ success: false, message: 'Team not found for user' });
+      }
+
+      const leagueTeamId = leagueTeamResult.rows[0].league_team_id;
+
+      // Begin transaction
+      await pool.query('BEGIN');
+
+      // Update all players to bench (default)
+      await pool.query(
+          'UPDATE league_team_players SET starter = false WHERE league_team_id = $1',
+          [leagueTeamId]
+      );
+
+      // Update starters (set starter = true)
+      if (starters.length > 0) {
+          const starterPlaceholders = starters.map((_, idx) => `$${idx + 1}`).join(', ');
+          await pool.query(
+              `UPDATE league_team_players SET starter = true WHERE league_team_id = $${starters.length + 1} AND player_id IN (${starterPlaceholders})`,
+              [...starters, leagueTeamId]
+          );
+      }
+
+      // Commit transaction
+      await pool.query('COMMIT');
+
+      res.status(200).json({ success: true, message: 'Lineup updated successfully' });
+  } catch (error) {
+      await pool.query('ROLLBACK'); // Rollback transaction on error
+      console.error('Error updating lineup:', error);
+      res.status(500).json({ success: false, message: 'Failed to update lineup' });
+  }
+});
+
+router.post('/player-names-to-id', async (req, res) => {
+  const { playerNames } = req.body;
+
+  if (!Array.isArray(playerNames) || playerNames.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid player names' });
+  }
+
+  try {
+      const placeholders = playerNames.map((_, idx) => `$${idx + 1}`).join(', ');
+      const query = `SELECT player_id, player_name FROM player WHERE player_name IN (${placeholders})`;
+      const result = await pool.query(query, playerNames);
+
+      const playerMap = result.rows.reduce((acc, row) => {
+          acc[row.player_name] = row.player_id;
+          return acc;
+      }, {});
+
+      res.status(200).json({ success: true, playerMap });
+  } catch (error) {
+      console.error('Error fetching player IDs:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch player IDs' });
   }
 });
 
