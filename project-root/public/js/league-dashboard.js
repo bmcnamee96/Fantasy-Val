@@ -402,51 +402,71 @@ async function autoAdjustLineup() {
         const teamData = await response.json();
         console.log('Fetched team data:', teamData);
 
-        const starters = teamData.filter(player => player.starter);
-        const bench = teamData.filter(player => !player.starter);
+        let starters = teamData.filter(player => player.starter);
+        let bench = teamData.filter(player => !player.starter);
 
-        if (starters.length > 5) {
-            const excessStarters = starters.slice(5);
-            const adjustedStarters = starters.slice(0, 5);
-            const newBench = [...bench, ...excessStarters];
-            
-            console.log('Adjusted starters:', adjustedStarters);
-            console.log('New bench:', newBench);
+        // Role-based filtering
+        const fraggerStarters = starters.filter(player => player.role === 'Fragger');
+        const supportStarters = starters.filter(player => player.role === 'Support');
+        const anchorStarters = starters.filter(player => player.role === 'Anchor');
 
-            await updateTeamStatus(
-                adjustedStarters.map(player => player.player_id),
-                newBench.map(player => player.player_id)
-            );
-        } else if (starters.length < 5) {
-            const neededStarters = 5 - starters.length;
-            const additionalStarters = bench.slice(0, neededStarters);
-            const remainingBench = bench.slice(neededStarters);
-            
-            console.log('Starters from autoAdjust:', additionalStarters);
-            console.log('Bench from autoAdjust:', remainingBench);
+        let adjustedStarters = [];
+        let newBench = [...bench];
 
-            // Map player names to IDs
-            const allPlayers = [...additionalStarters, ...remainingBench];
-            const playerDetails = await mapPlayerNamesToIds(allPlayers);
-
-            // Extract player IDs from the mapped details
-            const starterIds = additionalStarters.map(player => 
-                playerDetails.find(p => p.player_name === player.player_name)?.player_id
-            );
-            const benchIds = remainingBench.map(player => 
-                playerDetails.find(p => p.player_name === player.player_name)?.player_id
-            );
-
-            console.log('starterIds:', starterIds);
-            console.log('benchIds:', benchIds);
-
-            await updateTeamStatus(starterIds, benchIds);
-
-            return { startingLineup: [...starters, ...additionalStarters], bench: remainingBench };
+        // Ensure exactly 1 Fragger in starters
+        if (fraggerStarters.length > 0) {
+            adjustedStarters.push(fraggerStarters[0]);
+            newBench = [...newBench, ...fraggerStarters.slice(1)];
+        } else {
+            const benchFragger = newBench.find(player => player.role === 'Fragger');
+            if (benchFragger) {
+                adjustedStarters.push(benchFragger);
+                newBench = newBench.filter(player => player.player_name !== benchFragger.player_name);
+            }
         }
 
-        // If no adjustments are needed, return the existing lineup
-        return { startingLineup: starters, bench: bench };
+        // Ensure exactly 3 Support in starters
+        if (supportStarters.length >= 3) {
+            adjustedStarters = [...adjustedStarters, ...supportStarters.slice(0, 3)];
+            newBench = [...newBench, ...supportStarters.slice(3)];
+        } else {
+            const neededSupport = 3 - supportStarters.length;
+            adjustedStarters = [...adjustedStarters, ...supportStarters];
+            const benchSupport = newBench.filter(player => player.role === 'Support').slice(0, neededSupport);
+            adjustedStarters = [...adjustedStarters, ...benchSupport];
+            newBench = newBench.filter(player => player.role !== 'Support' || !benchSupport.includes(player));
+        }
+
+        // Ensure exactly 1 Anchor in starters
+        if (anchorStarters.length > 0) {
+            adjustedStarters.push(anchorStarters[0]);
+            newBench = [...newBench, ...anchorStarters.slice(1)];
+        } else {
+            const benchAnchor = newBench.find(player => player.role === 'Anchor');
+            if (benchAnchor) {
+                adjustedStarters.push(benchAnchor);
+                newBench = newBench.filter(player => player.player_name !== benchAnchor.player_name);
+            }
+        }
+
+        // Map player names to IDs
+        const allPlayers = [...adjustedStarters, ...newBench];
+        const playerDetails = await mapPlayerNamesToIds(allPlayers);
+
+        // Extract player IDs from the mapped details
+        const starterIds = adjustedStarters.map(player => 
+            playerDetails.find(p => p.player_name === player.player_name)?.player_id
+        );
+        const benchIds = newBench.map(player => 
+            playerDetails.find(p => p.player_name === player.player_name)?.player_id
+        );
+
+        console.log('starterIds:', starterIds);
+        console.log('benchIds:', benchIds);
+
+        await updateTeamStatus(starterIds, benchIds);
+
+        return { startingLineup: adjustedStarters, newBench };
 
     } catch (error) {
         console.error('Error adjusting lineup:', error);
