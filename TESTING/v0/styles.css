@@ -1,0 +1,243 @@
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --background-color: #ecf0f1;
+    --text-color: #34495e;
+    --border-color: #bdc3c7;
+    --success-color: #2ecc71;
+    --danger-color: #e74c3c;
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--background-color);
+  }
+  
+  #app {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    grid-template-areas: 
+      "header header"
+      "nav nav"
+      "main aside"
+      "footer footer";
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  header {
+    grid-area: header;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 20px;
+    border-radius: 5px;
+  }
+  
+  header h1 {
+    margin-bottom: 10px;
+  }
+  
+  nav {
+    grid-area: nav;
+    display: flex;
+    justify-content: space-between;
+    background-color: var(--secondary-color);
+    padding: 10px;
+    border-radius: 5px;
+  }
+  
+  .tab-button {
+    background-color: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 10px 15px;
+    transition: background-color 0.3s;
+  }
+  
+  .tab-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  main {
+    grid-area: main;
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  aside {
+    grid-area: aside;
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  footer {
+    grid-area: footer;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 20px;
+    border-radius: 5px;
+    margin-top: 20px;
+  }
+  
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  button {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.3s;
+  }
+  
+  button:hover {
+    background-color: #2980b9;
+  }
+  
+  #editTeam, #autoAdjust {
+    margin-bottom: 10px;
+  }
+  
+  #teamRoster, #tradeOffers, #availablePlayersList, #weeklyMatchups, #opponentInfo {
+    margin-top: 20px;
+  }
+  
+  #teamRoster > div, #tradeOffers > div, #availablePlayersList > div {
+    background-color: #f9f9f9;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+  }
+  
+  #leagueStandings, #leagueMembers {
+    margin-top: 20px;
+  }
+  
+  #leagueStandings h2, #leagueMembers h2 {
+    margin-bottom: 10px;
+  }
+  
+  #leagueStandings > div, #leagueMembers > div {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  #leaveLeague {
+    background-color: var(--danger-color);
+    margin-top: 20px;
+  }
+  
+  #leaveLeague:hover {
+    background-color: #c0392b;
+  }
+  
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+  
+  .modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .close:hover,
+  .close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  
+  #modalButtons {
+    margin-top: 20px;
+    text-align: right;
+  }
+  
+  #modalButtons button {
+    margin-left: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-areas: 
+        "header"
+        "nav"
+        "main"
+        "aside"
+        "footer";
+    }
+  
+    nav {
+      flex-direction: column;
+    }
+  
+    .tab-button {
+      width: 100%;
+      text-align: left;
+      padding: 15px;
+    }
+  
+    aside {
+      margin-top: 20px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    body {
+      font-size: 14px;
+    }
+  
+    header h1 {
+      font-size: 24px;
+    }
+  
+    .modal-content {
+      width: 95%;
+    }
+  }

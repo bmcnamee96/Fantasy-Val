@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Esports League Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1 id="leagueName"></h1>
+            <p id="leagueDescription"></p>
+            <div id="currentWeek"></div>
+            <div id="timer"></div>
+        </header>
+
+        <nav>
+            <button class="tab-button" data-tab="myTeam">My Team</button>
+            <button class="tab-button" data-tab="trades">Trades</button>
+            <button class="tab-button" data-tab="freeAgents">Free Agents</button>
+            <button class="tab-button" data-tab="schedule">League Schedule</button>
+        </nav>
+
+        <main>
+            <section id="myTeam" class="tab-content">
+                <button id="editTeam">Edit Team</button>
+                <button id="autoAdjust">Auto-adjust</button>
+                <div id="teamRoster"></div>
+            </section>
+
+            <section id="trades" class="tab-content">
+                <div id="tradeOffers"></div>
+                <form id="tradeRequestForm">
+                    <!-- Trade request form fields will be added here -->
+                </form>
+            </section>
+
+            <section id="freeAgents" class="tab-content">
+                <div id="availablePlayersList"></div>
+            </section>
+
+            <section id="schedule" class="tab-content">
+                <div id="weeklyMatchups"></div>
+                <div id="opponentInfo"></div>
+            </section>
+        </main>
+
+        <aside>
+            <button id="draftButton">Enter Draft</button>
+            <div id="draftStatus"></div>
+            <button id="leaveLeague">Leave League</button>
+
+            <div id="leagueStandings"></div>
+            <div id="leagueMembers"></div>
+        </aside>
+
+        <footer>
+            <div id="leagueRules"></div>
+        </footer>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="modalMessage"></p>
+            <div id="modalButtons"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

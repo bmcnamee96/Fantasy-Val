@@ -302,41 +302,69 @@ function updateUserListUI() {
     }
 }
 
-function updateAvailablePlayersUI(availablePlayers) {
-    const availablePlayersElement = document.getElementById('available-players');
+async function updateAvailablePlayersUI(availablePlayers) {
+    const availablePlayersElement = document.getElementById('available-players-content');
     if (availablePlayersElement) {
         if (Array.isArray(availablePlayers)) {
             // Clear previous content
             availablePlayersElement.innerHTML = '';
 
-            // Create new cards with default picture handling
-            const cardsHTML = availablePlayers.map(player => {
-                const pictureUrl = player.pictureUrl || 'images/Blank.png'; 
+            // Create an array of Promises to handle asynchronous image checks
+            const cardsPromises = availablePlayers.map(player => {
+                return new Promise((resolve) => {
+                    // Construct the image file name and path
+                    const imageName = `${player.team_abrev} ${player.name}.png`;
+                    const encodedImageName = encodeURIComponent(imageName);
+                    const pictureUrl = `images/${encodedImageName}`;
 
-                return `
-                    <div class="col-md-4 player-card">
-                        <div class="card">
-                            <img src="${pictureUrl}" class="card-img-top" alt="${player.name}" style="min-height: 50px; max-height: 100px;">
-                            <div class="card-body">
-                                <h5 class="card-title">${player.team_abrev} ${player.name} (${player.role || 'Unknown Role'})</h5>
-                                <button class="btn btn-secondary"
-                                        data-player-id="${player.id}"
-                                        onclick="showDraftConfirmation('${player.id}', '${player.team_abrev}', '${player.name}', '${player.role || 'Unknown Role'}')">
-                                    Draft
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    // Create a new Image object to check if the image exists
+                    const img = new Image();
+                    img.src = pictureUrl;
 
-            availablePlayersElement.innerHTML = `<div class="row">${cardsHTML}</div>`;
+                    // If the image loads successfully
+                    img.onload = () => {
+                        resolve(createPlayerCard(player, pictureUrl));
+                    };
+
+                    // If there's an error loading the image (image doesn't exist)
+                    img.onerror = () => {
+                        const blankUrl = `images/Blank.png`;
+                        resolve(createPlayerCard(player, blankUrl));
+                    };
+                });
+            });
+
+            // Wait for all Promises to resolve
+            const cardsHTMLArray = await Promise.all(cardsPromises);
+
+            // Insert the generated HTML into the DOM
+            availablePlayersElement.innerHTML = `<div class="row">${cardsHTMLArray.join('')}</div>`;
         } else {
             console.error('Data is not an array:', availablePlayers);
         }
     } else {
         console.error('Available players element not found');
     }
+}
+
+function createPlayerCard(player, imageUrl) {
+    return `
+        <div class="col-md-4 player-card mb-4">
+            <div class="card h-100">
+                <img src="${imageUrl}" 
+                     class="card-img-top player-image" 
+                     alt="${player.name}">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">${player.team_abrev} ${player.name} (${player.role || 'Unknown Role'})</h5>
+                    <button class="btn btn-secondary mt-auto"
+                            data-player-id="${player.id}"
+                            onclick="showDraftConfirmation('${player.id}', '${player.team_abrev}', '${player.name}', '${player.role || 'Unknown Role'}')">
+                        Draft
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function updateCurrentTurnUI(currentIndex) {
@@ -387,24 +415,24 @@ function updateDraftMessageUI(message) {
 function renderTeam(teamData) {
     const teamContainer = document.getElementById('team-container');
     teamContainer.innerHTML = ''; // Clear any existing content
-  
-    if (teamData.length === 0) {
-      teamContainer.innerHTML = '<p>No players drafted yet.</p>';
-      return;
+
+    if (!teamData || teamData.length === 0) {
+        teamContainer.innerHTML = '<p>No players drafted yet.</p>';
+        return;
     }
-  
+
     teamData.forEach(player => {
-      const playerElement = document.createElement('div');
-      playerElement.classList.add('player-card');
-      playerElement.innerHTML = `
-        <div class="card mb-3">
-          <div class="card-body">
-            <h5 class="card-title">${player.team_abrev} ${player.player_name}</h5>
-            <p class="card-text">Role: ${player.role}</p>
-          </div>
-        </div>
-      `;
-      teamContainer.appendChild(playerElement);
+        const playerElement = document.createElement('div');
+        playerElement.classList.add('player-card');
+        playerElement.innerHTML = `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">${player.team_abrev} ${player.name || player.player_name}</h5>
+                    <p class="card-text">Role: ${player.role}</p>
+                </div>
+            </div>
+        `;
+        teamContainer.appendChild(playerElement);
     });
 }
 
@@ -611,7 +639,7 @@ async function initializeSocket() {
         })
         
         // Event handler for draft ended event
-        socketInstance.on('draftEnded', (data) => {
+        socketInstance.on('draftEnded', async (data) => {
             console.log(data.message);
           
             if (data.redirectUrl) {

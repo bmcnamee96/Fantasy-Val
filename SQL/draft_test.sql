@@ -15,7 +15,7 @@ SELECT * FROM league_teams;
 SELECT * FROM users;
 
 INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended)
-VALUES (6, -1, FALSE, FALSE);  -- Example for league with ID 1
+VALUES (3, -1, FALSE, FALSE); 
 
 INSERT INTO league_teams (league_id, team_name, user_id)
 	VALUES (6, 'Test Team', 1); 
@@ -37,7 +37,7 @@ SET current_turn_index = -1  -- Example: move to the next user's turn
 WHERE league_id = 3;
 
 UPDATE draft_status
-SET draft_started = FALSE  -- Example: move to the next user's turn
+SET draft_ended = FALSE  -- Example: move to the next user's turn
 WHERE league_id = 3;
 
 SELECT * FROM draft_orders;

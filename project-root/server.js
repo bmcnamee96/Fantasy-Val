@@ -33,6 +33,7 @@ app.use(expressJwt({
   path: [
     '/',
     '/index.html',
+    /\/images\/.*/,
     '/api/users/signup',
     '/api/users/signin',
     '/api/users/recover-password',

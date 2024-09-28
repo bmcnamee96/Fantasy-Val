@@ -40,6 +40,7 @@
             </ul>
             
             <div class="nav-right">
+
                 <div id="authLinks" class="auth-buttons">
                     <button id="signupBtn">Sign Up</button>
                     <button id="signinBtn">Sign In</button>
@@ -48,6 +49,8 @@
                     WELCOME&nbsp;&nbsp;<span id="usernameSpan" class="username"></span>!
                 </div>
                 <button id="signoutBtn" style="display: none;">Sign Out</button>
+
+                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌙</button>
             </div>
         </div>
     </nav>
@@ -99,92 +102,73 @@
     </div>
     <!--#endregion -->
 
-    <!-- #region Slider section -->
-    <section class="slider_section ">
-        <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
-            <ol class="carousel-indicators">
-            <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active">01</li>
-            <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
-            <li data-target="#carouselExampleIndicators" data-slide-to="2"></li>
-            </ol>
-            <div class="carousel-inner">
-                <div class="carousel-item active">
-                    <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-md-12 img-container">
-                            <div class="img-box">
-                                <img src="images/mvp.png" alt="MVP">
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-                <div class="carousel-item ">
-                    <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-md-12 img-container">
-                            <div class="img-box">
-                                <img src="images/allStar.png" alt="All Star">
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-                <div class="carousel-item ">
-                    <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-md-12 img-container">
-                        <div class="img-box">
-                            <img src="images/topUser.png" alt="Top User">
-                        </div>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- #endregion -->
+    <main class="container-fluid">
+        <!-- #region Slider section -->
+        <section class="slider_section">
+            <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
+                <!-- Indicators -->
+                <ol class="carousel-indicators">
+                    <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
+                    <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
+                    <li data-target="#carouselExampleIndicators" data-slide-to="2"></li>
+                </ol>
 
-    <!-- How to Play Section -->
-    <div class="how_to_section">
-        <div class="container">
-            <div class="box">
-                <div class="number-circle">1</div>
-                <h3>Create an Account</h3>
-                <p>Sign up to join the action.</p>
+                <!-- Carousel items -->
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <img src="images/mvp.png" class="d-block w-100" alt="MVP">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="images/allStar.png" class="d-block w-100" alt="All Star">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="images/topUser.png" class="d-block w-100" alt="Top User">
+                    </div>
+                </div>
             </div>
-            <div class="box">
-                <div class="number-circle">2</div>
-                <h3>Join or Create a League</h3>
-                <p>Get into the competition by joining an existing league or creating your own.</p>
-            </div>
-            <div class="box">
-                <div class="number-circle">3</div>
-                <h3>Invite Friends</h3>
-                <p>Bring your friends along for the ultimate challenge.</p>
-            </div>
-            <div class="box">
-                <div class="number-circle">4</div>
-                <h3>Draft Your Dream Team</h3>
-                <p>Pick the perfect team of players to lead you to victory.</p>
-            </div>
-            <div class="box">
-                <div class="number-circle">5</div>
-                <h3>Compete Each Week</h3>
-                <p>Test your team’s skills and climb the leaderboard every week.</p>
-            </div>
-            <div class="box">
-                <div class="number-circle">6</div>
-                <h3>Prove Your Valorant Knowledge</h3>
-                <p>Show off your expertise and become the ultimate champion.</p>
+        </section>
+        <!-- #endregion -->
+
+        <!-- How to Play Section -->
+        <div class="how_to_section">
+            <div class="container">
+                <div class="box">
+                    <div class="number-circle">1</div>
+                    <h3>Create an Account</h3>
+                    <p>Sign up to join the action.</p>
+                </div>
+                <div class="box">
+                    <div class="number-circle">2</div>
+                    <h3>Join or Create a League</h3>
+                    <p>Get into the competition by joining an existing league or creating your own.</p>
+                </div>
+                <div class="box">
+                    <div class="number-circle">3</div>
+                    <h3>Invite Friends</h3>
+                    <p>Bring your friends along for the ultimate challenge.</p>
+                </div>
+                <div class="box">
+                    <div class="number-circle">4</div>
+                    <h3>Draft Your Dream Team</h3>
+                    <p>Pick the perfect team of players to lead you to victory.</p>
+                </div>
+                <div class="box">
+                    <div class="number-circle">5</div>
+                    <h3>Compete Each Week</h3>
+                    <p>Test your team’s skills and climb the leaderboard every week.</p>
+                </div>
+                <div class="box">
+                    <div class="number-circle">6</div>
+                    <h3>Prove Your Valorant Knowledge</h3>
+                    <p>Show off your expertise and become the ultimate champion.</p>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Footer -->
     <footer>
-        <div class="container">
+        <div class="container text-center">
             <p>&copy; 2024 Fantasy Valorant. All rights reserved.</p>
         </div>
     </footer>

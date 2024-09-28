@@ -19,7 +19,10 @@
 
     <!--Bootstrap Styles-->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
     <!--Custom Styles-->
     <link rel="stylesheet" href="css/styles.css">
 
@@ -48,6 +51,8 @@
                     WELCOME&nbsp;&nbsp;<span id="usernameSpan" class="username"></span>!
                 </div>
                 <button id="signoutBtn" style="display: none;">Sign Out</button>
+
+                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌙</button>
             </div>
         </div>
     </nav>
@@ -100,27 +105,32 @@
     <!--#endregion -->
 
     <!-- Main Content -->
-    <main>
-        <h1>My Dashboard</h1>
-        <div class="container mt-4">
-            <div class="row">
-                <!-- My Leagues Box -->
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header">
-                            My Leagues
+    <main class="container-fluid">
+        <h1 class="text-center mb-5">My Dashboard</h1>
+        <div class="row">
+            <!-- My Leagues Section -->
+            <div class="col-lg-8 mb-4 my-leagues-area"> <!-- Added 'my-leagues-area' class -->
+                <div class="card shadow-sm my-leagues-card"> <!-- Added 'my-leagues-card' class -->
+                    <div class="card-header text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-trophy mr-2"></i>My Leagues</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="leagues-list">
+                            <!-- Leagues will be dynamically loaded here -->
+                            <p>Loading leagues...</p>
                         </div>
-                        <ul class="list-group list-group-flush" id="leagues-list">
-                            <!-- Placeholder items will be dynamically replaced by JavaScript -->
-                            <li class="list-group-item">Loading leagues...</li>
-                        </ul>
                     </div>
                 </div>
-                 <!-- Buttons Box -->
-                <div class="col-md-4">
-                    <div class="d-flex flex-column align-items-end">
-                        <button class="btn btn-primary mb-2 btn-square" id="create-league-btn" onclick="location.href='create-league.html'">Create a League</button>
-                        <button class="btn btn-secondary btn-square" id="join-league-btn" onclick="location.href='join-league.html'">Join a League</button>
+            </div>
+            <!-- Actions Section -->
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header text-white">
+                        Actions
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <button class="btn btn-success mb-3" onclick="location.href='create-league.html'"><i class="fas fa-plus mr-1"></i>Create a League</button>
+                        <button class="btn btn-success mb-3" onclick="location.href='join-league.html'"><i class="fas fa-sign-in-alt mr-2"></i>Join a League</button>
                     </div>
                 </div>
             </div>
@@ -129,7 +139,7 @@
 
     <!-- Footer -->
     <footer>
-        <div class="container">
+        <div class="container text-center">
             <p>&copy; 2024 Fantasy Valorant. All rights reserved.</p>
         </div>
     </footer>

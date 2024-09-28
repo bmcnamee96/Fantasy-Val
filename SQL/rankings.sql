@@ -59,6 +59,17 @@ UPDATE player SET preseason_ranking = 55 WHERE player_name = 'mta' AND team_abre
 UPDATE player SET preseason_ranking = 56 WHERE player_name = 'ShahZaM' AND team_abrev = 'MIBR';
 UPDATE player SET preseason_ranking = 57 WHERE player_name = 'Pa1nt' AND team_abrev = 'MIBR';
 UPDATE player SET preseason_ranking = 58 WHERE player_name = 'Klaus' AND team_abrev = 'KRU';
+UPDATE player SET preseason_ranking = 59 WHERE player_name = 'Blaze' AND team_abrev = '100T';
+UPDATE player SET preseason_ranking = 60 WHERE player_name = 'Phantom' AND team_abrev = 'EG';
+UPDATE player SET preseason_ranking = 61 WHERE player_name = 'Vortex' AND team_abrev = 'NRG';
+UPDATE player SET preseason_ranking = 62 WHERE player_name = 'Shadow' AND team_abrev = 'SEN';
+UPDATE player SET preseason_ranking = 63 WHERE player_name = 'Ghost' AND team_abrev = 'KRU';
+UPDATE player SET preseason_ranking = 64 WHERE player_name = 'Stone' AND team_abrev = 'MIBR';
+UPDATE player SET preseason_ranking = 65 WHERE player_name = 'Ironclad' AND team_abrev = 'C9';
+UPDATE player SET preseason_ranking = 66 WHERE player_name = 'Fortress' AND team_abrev = 'LEV';
+UPDATE player SET preseason_ranking = 67 WHERE player_name = 'Bulwark' AND team_abrev = 'FUR';
+UPDATE player SET preseason_ranking = 68 WHERE player_name = 'Sentinel' AND team_abrev = 'LOUD';
+
 
 
 SELECT * FROM player;

@@ -24,6 +24,48 @@ function updateUI() {
     }
 }
 
+// Theme Toggle Functionality
+
+// Function to update the theme icon
+function updateThemeIcon() {
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    if (!themeToggleBtn) return; // Exit if the button doesn't exist
+
+    if (document.body.classList.contains('dark-theme')) {
+        themeToggleBtn.textContent = '☀️'; // Sun icon for light mode
+        themeToggleBtn.setAttribute('aria-label', 'Switch to Light Theme');
+    } else {
+        themeToggleBtn.textContent = '🌙'; // Moon icon for dark mode
+        themeToggleBtn.setAttribute('aria-label', 'Switch to Dark Theme');
+    }
+}
+
+// On page load, set the theme based on saved preference
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+    }
+    updateThemeIcon();
+}
+
+// Function to set up theme toggle event listener
+function setupThemeToggle() {
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    if (!themeToggleBtn) return; // Exit if the button doesn't exist
+
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark-theme');
+        updateThemeIcon();
+        // Save the user's preference in localStorage
+        if (document.body.classList.contains('dark-theme')) {
+            localStorage.setItem('theme', 'dark');
+        } else {
+            localStorage.setItem('theme', 'light');
+        }
+    });
+}
+
 // Join League
 function showModal(message, isSuccess = false) {
     const modal = document.getElementById('error-modal');
@@ -84,18 +126,29 @@ async function fetchUserLeagues() {
         leaguesList.innerHTML = ''; // Clear existing content
 
         if (leagues.length === 0) {
-            leaguesList.innerHTML = '<li class="list-group-item">No leagues found.</li>';
+            leaguesList.innerHTML = '<p>You are not in any leagues. Join or create one now!</p>';
         } else {
-            leaguesList.innerHTML = leagues.map(league => `
-                <li class="list-group-item">
-                    <a href="league-dashboard.html?leagueId=${league.league_id}" class="league-link">${league.league_name}</a>
-                </li>
-            `).join('');
+            leagues.forEach(league => {
+                const leagueCard = document.createElement('div');
+                leagueCard.className = 'card mb-3';
+
+                leagueCard.innerHTML = `
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-1">${league.league_name}</h5>
+                            <p class="card-text mb-0">${league.description || 'No description available.'}</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="location.href='league-dashboard.html?leagueId=${league.league_id}'">View League</button>
+                    </div>
+                `;
+
+                leaguesList.appendChild(leagueCard);
+            });
         }
     } catch (error) {
         console.error('Error fetching leagues:', error);
         const leaguesList = document.querySelector('#leagues-list');
-        leaguesList.innerHTML = '<li class="list-group-item">You are not in a league! Join or create one now!</li>';
+        leaguesList.innerHTML = '<p>Error loading leagues. Please try again later.</p>';
     }
 }
 
@@ -277,6 +330,12 @@ async function joinLeague() {
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded and parsed for scripts.js');
+
+    // Initialize theme
+    initializeTheme();
+
+    // Set up theme toggle event listener
+    setupThemeToggle();
 
     // Get modals, buttons, and form elements
     const signupModal = document.getElementById("signupModal");

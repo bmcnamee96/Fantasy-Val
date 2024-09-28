@@ -10,8 +10,8 @@ const clients = new Map();
 let draftStarted = false;
 let draftEnded = false;
 let currentTurnIndex = 0; // Index of the current turn
-let turnDuration = 5;
-let maxRounds = 6;
+let turnDuration = 45;
+let maxRounds = 7;
 let turnTimer = null;
 let currentTurnTimer = null; // Variable to store the active timer
 
@@ -594,9 +594,13 @@ async function startDraft(leagueId, turnDuration, io) {
           [currentTurnIndex, leagueId]
       );
 
-      // Start the first turn timer and get the remaining time
-      const remainingTime = await startTurnTimer(leagueId, turnDuration, io);
+      // Start the first turn timer
+      await startTurnTimer(leagueId, turnDuration, io, currentTurnIndex);
 
+      // Set remaining time
+      const remainingTime = turnDuration;
+
+      // Set the draft order
       const draftOrder = await setDraftOrder(leagueId);
 
       // Emit the 'draftStarted' message to all users in the league with the remaining time, turn
@@ -675,11 +679,10 @@ async function handleTurnEnd(leagueId, io) {
     const draftOccurred = await checkIfDraftOccurred(leagueId, currentTurnIndex);
 
     if (!draftOccurred) {
-      console.log('No draft occured, autodrafting')
+      console.log('No draft occurred, autodrafting');
       // Autodraft if no player was drafted
       await autodraftPlayer(leagueId, io);
-
-      return // exit the function
+      return; // Exit the function
     }
 
     // Increment the current turn index
@@ -708,133 +711,174 @@ async function handleTurnEnd(leagueId, io) {
 
 async function draftPlayer(userId, leagueId, playerId) {
   try {
-      // Parse IDs and validate
-      const leagueIdInt = parseInt(leagueId, 10);
-      const playerIdInt = parseInt(playerId, 10);
+    // Parse IDs and validate
+    const leagueIdInt = parseInt(leagueId, 10);
+    const playerIdInt = parseInt(playerId, 10);
 
-      if (Number.isNaN(leagueIdInt) || Number.isNaN(playerIdInt)) {
-          const errorMsg = 'Invalid leagueId or playerId.';
-          console.error(errorMsg, { leagueId, playerId });
-          return { success: false, message: errorMsg };
-      }
+    if (Number.isNaN(leagueIdInt) || Number.isNaN(playerIdInt)) {
+      const errorMsg = 'Invalid leagueId or playerId.';
+      console.error(errorMsg, { leagueId, playerId });
+      return { success: false, message: errorMsg };
+    }
 
-      // Fetch username associated with userId
-      const username = await getUsernameFromId(userId);
-      if (!username) {
-          const errorMsg = 'Username could not be fetched.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
+    // Fetch username associated with userId
+    const username = await getUsernameFromId(userId);
+    if (!username) {
+      const errorMsg = 'Username could not be fetched.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
-      // Fetch the current turn index for the league
-      const currentTurnIndex = await getCurrentTurnIndex(leagueIdInt);
-      if (currentTurnIndex === null) {
-          const errorMsg = 'Current turn index could not be fetched.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
+    // Fetch the current turn index for the league
+    const currentTurnIndex = await getCurrentTurnIndex(leagueIdInt);
+    if (currentTurnIndex === null) {
+      const errorMsg = 'Current turn index could not be fetched.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
-      // Fetch the draft order to get the expected user for the current turn
-      const draftOrder = await getDraftOrder(leagueIdInt);
-      if (!draftOrder) {
-          const errorMsg = 'Draft order could not be fetched.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
+    // Fetch the draft order to get the expected user for the current turn
+    const draftOrder = await getDraftOrder(leagueIdInt);
+    if (!draftOrder) {
+      const errorMsg = 'Draft order could not be fetched.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
-      // Determine the username who should be drafting in the current turn
-      const currentUsername = draftOrder[currentTurnIndex];
+    // Determine the username who should be drafting in the current turn
+    const currentUsername = draftOrder[currentTurnIndex];
 
-      // Validate the user making the draft
-      if (currentUsername !== username) {
-          const errorMsg = 'User is not authorized to draft at this turn.';
-          console.error(errorMsg, { username, leagueId, playerId });
-          return { success: false, message: errorMsg };
-      }
+    // Validate the user making the draft
+    if (currentUsername !== username) {
+      const errorMsg = 'User is not authorized to draft at this turn.';
+      console.error(errorMsg, { username, leagueId, playerId });
+      return { success: false, message: errorMsg };
+    }
 
-      // Fetch player name and role from the player table
-      const playerName = await getPlayerNameFromId(playerIdInt);
-      const playerRole = await getRoleFromPlayerId(playerIdInt);
-      if (!playerName || !playerRole) {
-          const errorMsg = 'Player name or role could not be fetched.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
+    // Fetch player name and role from the player table
+    const playerName = await getPlayerNameFromId(playerIdInt);
+    const playerRole = await getRoleFromPlayerId(playerIdInt);
+    if (!playerName || !playerRole) {
+      const errorMsg = 'Player name or role could not be fetched.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
-      // Get the league_team_id for the user
-      const leagueTeamId = await getLeagueTeamId(userId, leagueIdInt);
-      if (!leagueTeamId) {
-          const errorMsg = 'League team ID could not be fetched.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
+    // Get the league_team_id for the user
+    const leagueTeamId = await getLeagueTeamId(userId, leagueIdInt);
+    if (!leagueTeamId) {
+      const errorMsg = 'League team ID could not be fetched.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
-      // Check if the team length allows this draft
-      const teamLength = await getTeamLength(leagueTeamId);
-      if (teamLength === null) {
-          const errorMsg = 'Error fetching team length.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
-      if (teamLength >= 7) {
-          const errorMsg = 'Cannot draft this player; team size limit reached.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
+    // Check if the team length allows this draft
+    const teamLength = await getTeamLength(leagueTeamId);
+    if (teamLength === null) {
+      const errorMsg = 'Error fetching team length.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
+    if (teamLength >= 7) {
+      const errorMsg = 'Cannot draft this player; team size limit reached.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
-      // Check if the team composition allows this draft
-      const canDraft = await checkTeamComposition(leagueTeamId, playerRole);
-      if (!canDraft) {
-          const errorMsg = 'Cannot draft this player; team composition limits exceeded.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
-      }
+    // Check if the team composition allows this draft
+    const canDraft = await checkTeamComposition(leagueTeamId, playerRole);
+    if (!canDraft) {
+      const errorMsg = 'Cannot draft this player; team composition limits exceeded.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
 
-      // Insert into drafted_players table
-      await pool.query(
-        `INSERT INTO drafted_players (league_id, player_id, league_team_id, turn_index)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (league_id, player_id) DO NOTHING`,
-        [leagueIdInt, playerIdInt, leagueTeamId, currentTurnIndex]
+    // Insert into drafted_players table
+    await pool.query(
+      `INSERT INTO drafted_players (league_id, player_id, league_team_id, turn_index)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (league_id, player_id) DO NOTHING`,
+      [leagueIdInt, playerIdInt, leagueTeamId, currentTurnIndex]
     );
 
-      // Insert into league_team_players table
-      await pool.query(
-          `INSERT INTO league_team_players (league_team_id, player_id)
-           VALUES ($1, $2)
-           ON CONFLICT (league_team_id, player_id) DO NOTHING`,
-          [leagueTeamId, playerIdInt]
-      );
+    // Determine if the player can be a starter
+    // Fetch current starters
+    const currentStartersResult = await pool.query(`
+      SELECT p.role 
+      FROM league_team_players ltp
+      JOIN player p ON ltp.player_id = p.player_id
+      WHERE ltp.league_team_id = $1 AND ltp.starter = TRUE
+    `, [leagueTeamId]);
 
-      console.log(`Player ${playerIdInt} drafted successfully in league ${leagueIdInt}`);
+    const currentStarters = currentStartersResult.rows;
 
-      // Emit updated list to all clients in the league
-      emitAvailablePlayers(leagueId);
+    // Count roles in current starters
+    const roleCounts = {
+      Fragger: 0,
+      Support: 0,
+      Anchor: 0
+    };
 
-      // Fetch team abbreviation for the drafted player
-      const teamAbrev = await getTeamAbrevFromPlayerId(playerIdInt);
-      if (!teamAbrev) {
-          const errorMsg = 'Team abbreviation could not be fetched.';
-          console.error(errorMsg);
-          return { success: false, message: errorMsg };
+    currentStarters.forEach(row => {
+      const role = row.role;
+      if (roleCounts.hasOwnProperty(role)) {
+        roleCounts[role]++;
+      } else {
+        console.error(`Unexpected role: ${role}`);
       }
+    });
 
-      // Emit the drafted player message to all clients
-      const draftMessage = `${teamAbrev} ${playerName} was drafted by ${username}`;
-      emitDraftMessage(leagueId, draftMessage);
+    // Maximum starters per role
+    const maxRoleCounts = {
+      Fragger: 1,
+      Support: 3,
+      Anchor: 1
+    };
 
-      // Add slight delay before handling turn end to avoid race conditions
-      await new Promise(resolve => setTimeout(resolve, 100));
+    // Determine if the new player can be a starter
+    let canBeStarter = false;
+    if (roleCounts[playerRole] < maxRoleCounts[playerRole]) {
+      canBeStarter = true;
+    }
 
-      console.log(`Handling turn end for league ${leagueId}`);
-      await handleTurnEnd(leagueId, io);
+    console.log(`Player ${playerIdInt} (${playerRole}) can${canBeStarter ? '' : 'not'} be a starter.`);
 
-      // Return success message
-      return { success: true, message: `Player ${playerIdInt} drafted successfully.` };
+    // Insert or update the player's starter status in league_team_players
+    await pool.query(`
+      INSERT INTO league_team_players (league_team_id, player_id, starter)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (league_team_id, player_id) DO UPDATE SET starter = EXCLUDED.starter
+    `, [leagueTeamId, playerIdInt, canBeStarter]);
+
+    console.log(`Player ${playerIdInt} drafted successfully in league ${leagueIdInt}`);
+
+    // Emit updated list to all clients in the league
+    emitAvailablePlayers(leagueId);
+
+    // Fetch team abbreviation for the drafted player
+    const teamAbrev = await getTeamAbrevFromPlayerId(playerIdInt);
+    if (!teamAbrev) {
+      const errorMsg = 'Team abbreviation could not be fetched.';
+      console.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
+
+    // Emit the drafted player message to all clients
+    const draftMessage = `${teamAbrev} ${playerName} was drafted by ${username}`;
+    emitDraftMessage(leagueId, draftMessage);
+
+    // Add slight delay before handling turn end to avoid race conditions
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    console.log(`Handling turn end for league ${leagueId}`);
+    await handleTurnEnd(leagueId, io);
+
+    // Return success message
+    return { success: true, message: `Player ${playerIdInt} drafted successfully.` };
 
   } catch (error) {
-      console.error('Error drafting player:', error);
-      return { success: false, message: 'An unexpected error occurred while drafting the player.' };
+    console.error('Error drafting player:', error);
+    return { success: false, message: 'An unexpected error occurred while drafting the player.' };
   }
 }
 
@@ -923,13 +967,16 @@ async function checkEndOfDraft(currentTurnIndex, leagueId, io) {
     const currentRound = Math.floor(currentTurnIndex / numParticipants) + 1;
     console.log('Current Round:', currentRound);
 
-    // For testing: end the draft after round 1
-    // Adjust to currentRound > 7 for full implementation
+    // For full implementation, adjust to currentRound > maxRounds
     if (currentRound > maxRounds) { 
-      endDraft(leagueId, io);
+      await endDraft(leagueId, io);
+      return true; // Indicate that the draft has ended
     }
+
+    return false; // Indicate that the draft has not ended
   } catch (error) {
     console.error('Error in checkEndOfDraft:', error);
+    return false; // Assume draft has not ended in case of error
   }
 }
 
