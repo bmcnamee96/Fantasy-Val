@@ -501,6 +501,7 @@ function renderTeam(teamData) {
         playerElement.classList.add(player.starter ? 'starter' : 'bench'); // Apply class based on 'starter' property
         playerElement.innerHTML = `
         <span>${player.team_abrev} ${player.player_name}</span>
+        <span>${player.role}</span>
         <span>${player.points} pts</span>
         `;
         playersContainer.appendChild(playerElement);

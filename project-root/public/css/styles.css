@@ -25,7 +25,7 @@
     --secondary-color: #6c757d;
 
     /* Card-specific Variables */
-    --card-header: #500000;
+    --card-header-bg: #500000;
     --my-leagues-area-bg: #f8f9fa;
     --my-leagues-area-text: #000000;
     --card-background: #ffffff;
@@ -33,7 +33,7 @@
     --card-border-color: #e0e0e0;
     --card-hover-shadow: rgba(0, 0, 0, 0.1);
     --my-leagues-card-bg: #ffffff;
-    --my-leagues-card-text: #000000;
+    --my-leagues-card-text: #ffffff;
 
     /* Additional Variables */
     --red-light: #ff4d4d; /* Example color, adjust as needed */
@@ -78,7 +78,7 @@
     --secondary-color: #bb86fc;
 
     /* Card-specific Variables */
-    --card-header: #500000;
+    --card-header-bg: #500000;
     --my-leagues-area-bg: #1a1a1a;
     --my-leagues-area-text: #ffffff;
     --card-background: #1f1f1f;
@@ -98,10 +98,10 @@
     --message-text-color: #d4edda; /* Example text color for dark theme */
 
     /* Trade and Player Specific Colors */
-    --trade-initiated-bg: #2a3b4c; /* Adjust to suitable dark color */
-    --trade-requested-bg: #3b4c5d; /* Adjust to suitable dark color */
-    --starter-bg: #3a4c5d; /* Adjust to suitable dark color */
-    --bench-bg: #4b5d6e; /* Adjust to suitable dark color */
+    --trade-initiated-bg: #024c71;
+    --trade-requested-bg: #705e03;
+    --starter-bg: #185600;
+    --bench-bg: #960000;
 }
 
 /* =============================== */
@@ -114,6 +114,18 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
+}
+
+/* Hide the body until the correct theme is applied */
+body {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.1s ease-in-out;
+}
+
+body.theme-ready {
+    visibility: visible;
+    opacity: 1;
 }
 
 nav {
@@ -237,6 +249,7 @@ nav .container {
 main.container-fluid {
     margin-top: 100px;
     margin-bottom: 20px;
+    max-width: 1300px;
     background-color: var(--background-color);
     color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
@@ -1331,12 +1344,15 @@ th[data-sort="desc"]::after {
     border: 1px solid var(--card-border-color);
 }
 
-.card-header {
-    background-color: var(--primary-color);
+/* Targeting card headers within both My Leagues and Actions sections */
+.my-leagues-card .card-header,
+.actions .card-header {
+    background-color: var(--card-header-bg);
     color: var(--my-leagues-card-text);
     font-size: large;
 }
 
+/* Leagues List Card Styles */
 #leagues-list .card {
     background-color: var(--card-background);
     color: var(--card-text-color);
@@ -1374,40 +1390,41 @@ th[data-sort="desc"]::after {
     color: var(--text-color-secondary);
 }
 
-/* My Leagues Surrounding Area */
-.my-leagues-area {
+/* My Leagues and Actions Surrounding Area */
+.my-leagues-area,
+.actions-area {
     background-color: var(--my-leagues-area-bg);
     color: var(--my-leagues-area-text);
     padding: 15px;
     border-radius: 8px;
 }
 
-/* My Leagues Card */
-.my-leagues-card {
+/* My Leagues and Actions Cards */
+.my-leagues-card,
+.actions {
     background-color: var(--my-leagues-card-bg);
     color: var(--my-leagues-card-text);
     border: 1px solid var(--table-border-color);
     transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.my-leagues-card:hover {
+.my-leagues-card:hover,
+.actions:hover {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     transform: translateY(-5px);
 }
 
-.my-leagues-card .card-header {
-    background-color: var(--primary-color);
-    color: var(--my-leagues-card-text);
-}
-
-.my-leagues-card .btn-light {
+/* Buttons within My Leagues and Actions Cards */
+.my-leagues-card .btn-light,
+.actions .btn-light {
     background-color: var(--accent-color);
     color: var(--my-leagues-card-text);
     border: none;
     transition: background-color 0.3s ease;
 }
 
-.my-leagues-card .btn-light:hover {
+.my-leagues-card .btn-light:hover,
+.actions .btn-light:hover {
     background-color: var(--secondary-color);
 }
 
@@ -1494,6 +1511,101 @@ button:focus,
 .tab:not(.active):hover {
     background-color: var(--accent-color);
     color: var(--white-primary);
+}
+
+/* =============================== */
+/*        Feedback Styles          */
+/* =============================== */
+
+.form-group {
+    margin-bottom: 20px;
+    background-color: var(--background-color);
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+input[type="text"], input[type="email"], select, textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: var(--background-color);
+    color: var(--text-color)
+}
+
+textarea {
+    background-color: var(--background-color);
+    height: 150px;
+    color: var(--text-color)
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.rating-container {
+    background-color: var(--background-color);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.rating {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    font-size: 0;
+}
+
+.rating input {
+    display: none;
+}
+
+.rating label {
+    cursor: pointer;
+    font-size: 40px;
+    padding: 5px;
+    color: #ccc;
+    transition: color 0.2s ease-in-out;
+}
+
+.rating label:before {
+    content: '\2605';
+}
+
+.rating input:checked ~ label,
+.rating:not(:checked) > label:hover,
+.rating:not(:checked) > label:hover ~ label {
+    color: #ffd700;
+}
+
+.rating input:checked + label:hover,
+.rating input:checked ~ label:hover,
+.rating label:hover ~ input:checked ~ label,
+.rating input:checked ~ label:hover ~ label {
+    color: #ffed85;
+}
+
+.past-suggestions, .faq {
+    background-color: var(--background-color);
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+
+.acknowledgment {
+    display: none;
+    background-color: #dff0d8;
+    color: #3c763d;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 4px;
 }
 
 /* =============================== */

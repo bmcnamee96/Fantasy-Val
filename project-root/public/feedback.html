@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Heading -->
 <head>
     <script>
         // Apply the saved theme immediately to prevent flashing and show the body
@@ -20,31 +19,20 @@
         })();
     </script>
 
-    <!-- Basic -->
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-      <!-- Mobile Metas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <!-- Site Metas -->
-    <meta name="keywords" content="" />
-    <meta name="description" content="" />
-    <meta name="author" content="" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Valorant Suggestion Box</title>
 
     <!-- Fav Icon -->
     <link rel="icon" href="images/favicon.png" type="image/x-icon">
-
-    <title>Fantasy Valorant</title>
-
-    <!--Bootstrap Styles-->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     
-    <!--Custom Styles-->
+    <!-- External stylesheets -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/styles.css">
 
 </head>
-<!-- Body -->
 <body>
-    <!--#region ALL HTMLS -->
+ <!--#region ALL HTML -->
     <!-- Navigation Bar -->
     <nav>
         <div class="container">
@@ -103,7 +91,6 @@
             </form>
             <a href="#" id="forgotPassword">Forgot Password?</a>
             
-            <!-- Password Recovery Form -->
             <div id="passwordRecoveryForm" class="modal">
                 <div class="modal-content">
                     <span class="close" id="passwordRecoveryClose">&times;</span>
@@ -111,48 +98,92 @@
                     <form id="passwordRecoveryInnerForm">
                         <label for="recoveryEmail">Enter your email:</label>
                         <input type="email" id="recoveryEmail" name="recoveryEmail" required>
-                        <button type="submit" id="recoverPasswordBtn">Submit</button>
+                        <button type="submit">Submit</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    <!--#endregion -->
+    <!--#endregion-->
 
     <!-- Main Content -->
     <main class="container-fluid">
-        <h1>Create a League</h1>
+        <h1>Fantasy Valorant Suggestion Box</h1>
+        <p>Help us improve your fantasy experience! Share your feedback, ideas, or improvements. Your input is valuable in making our platform better for everyone.</p>
 
-        <!-- Create League and Join a League Sections -->
-        <div class="col">
-            <form id="create-league-form" class="form">
-                <div class="form-group row">
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" id="league_name" name="league_name" placeholder="League Name" required>
-                    </div>
-                    <div class="col-md-6">
-                        <input type="password" class="form-control" id="league-pass" name="league-pass" placeholder="League Password" required>
-                    </div>
-                    <div class="col-md-12">
-                        <textarea class="form-control" id="description" name="description" placeholder="Description" rows="4" maxlength="250"></textarea>
-                        <small id="charCount" class="form-text text-muted">0/250</small>
-                    </div>
-                    <input type="text" name="team_name" placeholder="Enter your team name" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Create League</button>
-            </form>
-
-            <!--Error Message Popup for Creating Leagues!-->
-            <div id="error-modal" class="modal">
-                <div class="modal-content">
-                    <span class="close-button">&times;</span>
-                    <p id="modal-message"></p>
-                </div>
+        <form id="suggestionForm">
+            <div class="form-group">
+                <h2 for="suggestion">Your Suggestion:</h2>
+                <textarea id="suggestion" name="suggestion" required></textarea>
             </div>
+            
+            <div class="form-group">
+                <h2 for="category">Category:</h2>
+                <select id="category" name="category" required>
+                    <option value="">Select a category</option>
+                    <option value="gameplay">Gameplay</option>
+                    <option value="website">Website Design</option>
+                    <option value="scoring">Scoring System</option>
+                    <option value="stats">Player Stats</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <!-- Rating and Feedback -->
+            <div class="rating-container">
+                <h2>How was your experience?</h2>
+                <div class="rating">
+                    <input type="radio" id="star5" name="rating" value="5" />
+                    <label for="star5" title="Excellent"></label>
+                    <input type="radio" id="star4" name="rating" value="4" />
+                    <label for="star4" title="Very Good"></label>
+                    <input type="radio" id="star3" name="rating" value="3" />
+                    <label for="star3" title="Good"></label>
+                    <input type="radio" id="star2" name="rating" value="2" />
+                    <label for="star2" title="Poor"></label>
+                    <input type="radio" id="star1" name="rating" value="1" />
+                    <label for="star1" title="Very Poor"></label>
+                </div>
+                <div class="feedback" id="feedback"></div>
+            </div>
+            
+            <div class="form-group">
+                <h2 for="email">Email (optional):</h2>
+                <input type="email" id="email" name="email" placeholder="Enter your email if you'd like a response">
+            </div>
+            
+            <button type="submit">Submit Suggestion</button>
+        </form>
+        
+        <div class="acknowledgment" id="acknowledgment">
+            <h3>Thank you for your feedback!</h3>
+            <p>We appreciate your input and will carefully consider your suggestion. Your passion for fantasy valorant helps us improve the game for everyone!</p>
+        </div>
+        
+        <div class="past-suggestions">
+            <h3>Your Past Suggestions</h3>
+            <ul id="pastSuggestions">
+                <!-- Past suggestions will be dynamically added here -->
+            </ul>
+        </div>
+        
+        <div class="faq">
+            <h3>What We Consider</h3>
+            <p>We value suggestions that enhance the overall fantasy valorant experience. Some examples include:</p>
+            <ul>
+                <li>Innovative scoring systems</li>
+                <li>New gameplay features</li>
+                <li>Improvements to user interface and experience</li>
+                <li>Enhanced player statistics and analysis tools</li>
+            </ul>
+            <h4>Most Common Requests</h4>
+            <ul>
+                <li>Integration with live game stats</li>
+                <li>Customizable league settings</li>
+                <li>Mobile app improvements</li>
+            </ul>
         </div>
     </main>
-
-
 
     <!-- Footer -->
     <footer>
@@ -168,4 +199,3 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
-

@@ -2,6 +2,24 @@
 <html lang="en">
 <!-- Heading -->
 <head>
+    <script>
+        // Apply the saved theme immediately to prevent flashing and show the body
+        (function() {
+            // Wait for the DOM to load
+            document.addEventListener('DOMContentLoaded', function() {
+                const savedTheme = localStorage.getItem('theme');
+                
+                // Check if savedTheme is dark and apply it
+                if (savedTheme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                }
+                
+                // Once the theme is set, make the body visible
+                document.body.classList.add('theme-ready');
+            });
+        })();
+    </script>
+    
     <!-- Basic -->
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -32,7 +50,7 @@
             <ul class="nav-links">
                 <li><a href="my-dashboard.html">My Dashboard</a></li>
                 <li><a href="player-stats.html">Player Stats</a></li>
-                <li><a href="discussion.html">Discussion</a></li>
+                <li><a href="feedback.html">Feedback</a></li>
             </ul>
             
             <div class="nav-right">

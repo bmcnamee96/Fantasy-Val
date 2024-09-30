@@ -2,6 +2,24 @@
 <html lang="en">
 <!-- Heading -->
 <head>
+    <script>
+        // Apply the saved theme immediately to prevent flashing and show the body
+        (function() {
+            // Wait for the DOM to load
+            document.addEventListener('DOMContentLoaded', function() {
+                const savedTheme = localStorage.getItem('theme');
+                
+                // Check if savedTheme is dark and apply it
+                if (savedTheme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                }
+                
+                // Once the theme is set, make the body visible
+                document.body.classList.add('theme-ready');
+            });
+        })();
+    </script>
+
     <!-- Basic -->
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -36,7 +54,7 @@
             <ul class="nav-links">
                 <li><a href="my-dashboard.html">My Dashboard</a></li>
                 <li><a href="player-stats.html">Player Stats</a></li>
-                <li><a href="discussion.html">Discussion</a></li>
+                <li><a href="feedback.html">Feedback</a></li>
             </ul>
             
             <div class="nav-right">
@@ -103,14 +121,22 @@
 
     <!-- Main Content -->
     <main class="container-fluid">
-        <!-- Name and Description of League -->
-        <h1 id="league-name" class="card-title">League Name</h1>
-        <p id="league-description" class="card-text center-text">League Description</p>
-
-        <div class="top-left">
-            <div id="currentWeek">Current Week: 1</div>
-            <hr id="divider-line"> <!-- The horizontal line -->
-            <div class="timer" id="countdown"></div>
+        <!-- Header Section -->
+        <div class="row align-items-center mb-4">
+            <!-- League Information -->
+            <div class="col-md-8">
+                <h1 id="league-name" class="card-title">League Name</h1>
+                <p id="league-description" class="card-text">League Description</p>
+            </div>
+            <!-- Current Week and Countdown Timer -->
+            <div class="col-md-4 text-md-right mt-3 mt-md-0">
+                <div class="current-week mb-2">
+                    <span id="currentWeek">1</span>
+                </div>
+                <div class="timer" id="countdown">
+                    <!-- Countdown Timer Content -->
+                </div>
+            </div>
         </div>
 
         <div class="main-content">

@@ -535,6 +535,73 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchUserLeagues();
     }
 
+    // feedback 
+
+    document.getElementById('suggestionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get form values
+        const suggestion = document.getElementById('suggestion').value;
+        const category = document.getElementById('category').value;
+        const rating = document.querySelector('input[name="rating"]:checked')?.value;
+        const email = document.getElementById('email').value;
+        
+        // In a real application, you would send this data to a server
+        console.log('Suggestion:', suggestion);
+        console.log('Category:', category);
+        console.log('Rating:', rating);
+        console.log('Email:', email);
+        
+        // Add to past suggestions (for demo purposes)
+        const pastSuggestions = document.getElementById('pastSuggestions');
+        const li = document.createElement('li');
+        li.textContent = `${suggestion} (${category}) - Status: In Review`;
+        pastSuggestions.appendChild(li);
+        
+        // Show acknowledgment
+        document.getElementById('acknowledgment').style.display = 'block';
+        
+        // Clear form
+        this.reset();
+    });
+
+    // Handle rating feedback
+    const feedbackElement = document.getElementById('feedback');
+    const ratingLabels = document.querySelectorAll('.rating label');
+
+    function updateFeedback(rating) {
+        const feedbackMessages = [
+            "Very Poor",
+            "Poor",
+            "Good",
+            "Very Good",
+            "Excellent"
+        ];
+        feedbackElement.textContent = `${feedbackMessages[rating - 1]} (${rating} star${rating !== 1 ? 's' : ''})`;
+    }
+
+    document.querySelectorAll('input[name="rating"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            updateFeedback(parseInt(e.target.value));
+        });
+    });
+
+    ratingLabels.forEach(label => {
+        label.addEventListener('mouseover', () => {
+            const ratingValue = label.getAttribute('for').replace('star', '');
+            updateFeedback(parseInt(ratingValue));
+        });
+
+        label.addEventListener('mouseout', () => {
+            const checkedRating = document.querySelector('input[name="rating"]:checked');
+            if (checkedRating) {
+                updateFeedback(parseInt(checkedRating.value));
+            } else {
+                feedbackElement.textContent = '';
+            }
+        });
+    });
+
     // Call updateUI on page load to handle existing login state
     updateUI();
 });
