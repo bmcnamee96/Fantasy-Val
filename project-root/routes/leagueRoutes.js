@@ -315,61 +315,66 @@ router.get('/:leagueId/users', authenticateToken, async (req, res) => {
   }
 });
 
-// Route to get teams in a league
-router.get('/:leagueId/teams', authenticateToken, async (req, res) => {
-  const { leagueId } = req.params;
-
-  try {
-      // Fetch the teams and players for the specified league
-      const result = await db.query(`
-          SELECT lt.league_team_id AS teamId, t.team_name AS teamName, ARRAY_AGG(p.player_id) AS players
-          FROM league_team_players lt
-          JOIN player p ON lt.player_id = p.player_id
-          JOIN league_teams lt2 ON lt.league_team_id = lt2.league_team_id
-          JOIN teams t ON lt2.team_abrev = t.team_abrev
-          WHERE lt2.league_id = $1
-          GROUP BY lt.league_team_id, t.team_name
-      `, [leagueId]);
-
-      res.json(result.rows);
-  } catch (error) {
-      console.error('Error fetching teams:', error);
-      res.status(500).json({ error: 'Failed to fetch teams' });
-  }
-});
-
-// API to get the user's team for a specific league
+// API Endpoint to fetch the user's team data with points for the current week
 router.get('/my-team/:leagueId', authenticateToken, async (req, res) => {
   const { leagueId } = req.params;
-  const userId = req.user.userId; // Assuming the token contains the user ID
+  const userId = req.user.userId; // Extracted from the authenticated token
+  const currentWeek = parseInt(req.query.week, 10); // Retrieve 'week' from query parameters
+
+  // Validate 'currentWeek'
+  if (isNaN(currentWeek)) {
+    return res.status(400).json({ error: 'Invalid or missing "week" query parameter.' });
+  }
 
   try {
-    // Query to get the league_team_id for the user
+    // 1. Fetch the 'league_team_id' for the user and league
     const leagueTeamQuery = `
       SELECT league_team_id
       FROM league_teams
       WHERE user_id = $1 AND league_id = $2
     `;
-
     const leagueTeamResult = await pool.query(leagueTeamQuery, [userId, leagueId]);
 
     if (leagueTeamResult.rows.length === 0) {
-      return res.status(404).json({ error: `No team found for the ${userId} in this league.` });
+      return res.status(404).json({ error: 'No team found for the user in this league.' });
     }
 
     const leagueTeamId = leagueTeamResult.rows[0].league_team_id;
 
-    // Query to get the players for the league_team_id
-    const playerQuery = `
-      SELECT p.player_name, p.role, p.team_abrev, ltp.starter
-      FROM league_team_players ltp
-      JOIN player p ON ltp.player_id = p.player_id
-      WHERE ltp.league_team_id = $1
+    // 2. Fetch players along with their points for the current week
+    const playersQuery = `
+      SELECT 
+          p.player_name, 
+          p.role, 
+          p.team_abrev, 
+          COALESCE(SUM(sps.adjusted_points), 0) AS points, 
+          ltp.starter
+      FROM 
+          league_team_players ltp
+      JOIN 
+          player p ON ltp.player_id = p.player_id
+      LEFT JOIN 
+          series_player_stats sps 
+          ON p.player_id = sps.player_id 
+          AND sps.week = $2
+      WHERE 
+          ltp.league_team_id = $1
+      GROUP BY 
+          p.player_name, p.role, p.team_abrev, ltp.starter;
     `;
-    const playerResult = await pool.query(playerQuery, [leagueTeamId]);
+    const playersResult = await pool.query(playersQuery, [leagueTeamId, currentWeek]);
 
-    // Send the player's data back to the client
-    res.json(playerResult.rows);
+    // 4. Format the points to have two decimal places before sending to the client
+    const formattedPlayers = playersResult.rows.map(player => ({
+      player_name: player.player_name,
+      role: player.role,
+      team_abrev: player.team_abrev,
+      points: parseFloat(player.points.toFixed(2)), // Ensures two decimal places
+      starter: player.starter
+    }));
+
+    // 5. Send the formatted player's data back to the client
+    res.json(formattedPlayers);
   } catch (error) {
     console.error('Error fetching team data:', error);
     res.status(500).json({ error: 'An error occurred while fetching team data.' });
@@ -500,5 +505,25 @@ router.post('/player-names-to-id', async (req, res) => {
   }
 });
 
+router.get('/current-week', async (req, res) => {
+  try {
+      const now = new Date(); // Current server time in UTC
+
+      const result = await pool.query(
+          `SELECT week_number FROM weeks WHERE start_date <= $1 ORDER BY start_date DESC LIMIT 1`,
+          [now]
+      );
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ message: 'No current week found.' });
+      }
+
+      const currentWeek = result.rows[0].week_number;
+      res.json({ currentWeek });
+  } catch (error) {
+      console.error('Error fetching current week:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+  }
+});
 
 module.exports = router;

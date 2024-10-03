@@ -2,20 +2,26 @@
 
 const token = localStorage.getItem('token');
 let leagueId = getLeagueIdFromUrl(); // Extract league ID from URL
-let currentTargetIndex = 0; // Start with the first target date (first Friday)
-let currentWeek = 1; // Start with the first week
+// let currentTargetIndex = 0; // Start with the first target date (first Friday)
+let currentWeek; // Start with the first week
+// let timerInterval = null;
 let benchPlayers = {}; // Stores available players categorized by role
 let currentLineup = []; // Stores the current lineup of players
 let originalLineup = [];
 let originalBenchPlayers = {};
 
-// Array of targets in UTC (adjust these dates as needed)
-const targetFridaysUTC = [
-    new Date(Date.UTC(2024, 8, 11, 23, 22, 0)), // Next Friday at 5 PM UTC
-    new Date(Date.UTC(2024, 8, 20, 22, 0, 0)), // Following Friday at 5 PM UTC
-    new Date(Date.UTC(2024, 8, 27, 22, 0, 0)),
-    new Date(Date.UTC(2024, 9, 27, 22, 0, 0))  // And so on...
-];
+// // Array of targets in UTC (adjust these dates as needed)
+// const targetFridaysUTC = [
+//     new Date(Date.UTC(2024, 8, 11, 23, 22, 0)), // September 11, 2024, 23:22 UTC
+//     new Date(Date.UTC(2024, 8, 18, 23, 22, 0)), // September 18, 2024, 23:22 UTC
+//     new Date(Date.UTC(2024, 8, 25, 23, 22, 0)), // September 25, 2024, 23:22 UTC
+//     new Date(Date.UTC(2024, 9, 2, 23, 22, 0)),  // October 2, 2024, 23:22 UTC
+//     new Date(Date.UTC(2024, 9, 9, 23, 22, 0)),  // October 9, 2024, 23:22 UTC
+//     new Date(Date.UTC(2024, 9, 16, 23, 22, 0)), // October 16, 2024, 23:22 UTC
+//     new Date(Date.UTC(2024, 9, 23, 23, 22, 0)), // October 23, 2024, 23:22 UTC
+//     new Date(Date.UTC(2024, 9, 30, 23, 22, 0)), // October 30, 2024, 23:22 UTC
+//     // Add more dates as needed...
+// ];
 
 // -------------------------------------------------------------------------- //
 
@@ -238,38 +244,35 @@ function showModal(message) {
     }
 }
 
-function updateCountdown() {
-    const now = new Date(); // Get current local time
-    const nowUTC = new Date(now.toISOString()); // Convert local time to UTC
+/**
+ * Optionally fetches the next roster lock time from the server and displays a countdown.
+ * Implement this if you want to show a countdown based on server-managed times.
+ */
+async function updateCountdown() {
+    try {
+        const response = await fetch(`/api/leagues/next-roster-lock`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-    // Get the current target Friday and the following Sunday (end of game period)
-    const targetFridayUTC = targetFridaysUTC[currentTargetIndex];
-    const endOfGameUTC = new Date(targetFridayUTC.getTime() + 5 * 60 * 1000); // 5 minutes after the target
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch roster lock time.');
+        }
 
-    if (nowUTC >= targetFridayUTC && nowUTC <= endOfGameUTC) {
-        // If within the game period (Friday to Sunday), stop the timer
-        document.getElementById('countdown').innerHTML = "Games in Progress!";
-        return;
-    } else if (nowUTC > endOfGameUTC) {
-        // If after Sunday, move to the next Friday target
-        currentTargetIndex++;
-        if (currentTargetIndex >= targetFridaysUTC.length) {
-            document.getElementById('countdown').innerHTML = "All games have ended!";
-            clearInterval(timerInterval); // Stop the timer if no more dates
-            return;
-        } else {
-            // Increment the week number when moving to the next target date
-            currentWeek++;
-            updateWeekDisplay(); // Update the displayed week number
-            updateCountdown(); // Call recursively to start next countdown
-            showDebugInfo();
+        const data = await response.json();
+        const rosterLockTime = new Date(data.rosterLockTime); // Assuming the server sends a timestamp
+
+        const now = new Date();
+        const timeDifference = rosterLockTime - now;
+
+        if (timeDifference <= 0) {
+            document.getElementById('countdown').innerHTML = "Roster Lock Passed!";
             return;
         }
-    } else {
-        // Calculate the countdown time remaining until the next Friday
-        const timeDifference = targetFridayUTC - nowUTC; // Difference in milliseconds
 
-        // Convert the time difference to days, hours, minutes, and seconds
+        // Convert time difference to days, hours, minutes, and seconds
         const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
         const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
@@ -278,12 +281,46 @@ function updateCountdown() {
         // Display the countdown
         document.getElementById('countdown').innerHTML =
             `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}` + 
-            `<br>Until Roster Lock`;  // Add line break
+            `<br>Until Roster Lock`;
+
+    } catch (error) {
+        console.error('Error updating countdown:', error);
+        document.getElementById('countdown').innerHTML = "Failed to load countdown.";
+    }
+}
+
+/**
+ * Fetches the current week from the server.
+ * @returns {Promise<number>} The current week number.
+ */
+async function fetchCurrentWeek() {
+    try {
+        const response = await fetch(`/api/leagues/current-week`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch current week.');
+        }
+
+        const data = await response.json();
+        console.log('Current Week Fetched:', data.currentWeek);
+        return data.currentWeek;
+    } catch (error) {
+        console.error('Error fetching current week:', error);
+        showToast(`Error: ${error.message}`, 'error');
+        return null;
     }
 }
 
 function updateWeekDisplay() {
-    document.getElementById('currentWeek').innerHTML = `Current Week: ${currentWeek}`;
+    const weekDisplay = document.getElementById('currentWeek');
+    if (weekDisplay) {
+        weekDisplay.innerHTML = `Current Week: ${currentWeek}`;
+    }
 }
 
 function showDebugInfo() {
@@ -381,44 +418,67 @@ async function fetchLeagueUsers(leagueId) {
 async function fetchMyTeam() {
     if (!leagueId) {
         console.error('No league ID found, cannot fetch team data.');
+        showToast('Error: League ID is missing.', 'error');
         return;
     }
 
+    // Fetch currentWeek from the server
+    const serverCurrentWeek = await fetchCurrentWeek();
+    if (!serverCurrentWeek) {
+        // Handle the error appropriately
+        return;
+    }
+
+    currentWeek = serverCurrentWeek; // Update the global currentWeek
+    updateWeekDisplay(); // Update the UI with the new week
+
+    console.log(`Fetching team data for leagueId: ${leagueId}, currentWeek: ${currentWeek}`);
+
     try {
-        const response = await fetch(`/api/leagues/my-team/${leagueId}`, {
+        const response = await fetch(`/api/leagues/my-team/${leagueId}?week=${currentWeek}`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming the token is stored in localStorage
+                'Authorization': `Bearer ${token}`
             }
         });
         if (!response.ok) throw new Error('Failed to fetch team data.');
-        
+
         const teamData = await response.json();
-        console.log('My Team Fetched', teamData);
+        console.log('My Team Fetched:', teamData);
         renderTeam(teamData);
 
-    // Populate currentLineup based on fetched team data
-    currentLineup = teamData
-        .filter(player => player.starter)
-        .map(player => ({ 
-            name: player.player_name, 
-            team_abrev: player.team_abrev, // Added team_abrev
-            role: player.role 
-        })
-    );
+        // Populate currentLineup based on fetched team data
+        currentLineup = teamData
+            .filter(player => player.starter)
+            .map(player => ({
+                name: player.player_name,
+                team_abrev: player.team_abrev,
+                role: player.role,
+                points: player.points
+            }));
 
-    // Populate benchPlayers categorized by role
-    const bench = teamData.filter(player => !player.starter);
-    benchPlayers = bench.reduce((acc, player) => {
-        if (!acc[player.role]) acc[player.role] = [];
-        acc[player.role].push({ 
-            name: player.player_name, 
-            team_abrev: player.team_abrev // Added team_abrev
-        });
-        return acc;
-    }, {});
+        // Populate benchPlayers categorized by role
+        const bench = teamData.filter(player => !player.starter);
+        benchPlayers = bench.reduce((acc, player) => {
+            if (!acc[player.role]) acc[player.role] = [];
+            acc[player.role].push({
+                name: player.player_name,
+                team_abrev: player.team_abrev,
+                role: player.role,
+                points: player.points
+            });
+            return acc;
+        }, {});
+
+        console.log('Current Lineup:', currentLineup);
+        console.log('Bench Players:', benchPlayers);
 
     } catch (error) {
         console.error('Error fetching team data:', error);
+        showToast(`Error: ${error.message}`, 'error');
+
+        // Display error message to the user
+        const playersContainer = document.getElementById('players-container');
+        playersContainer.innerHTML = '<p class="error">Failed to load team data. Please try again later.</p>';
     }
 }
 
@@ -488,90 +548,6 @@ async function updateTeamStatus(starters, bench) {
 
 // -------------------------------------------------------------------------- //
 
-async function autoAdjustLineup() {
-    try {
-        const response = await fetch(`/api/leagues/my-team/${leagueId}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch team data.');
-
-        const teamData = await response.json();
-        console.log('Fetched team data:', teamData);
-
-        let starters = teamData.filter(player => player.starter);
-        let bench = teamData.filter(player => !player.starter);
-
-        // Role-based filtering
-        const fraggerStarters = starters.filter(player => player.role === 'Fragger');
-        const supportStarters = starters.filter(player => player.role === 'Support');
-        const anchorStarters = starters.filter(player => player.role === 'Anchor');
-
-        let adjustedStarters = [];
-        let newBench = [...bench];
-
-        // Ensure exactly 1 Fragger in starters
-        if (fraggerStarters.length > 0) {
-            adjustedStarters.push(fraggerStarters[0]);
-            newBench = [...newBench, ...fraggerStarters.slice(1)];
-        } else {
-            const benchFragger = newBench.find(player => player.role === 'Fragger');
-            if (benchFragger) {
-                adjustedStarters.push(benchFragger);
-                newBench = newBench.filter(player => player.player_name !== benchFragger.player_name);
-            }
-        }
-
-        // Ensure exactly 3 Support in starters
-        if (supportStarters.length >= 3) {
-            adjustedStarters = [...adjustedStarters, ...supportStarters.slice(0, 3)];
-            newBench = [...newBench, ...supportStarters.slice(3)];
-        } else {
-            const neededSupport = 3 - supportStarters.length;
-            adjustedStarters = [...adjustedStarters, ...supportStarters];
-            const benchSupport = newBench.filter(player => player.role === 'Support').slice(0, neededSupport);
-            adjustedStarters = [...adjustedStarters, ...benchSupport];
-            newBench = newBench.filter(player => player.role !== 'Support' || !benchSupport.includes(player));
-        }
-
-        // Ensure exactly 1 Anchor in starters
-        if (anchorStarters.length > 0) {
-            adjustedStarters.push(anchorStarters[0]);
-            newBench = [...newBench, ...anchorStarters.slice(1)];
-        } else {
-            const benchAnchor = newBench.find(player => player.role === 'Anchor');
-            if (benchAnchor) {
-                adjustedStarters.push(benchAnchor);
-                newBench = newBench.filter(player => player.player_name !== benchAnchor.player_name);
-            }
-        }
-
-        // Map player names to IDs
-        const allPlayers = [...adjustedStarters, ...newBench];
-        const playerDetails = await mapPlayerNamesToIds(allPlayers);
-
-        // Extract player IDs from the mapped details
-        const starterIds = adjustedStarters.map(player => 
-            playerDetails.find(p => p.player_name === player.player_name)?.player_id
-        );
-        const benchIds = newBench.map(player => 
-            playerDetails.find(p => p.player_name === player.player_name)?.player_id
-        );
-
-        console.log('starterIds:', starterIds);
-        console.log('benchIds:', benchIds);
-
-        await updateTeamStatus(starterIds, benchIds);
-
-        return { startingLineup: adjustedStarters, newBench };
-
-    } catch (error) {
-        console.error('Error adjusting lineup:', error);
-    }
-}
-
 async function mapPlayerNamesToIds(players) {
     const playerNames = players.map(player => player.player_name);
     const playerMap = await fetchPlayerIdsByName(playerNames);
@@ -593,19 +569,50 @@ function renderTeam(teamData) {
         return;
     }
 
-    teamData.forEach(player => {
-        console.log(`Player: ${player.player_name}, Starter: ${player.starter}`); // Debugging
-        const playerElement = document.createElement('div');
-        playerElement.classList.add('player');
-        playerElement.classList.add(player.starter ? 'starter' : 'bench'); // Apply class based on 'starter' property
-        playerElement.innerHTML = `
-        <span>${player.team_abrev} ${player.player_name}</span>
-        <span>${player.role}</span>
-        <span>${player.points} pts</span>
-        `;
-        playersContainer.appendChild(playerElement);
+    // Sort teamData: starters first, bench players last
+    const sortedTeamData = teamData.slice().sort((a, b) => {
+        return (b.starter === a.starter) ? 0 : b.starter ? 1 : -1;
     });
+
+    // Create headers for starters and bench
+    const starters = sortedTeamData.filter(player => player.starter);
+    const bench = sortedTeamData.filter(player => !player.starter);
+
+    if (starters.length > 0) {
+        const startersHeader = document.createElement('h3');
+        startersHeader.textContent = 'Starters';
+        playersContainer.appendChild(startersHeader);
+
+        starters.forEach(player => {
+            const playerElement = document.createElement('div');
+            playerElement.classList.add('player', 'starter');
+            playerElement.innerHTML = `
+                <span>${player.team_abrev} ${player.player_name}</span>
+                <span>${player.role}</span>
+                <span>${player.points} pts</span>
+            `;
+            playersContainer.appendChild(playerElement);
+        });
+    }
+
+    if (bench.length > 0) {
+        const benchHeader = document.createElement('h3');
+        benchHeader.textContent = 'Bench';
+        playersContainer.appendChild(benchHeader);
+
+        bench.forEach(player => {
+            const playerElement = document.createElement('div');
+            playerElement.classList.add('player', 'bench');
+            playerElement.innerHTML = `
+                <span>${player.team_abrev} ${player.player_name}</span>
+                <span>${player.role}</span>
+                <span>${player.points} pts</span>
+            `;
+            playersContainer.appendChild(playerElement);
+        });
+    }
 }
+
 
 function renderAvailablePlayers(players) {
     const freeAgentsContainer = document.getElementById('free-agents-container');
@@ -790,15 +797,26 @@ function validateLineup() {
         return acc;
     }, {});
 
+    let isValid = true;
+    let errorMessage = '';
+
     if (roleCount['Fragger'] > 1) {
-        errorDiv.textContent = 'Warning: More than 1 Fragger in the lineup.';
+        errorMessage = 'Error: More than 1 Fragger in the lineup.';
+        isValid = false;
     } else if (!roleCount['Support']) {
-        errorDiv.textContent = 'Warning: No Support player in the lineup.';
+        errorMessage = 'Error: No Support player in the lineup.';
+        isValid = false;
     } else if (!roleCount['Anchor']) {
-        errorDiv.textContent = 'Warning: No Anchor player in the lineup.';
+        errorMessage = 'Error: No Anchor player in the lineup.';
+        isValid = false;
     } else {
-        errorDiv.textContent = '';
+        errorMessage = '';
     }
+
+    // Display the error message
+    errorDiv.textContent = errorMessage;
+
+    return isValid;
 }
 
 // Save lineup
@@ -825,6 +843,13 @@ function initializeModalLineup() {
 // Save lineup to the server
 async function saveLineup() {
     try {
+        // Validate the lineup first
+        const isValid = validateLineup();
+        if (!isValid) {
+            // Optionally, focus on the errorDiv or provide additional UI feedback
+            return; // Exit the function if the lineup is invalid
+        }
+
         // Disable the save button and show a loading indicator
         saveLineupBtn.disabled = true;
         saveLineupBtn.textContent = 'Saving...';
@@ -910,8 +935,6 @@ async function saveLineup() {
     }
 }
 
-
-
 // -------------------------------------------------------------------------- //
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -920,16 +943,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Token:', token);
     console.log('Extracted League ID:', leagueId); // Log the leagueId for debugging
 
+    // Fetch draft status
     const status = await fetchDraftStatus();
 
     if (status.draft_ended) {
         removeDraftButton();
-    }
-
-    if (status.draft_ended) {
-        const { startingLineup, bench } = await autoAdjustLineup();
-
-        console.log({ startingLineup, bench} )
     }
 
     // Fetch league details
@@ -965,10 +983,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Attach event listener for clicking on the "My Team" tab to re-fetch data
-    document.querySelector('.tab[onclick*="my-team-content"]').addEventListener('click', fetchMyTeam);
+    const myTeamTab = document.querySelector('.tab[onclick*="my-team-content"]');
+    if (myTeamTab) {
+        myTeamTab.addEventListener('click', fetchMyTeam);
+    }
 
     // Add event listener to run fetchAvailablePlayers when the "Free Agents" tab is clicked
-    document.querySelector('.tab[onclick*="free-agents-content"]').addEventListener('click', fetchAvailablePlayers);
+    const freeAgentsTab = document.querySelector('.tab[onclick*="free-agents-content"]');
+    if (freeAgentsTab) {
+        freeAgentsTab.addEventListener('click', fetchAvailablePlayers);
+    }
 
     // Other event listeners
     const leaveLeagueBtn = document.getElementById('leave-league-btn');
@@ -981,12 +1005,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         draftButton.addEventListener('click', openDraft);
     }
 
-    // Update the countdown every second
-    const timerInterval = setInterval(updateCountdown, 1000);
-
-    // Initial call to display the timer and current week immediately
-    updateCountdown();
-    updateWeekDisplay();
-
+    // Optionally, initialize the countdown if implemented
+    // updateCountdown();
+    // setInterval(updateCountdown, 1000); // If using a countdown
 
 });
+

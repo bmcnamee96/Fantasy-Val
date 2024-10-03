@@ -125,6 +125,12 @@ CREATE TABLE IF NOT EXISTS player (
 	CONSTRAINT unique_rank UNIQUE(preseason_ranking)
 );
 
+-- Weeks table
+CREATE TABLE weeks (
+    week_number INT PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL
+);
+
 -- Series table
 CREATE TABLE IF NOT EXISTS series (
     series_id SERIAL PRIMARY KEY,
@@ -180,6 +186,7 @@ CREATE TABLE IF NOT EXISTS player_stats (
 CREATE TABLE IF NOT EXISTS series_player_stats (
     player_series_stats_id SERIAL PRIMARY KEY,
     series_id INTEGER,
+    week INTEGER,
     player_id INTEGER,
     series_maps INTEGER DEFAULT 0,
     series_kills NUMERIC DEFAULT 0,

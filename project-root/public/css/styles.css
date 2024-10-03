@@ -371,7 +371,7 @@ hr#divider-line {
 
 .edit-lineup-btn {
     position: absolute;
-    top: 71px;
+    top: 85px;
     right: 41px;
     padding: 2px 4px; /* Further reduced padding */
     font-size: 1rem; /* Further reduced font size */
@@ -381,8 +381,8 @@ hr#divider-line {
     border-radius: var(--border-radius);
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s, transform 0.3s;
-    width: 60px; /* Set a specific width */
-    height: 25px; /* Set a specific height */
+    width: 80px; /* Set a specific width */
+    height: 50px; /* Set a specific height */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -884,7 +884,7 @@ body.dark-theme #message-area {
     background-color: var(--modal-content-bg);
     color: var(--modal-text-color);
     margin: 10% auto; /* 10% from the top and centered */
-    padding: 40px; /* Increased padding */
+    padding: 20px; /* Increased padding */
     border: 1px solid var(--table-border-color);
     width: 50%; /* Adjusted width */
     max-width: 600px; /* Increased maximum width */
@@ -1319,28 +1319,6 @@ th[data-sort="desc"]::after {
     td {
         padding: 10px;
     }
-}
-
-/* =============================== */
-/*          Discussion Styles      */
-/* =============================== */
-#discussion header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-#discussion main {
-    display: flex;
-    flex-direction: column;
-}
-
-#discussion section {
-    background-color: var(--card-background);
-    margin-bottom: 20px;
-    padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.3s, color 0.3s;
 }
 
 /* =============================== */
