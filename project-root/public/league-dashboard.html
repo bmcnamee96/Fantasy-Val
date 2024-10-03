@@ -148,7 +148,8 @@
                     <div class="tab" onclick="openTab(event, 'league-schedule')">League Schedule</div>
                 </div>
                 <div id="my-team-content" class="tab-content">
-                    <button class="edit-btn">Edit Team</button>
+                    <!-- Button to Open Modal -->
+                    <button id="openModal" class="action-button edit-lineup-btn">Edit</button>
                     <div class="players" id="players-container">
                         <!-- Players will be dynamically inserted here -->
                     </div>
@@ -219,6 +220,32 @@
                 <p id="modal-message"></p>
             </div>
         </div>
+
+        <!-- Edit Lineup Modal -->
+        <div id="editLineupModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Edit Starting Lineup</h2>
+                
+                <div class="player-list">
+                    <h3>Available Players</h3>
+                    <div id="benchPlayers"></div>
+                </div>
+                
+                <div class="current-lineup">
+                    <h3>Current Lineup</h3>
+                    <div id="currentLineup"></div>
+                </div>
+                
+                <div id="error" class="error"></div>
+                
+                <div class="action-buttons">
+                    <button id="saveLineup" class="action-button">Save Changes</button>
+                    <button id="cancelEdit" class="action-button cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <footer>

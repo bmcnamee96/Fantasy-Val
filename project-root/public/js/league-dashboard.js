@@ -4,13 +4,90 @@ const token = localStorage.getItem('token');
 let leagueId = getLeagueIdFromUrl(); // Extract league ID from URL
 let currentTargetIndex = 0; // Start with the first target date (first Friday)
 let currentWeek = 1; // Start with the first week
+let benchPlayers = {}; // Stores available players categorized by role
+let currentLineup = []; // Stores the current lineup of players
+let originalLineup = [];
+let originalBenchPlayers = {};
 
 // Array of targets in UTC (adjust these dates as needed)
 const targetFridaysUTC = [
     new Date(Date.UTC(2024, 8, 11, 23, 22, 0)), // Next Friday at 5 PM UTC
     new Date(Date.UTC(2024, 8, 20, 22, 0, 0)), // Following Friday at 5 PM UTC
-    new Date(Date.UTC(2024, 8, 27, 22, 0, 0))  // And so on...
+    new Date(Date.UTC(2024, 8, 27, 22, 0, 0)),
+    new Date(Date.UTC(2024, 9, 27, 22, 0, 0))  // And so on...
 ];
+
+// -------------------------------------------------------------------------- //
+
+/**
+ * Display a toast message.
+ * @param {string} message - The message to display.
+ * @param {string} type - The type of message ('success', 'error'). Defaults to 'success'.
+ */
+function showToast(message, type = 'success') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.top = '20px';
+        toastContainer.style.right = '20px';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Create the toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    // Style the toast
+    toast.style.minWidth = '200px';
+    toast.style.marginTop = '10px';
+    toast.style.padding = '15px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.color = '#fff';
+    toast.style.opacity = '0.9';
+    toast.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+    toast.style.fontFamily = 'Arial, sans-serif';
+    toast.style.fontSize = '14px';
+    toast.style.cursor = 'pointer';
+    toast.style.transition = 'opacity 0.5s ease';
+
+    // Set background color based on type
+    switch(type) {
+        case 'success':
+            toast.style.backgroundColor = '#28a745';
+            break;
+        case 'error':
+            toast.style.backgroundColor = '#dc3545';
+            break;
+        default:
+            toast.style.backgroundColor = '#333';
+    }
+
+    // Remove toast on click
+    toast.addEventListener('click', () => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toastContainer.removeChild(toast);
+        }, 500);
+    });
+
+    // Append the toast to the container
+    toastContainer.appendChild(toast);
+
+    // Automatically remove the toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (toastContainer.contains(toast)) {
+                toastContainer.removeChild(toast);
+            }
+        }, 500);
+    }, 3000);
+}
 
 // -------------------------------------------------------------------------- //
 
@@ -215,11 +292,11 @@ function showDebugInfo() {
     const currentTargetDateUTC = targetFridaysUTC[currentTargetIndex]; // Get the current target date in UTC
     const endOfGameUTC = new Date(currentTargetDateUTC.getTime() + 5 * 60 * 1000); // 5 minutes after the target
 
-    console.log("Current local time:", now);
-    console.log("Current UTC time:", nowUTC);
-    console.log("Current target date (UTC):", currentTargetDateUTC);
-    console.log("End of Game Period (UTC):", endOfGameUTC);
-    console.log("Current Week:", currentWeek);
+    // console.log("Current local time:", now);
+    // console.log("Current UTC time:", nowUTC);
+    // console.log("Current target date (UTC):", currentTargetDateUTC);
+    // console.log("End of Game Period (UTC):", endOfGameUTC);
+    // console.log("Current Week:", currentWeek);
 }
 
 // -------------------------------------------------------------------------- //
@@ -318,6 +395,28 @@ async function fetchMyTeam() {
         const teamData = await response.json();
         console.log('My Team Fetched', teamData);
         renderTeam(teamData);
+
+    // Populate currentLineup based on fetched team data
+    currentLineup = teamData
+        .filter(player => player.starter)
+        .map(player => ({ 
+            name: player.player_name, 
+            team_abrev: player.team_abrev, // Added team_abrev
+            role: player.role 
+        })
+    );
+
+    // Populate benchPlayers categorized by role
+    const bench = teamData.filter(player => !player.starter);
+    benchPlayers = bench.reduce((acc, player) => {
+        if (!acc[player.role]) acc[player.role] = [];
+        acc[player.role].push({ 
+            name: player.player_name, 
+            team_abrev: player.team_abrev // Added team_abrev
+        });
+        return acc;
+    }, {});
+
     } catch (error) {
         console.error('Error fetching team data:', error);
     }
@@ -527,6 +626,291 @@ function renderAvailablePlayers(players) {
         freeAgentsContainer.appendChild(playerElement);
     });
 }
+
+// -------------------------------------------------------------------------- //
+
+// // Lineup Editing Modal Code
+
+// DOM elements
+const modal = document.getElementById('editLineupModal');
+const openModalBtn = document.getElementById('openModal');
+const closeModalBtn = modal.querySelector('.close'); // Scoped to modal
+const saveLineupBtn = document.getElementById('saveLineup');
+const cancelEditBtn = document.getElementById('cancelEdit');
+const benchPlayersDiv = document.getElementById('benchPlayers');
+const currentLineupDiv = document.getElementById('currentLineup');
+const errorDiv = document.getElementById('error');
+
+// Open modal
+openModalBtn.onclick = function() {
+    initializeModalLineup();
+    modal.style.display = 'block';
+    renderBenchPlayers();
+    renderCurrentLineup();
+}
+
+// Close modal
+closeModalBtn.onclick = function() {
+    modal.style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(event) {
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+});
+
+// Render bench players
+function renderBenchPlayers() {
+    console.log('Rendering Bench Players...');
+    benchPlayersDiv.innerHTML = ''; // Clear existing content
+
+    for (const [role, players] of Object.entries(benchPlayers)) {
+        console.log(`Role: ${role}, Players:`, players);
+
+        if (players.length === 0) continue; // Skip roles with no players
+
+        const roleDiv = document.createElement('div');
+        roleDiv.className = 'role-section';
+        roleDiv.innerHTML = `<div class="role-title">${role}:</div>`;
+
+        players.forEach(player => {
+            // Ensure the player is not already in the current lineup
+            if (!currentLineup.some(p => p.name === player.name)) {
+                console.log(`Adding player to bench: ${player.name} (${player.team_abrev})`);
+                const playerBtn = document.createElement('button');
+                playerBtn.className = 'player-button';
+                playerBtn.textContent = `${player.team_abrev} ${player.name}`; // Include team_abrev
+                playerBtn.addEventListener('click', () => addToLineup(player, role));
+                roleDiv.appendChild(playerBtn);
+            } else {
+                console.log(`Player already in lineup: ${player.name}`);
+            }
+        });
+
+        benchPlayersDiv.appendChild(roleDiv);
+    }
+}
+
+// Render current lineup
+function renderCurrentLineup() {
+    currentLineupDiv.innerHTML = '';
+    currentLineup.forEach(player => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'player';
+        
+        // Create player info
+        const playerInfo = document.createElement('div');
+        playerInfo.className = 'player-info';
+        playerInfo.innerHTML = `
+            <span>${player.team_abrev}</span>
+            <span>${player.name}</span>
+            <span class="player-role">(${player.role})</span>
+        `;
+        
+        // Create remove button
+        const removeButton = document.createElement('button');
+        removeButton.className = 'remove-button';
+        removeButton.textContent = 'Remove';
+        removeButton.addEventListener('click', () => removeFromLineup(player.name));
+        
+        // Append to playerDiv
+        playerDiv.appendChild(playerInfo);
+        playerDiv.appendChild(removeButton);
+        
+        // Append to currentLineupDiv
+        currentLineupDiv.appendChild(playerDiv);
+    });
+}
+
+// Add player to lineup
+function addToLineup(player, role) {
+    if (currentLineup.length < 5) {
+        // Prevent adding duplicate players
+        if (currentLineup.some(p => p.name === player.name)) {
+            errorDiv.textContent = 'Error: Player is already in the lineup.';
+            return;
+        }
+
+        currentLineup.push({ 
+            name: player.name, 
+            team_abrev: player.team_abrev, // Ensure team_abrev is included
+            role: role 
+        });
+        // Remove player from benchPlayers
+        benchPlayers[role] = benchPlayers[role].filter(p => p.name !== player.name);
+        renderBenchPlayers();
+        renderCurrentLineup();
+        validateLineup();
+    } else {
+        errorDiv.textContent = 'Lineup is full. Remove a player before adding a new one.';
+    }
+}
+
+// Remove player from lineup
+function removeFromLineup(playerName) {
+    console.log(`Removing player from lineup: ${playerName}`);
+    
+    // Find the player in the currentLineup
+    const player = currentLineup.find(p => p.name === playerName);
+    if (player) {
+        // Remove from currentLineup
+        currentLineup = currentLineup.filter(p => p.name !== playerName);
+        
+        // Initialize the role array if it doesn't exist
+        if (!benchPlayers[player.role]) {
+            benchPlayers[player.role] = [];
+        }
+        
+        // Prevent adding duplicate players to bench
+        if (!benchPlayers[player.role].some(p => p.name === player.name)) {
+            benchPlayers[player.role].push({ 
+                name: player.name, 
+                team_abrev: player.team_abrev // Ensure team_abrev is included
+            });
+            console.log(`Added ${player.name} back to bench under ${player.role}`);
+        } else {
+            console.warn(`Player ${player.name} already exists in bench under ${player.role}`);
+        }
+        
+        // Re-render the lineup and bench
+        renderBenchPlayers();
+        renderCurrentLineup();
+        validateLineup();
+    } else {
+        console.error(`Player not found in lineup: ${playerName}`);
+    }
+}
+
+// Validate lineup
+function validateLineup() {
+    const roleCount = currentLineup.reduce((acc, player) => {
+        acc[player.role] = (acc[player.role] || 0) + 1;
+        return acc;
+    }, {});
+
+    if (roleCount['Fragger'] > 1) {
+        errorDiv.textContent = 'Warning: More than 1 Fragger in the lineup.';
+    } else if (!roleCount['Support']) {
+        errorDiv.textContent = 'Warning: No Support player in the lineup.';
+    } else if (!roleCount['Anchor']) {
+        errorDiv.textContent = 'Warning: No Anchor player in the lineup.';
+    } else {
+        errorDiv.textContent = '';
+    }
+}
+
+// Save lineup
+saveLineupBtn.onclick = function() {
+    if (currentLineup.length !== 5) {
+        errorDiv.textContent = 'Error: Lineup must have exactly 5 players.';
+    } else {
+        saveLineup();
+    }
+}
+
+// Cancel edit
+cancelEditBtn.onclick = function() {
+    modal.style.display = 'none';
+}
+
+// Initialize modal lineup based on current team
+function initializeModalLineup() {
+    // Fetch the current lineup from the user's team
+    // Assuming fetchMyTeam populates currentLineup; otherwise, adjust accordingly
+    currentLineup = currentLineup.length ? currentLineup : [];
+}
+
+// Save lineup to the server
+async function saveLineup() {
+    try {
+        // Disable the save button and show a loading indicator
+        saveLineupBtn.disabled = true;
+        saveLineupBtn.textContent = 'Saving...';
+
+        // Extract starters and bench player names
+        const starters = currentLineup.map(player => player.name);
+        const bench = [];
+
+        // Collect all bench player names across roles
+        for (const role in benchPlayers) {
+            benchPlayers[role].forEach(playerName => {
+                bench.push(playerName);
+            });
+        }
+
+        // Combine all player names for bulk ID fetching
+        const allPlayerNames = [...starters, ...bench];
+
+        // Fetch all player IDs in a single request
+        const allPlayerIdsMap = await fetchPlayerIdsByName(allPlayerNames);
+
+        // Extract starters and bench IDs
+        const starterIds = starters.map(name => allPlayerIdsMap[name]).filter(id => id);
+        const benchIds = bench.map(name => allPlayerIdsMap[name]).filter(id => id);
+
+        // Validate that all starters have corresponding IDs
+        if (starterIds.length !== starters.length) {
+            throw new Error('Some starters could not be mapped to player IDs.');
+        }
+
+        // Optional: Validate bench players
+        if (benchIds.length !== bench.length) {
+            console.warn('Some bench players could not be mapped to player IDs.');
+            // Decide whether to proceed or throw an error
+        }
+
+        // Prepare the payload
+        const payload = {
+            starters: starterIds,
+            bench: benchIds
+        };
+
+        // Send the updated lineup to the server
+        const response = await fetch('/api/leagues/update-lineup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        // Handle server response
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update lineup.');
+        }
+
+        const result = await response.json();
+        console.log('Lineup saved:', result);
+        modal.style.display = 'none';
+
+        // Show success toast
+        showToast('Lineup has been successfully updated!', 'success');
+
+        // Re-enable the save button
+        saveLineupBtn.disabled = false;
+        saveLineupBtn.textContent = 'Save Changes';
+
+        // Refresh the team display
+        await fetchMyTeam();
+    } catch (error) {
+        // Re-enable the save button in case of error
+        saveLineupBtn.disabled = false;
+        saveLineupBtn.textContent = 'Save Changes';
+
+        // Show error toast
+        showToast(`Error: ${error.message}`, 'error');
+
+        // Display error message in the designated div
+        errorDiv.textContent = `Error: ${error.message}`;
+        console.error('Error saving lineup:', error);
+    }
+}
+
+
 
 // -------------------------------------------------------------------------- //
 

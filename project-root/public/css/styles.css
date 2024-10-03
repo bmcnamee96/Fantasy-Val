@@ -369,21 +369,27 @@ hr#divider-line {
     display: block;
 }
 
-.edit-btn {
+.edit-lineup-btn {
     position: absolute;
     top: 71px;
     right: 41px;
-    padding: 3px 6px; /* Reduced padding for a smaller button */
-    font-size: 0.7rem; /* Optional: Adjust font size to fit smaller button */
+    padding: 2px 4px; /* Further reduced padding */
+    font-size: 1rem; /* Further reduced font size */
     background-color: var(--button-bg-color);
     color: var(--button-text-color);
     border: none;
     border-radius: var(--border-radius);
     cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
+    transition: background-color 0.3s, color 0.3s, transform 0.3s;
+    width: 60px; /* Set a specific width */
+    height: 25px; /* Set a specific height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px; /* Makes the button pill-shaped */
 }
 
-.edit-btn:hover {
+.edit-lineup-btn:hover {
     background-color: var(--accent-color);
     color: var(--white-primary);
 }
@@ -829,7 +835,7 @@ body.dark-theme #message-area {
         padding: 20px;
     }
 
-    .edit-btn,
+    .edit-lineup-btn,
     .draft-btn,
     #leave-league-btn {
         padding: 8px;
@@ -1491,12 +1497,63 @@ th[data-sort="desc"]::after {
 }
 
 /* =============================== */
+/*        League Modal Styles      */
+/* =============================== */
+/* Modal Styles */
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.player-button {
+    margin: 5px;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.remove-button {
+    margin-left: 10px;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.error {
+    color: red;
+    margin-top: 10px;
+}
+
+.action-buttons {
+    margin-top: 20px;
+}
+
+.action-button {
+    padding: 10px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.action-button.cancel {
+    background-color: #ccc;
+}
+
+
+/* =============================== */
 /*        Accessibility Styles      */
 /* =============================== */
 /* Focus States for Interactive Elements */
 button:focus,
 .tab:focus,
-.edit-btn:focus,
+.edit-lineup-btn:focus,
 .draft-btn:focus,
 #leave-league-btn:focus {
     outline: 3px solid var(--accent-color);
