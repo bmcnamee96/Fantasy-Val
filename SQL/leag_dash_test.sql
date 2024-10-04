@@ -85,16 +85,17 @@ CREATE TABLE weeks (
     start_date TIMESTAMP NOT NULL
 );
 
-INSERT INTO weeks (start_date) VALUES 
-('2024-09-11 21:22:00+00'), -- Week 1 Start
-('2024-10-27 22:00:00+00'), -- Week 2 Start
-('2024-12-10 18:00:00+00'), -- Week 3 Start
-('2025-01-14 20:30:00+00')  -- Week 4 Start
--- Add more weeks as needed
+INSERT INTO weeks (week_number, start_date) VALUES 
+(1, '2024-09-30 02:00:00+00'), -- Week 1 Start
+(2, '2024-10-07 02:00:00+00'), -- Week 2 Start
+(3, '2024-10-14 02:00:00+00'), -- Week 3 Start
+(4, '2024-10-21 02:00:00+00')  -- Week 4 Start
 ;
 
 UPDATE weeks
-SET start_date = '2024-10-04 22:00:00+00'
-WHERE week_number = 3;
+SET start_date = '2024-10-31 22:00:00+00'
+WHERE week_number = 5;
 
 SELECT * FROM weeks;
+
+TRUNCATE weeks;

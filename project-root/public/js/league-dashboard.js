@@ -3,25 +3,12 @@
 const token = localStorage.getItem('token');
 let leagueId = getLeagueIdFromUrl(); // Extract league ID from URL
 // let currentTargetIndex = 0; // Start with the first target date (first Friday)
-let currentWeek; // Start with the first week
-// let timerInterval = null;
+let currentWeek = null; // Start with the first week
+let timerInterval = null;
 let benchPlayers = {}; // Stores available players categorized by role
 let currentLineup = []; // Stores the current lineup of players
 let originalLineup = [];
 let originalBenchPlayers = {};
-
-// // Array of targets in UTC (adjust these dates as needed)
-// const targetFridaysUTC = [
-//     new Date(Date.UTC(2024, 8, 11, 23, 22, 0)), // September 11, 2024, 23:22 UTC
-//     new Date(Date.UTC(2024, 8, 18, 23, 22, 0)), // September 18, 2024, 23:22 UTC
-//     new Date(Date.UTC(2024, 8, 25, 23, 22, 0)), // September 25, 2024, 23:22 UTC
-//     new Date(Date.UTC(2024, 9, 2, 23, 22, 0)),  // October 2, 2024, 23:22 UTC
-//     new Date(Date.UTC(2024, 9, 9, 23, 22, 0)),  // October 9, 2024, 23:22 UTC
-//     new Date(Date.UTC(2024, 9, 16, 23, 22, 0)), // October 16, 2024, 23:22 UTC
-//     new Date(Date.UTC(2024, 9, 23, 23, 22, 0)), // October 23, 2024, 23:22 UTC
-//     new Date(Date.UTC(2024, 9, 30, 23, 22, 0)), // October 30, 2024, 23:22 UTC
-//     // Add more dates as needed...
-// ];
 
 // -------------------------------------------------------------------------- //
 
@@ -245,48 +232,144 @@ function showModal(message) {
 }
 
 /**
- * Optionally fetches the next roster lock time from the server and displays a countdown.
- * Implement this if you want to show a countdown based on server-managed times.
+ * Determines if 'America/New_York' is currently in Daylight Saving Time.
+ * @param {Date} date 
+ * @returns {boolean} True if in DST, else false.
  */
-async function updateCountdown() {
-    try {
-        const response = await fetch(`/api/leagues/next-roster-lock`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+function isInDST(date = new Date()) {
+    // Months are 0-indexed: March = 2, November = 10
+    const year = date.getFullYear();
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to fetch roster lock time.');
+    // Second Sunday in March
+    const startDST = new Date(year, 2, 1);
+    while (startDST.getDay() !== 0) startDST.setDate(startDST.getDate() + 1);
+    startDST.setDate(startDST.getDate() + 7); // Second Sunday
+
+    // First Sunday in November
+    const endDST = new Date(year, 10, 1);
+    while (endDST.getDay() !== 0) endDST.setDate(endDST.getDate() + 1);
+
+    return date >= startDST && date < endDST;
+}
+
+/**
+ * Gets the current UTC time.
+ * @returns {Date} Current UTC time.
+ */
+function getCurrentUTC() {
+    return new Date();
+}
+
+/**
+ * Gets the current offset for 'America/New_York' in minutes.
+ * @param {Date} date 
+ * @returns {number} Offset in minutes from UTC (e.g., -240 for EDT, -300 for EST)
+ */
+function getNewYorkOffset(date = new Date()) {
+    return isInDST(date) ? -4 * 60 : -5 * 60;
+}
+
+/**
+ * Computes the next occurrence of a specific weekday and time in 'America/New_York' time zone.
+ * @param {Date} now 
+ * @param {number} targetWeekday 0=Sunday, 1=Monday, ..., 6=Saturday
+ * @param {number} targetHour 0-23
+ * @param {number} targetMinute 0-59
+ * @returns {Date} Target time in UTC
+ */
+function getNextOccurrenceUTC(now, targetWeekday, targetHour, targetMinute) {
+    const offset = getNewYorkOffset(now);
+    // Current time in New York
+    const nowNY = new Date(now.getTime() + offset * 60000);
+
+    // Calculate days until target weekday
+    let daysUntil = (targetWeekday - nowNY.getDay() + 7) % 7;
+    if (daysUntil === 0) {
+        // Today, check if target time has passed
+        if (nowNY.getHours() > targetHour || 
+            (nowNY.getHours() === targetHour && nowNY.getMinutes() >= targetMinute)) {
+            daysUntil = 7;
         }
-
-        const data = await response.json();
-        const rosterLockTime = new Date(data.rosterLockTime); // Assuming the server sends a timestamp
-
-        const now = new Date();
-        const timeDifference = rosterLockTime - now;
-
-        if (timeDifference <= 0) {
-            document.getElementById('countdown').innerHTML = "Roster Lock Passed!";
-            return;
-        }
-
-        // Convert time difference to days, hours, minutes, and seconds
-        const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
-
-        // Display the countdown
-        document.getElementById('countdown').innerHTML =
-            `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}` + 
-            `<br>Until Roster Lock`;
-
-    } catch (error) {
-        console.error('Error updating countdown:', error);
-        document.getElementById('countdown').innerHTML = "Failed to load countdown.";
     }
+
+    // Set target date in New York
+    const targetNY = new Date(nowNY.getTime());
+    targetNY.setDate(nowNY.getDate() + daysUntil);
+    targetNY.setHours(targetHour, targetMinute, 0, 0);
+
+    // Convert back to UTC
+    const targetUTC = new Date(targetNY.getTime() - offset * 60000);
+
+    return targetUTC;
+}
+
+/**
+ * Gets the next roster target time and its phase.
+ * @returns {{targetTime: Date, phase: string}} Next target time and phase description.
+ */
+function getNextRosterTargetAndPhase() {
+    const now = getCurrentUTC();
+    const offset = getNewYorkOffset(now);
+
+    // Define target times: Friday 5pm and Sunday 11pm
+    const nextFriday5pmUTC = getNextOccurrenceUTC(now, 5, 17, 0); // Friday=5
+    const nextSunday11pmUTC = getNextOccurrenceUTC(now, 0, 23, 0); // Sunday=0
+
+    let targetTime;
+    let phase;
+
+    if (now < nextFriday5pmUTC) {
+        targetTime = nextFriday5pmUTC;
+        phase = 'Until Roster Lock';
+    } else if (now < nextSunday11pmUTC) {
+        targetTime = nextSunday11pmUTC;
+        phase = 'Until Roster Unlock';
+    } else {
+        // After Sunday 11pm, set to next Friday 5pm
+        targetTime = getNextOccurrenceUTC(now, 5, 17, 0);
+        phase = 'Until Next Roster Lock';
+    }
+
+    return { targetTime, phase };
+}
+
+/**
+ * Updates the countdown timer in the DOM.
+ */
+function updateCountdown() {
+    const countdownElement = document.getElementById('countdown');
+    if (!countdownElement) {
+        console.error('Countdown element not found!');
+        return;
+    }
+
+    const { targetTime, phase } = getNextRosterTargetAndPhase();
+    const now = getCurrentUTC();
+    const timeDifference = targetTime - now;
+
+    if (timeDifference <= 0) {
+        // Phase has changed; recalculate immediately
+        updateCountdown();
+        return;
+    }
+
+    // Calculate days, hours, minutes, seconds
+    const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+    // Update countdown display
+    countdownElement.innerHTML = 
+        `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}<br>${phase}`;
+}
+
+/**
+ * Starts the countdown timer, updating every second.
+ */
+function startCountdown() {
+    updateCountdown(); // Initial call
+    setInterval(updateCountdown, 1000); // Update every second
 }
 
 /**
@@ -1005,9 +1088,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         draftButton.addEventListener('click', openDraft);
     }
 
-    // Optionally, initialize the countdown if implemented
-    // updateCountdown();
-    // setInterval(updateCountdown, 1000); // If using a countdown
-
+    startCountdown();
+    fetchCurrentWeek().then(week => {
+        currentWeek = week;
+    });
 });
 
