@@ -6,6 +6,7 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const saltRounds = 10; // Define the salt rounds for bcrypt
 const authenticateToken = require('../middleware/authMiddleware');
+const checkRosterLock = require('../middleware/checkRosterLock');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -431,53 +432,55 @@ router.get('/:leagueId/draft-status', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/update-lineup', authenticateToken, async (req, res) => {
-  const { starters, bench } = req.body;
+router.post('/update-lineup', authenticateToken, checkRosterLock, async (req, res) => {
+  const { starters } = req.body;
   const userId = req.user.userId; // Get userId from the authenticated token
 
-  if (!Array.isArray(starters) || !Array.isArray(bench)) {
-    return res.status(400).json({ success: false, message: 'Invalid request format' });
+  // Validate that 'starters' is an array
+  if (!Array.isArray(starters)) {
+    return res.status(400).json({ success: false, message: 'Invalid request format: starters must be an array' });
   }
 
   try {
-      // Get the user's league_team_id
-      const leagueTeamResult = await pool.query(
-          'SELECT league_team_id FROM league_teams WHERE user_id = $1',
-          [userId]
-      );
+    // Get the user's league_team_id
+    const leagueTeamResult = await pool.query(
+      'SELECT league_team_id FROM league_teams WHERE user_id = $1',
+      [userId]
+    );
 
-      if (leagueTeamResult.rows.length === 0) {
-          return res.status(404).json({ success: false, message: 'Team not found for user' });
-      }
+    if (leagueTeamResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Team not found for user' });
+    }
 
-      const leagueTeamId = leagueTeamResult.rows[0].league_team_id;
+    const leagueTeamId = leagueTeamResult.rows[0].league_team_id;
 
-      // Begin transaction
-      await pool.query('BEGIN');
+    // Begin transaction
+    await pool.query('BEGIN');
 
-      // Update all players to bench (default)
+    // Set all players on the team to bench (starter = false)
+    await pool.query(
+      'UPDATE league_team_players SET starter = false WHERE league_team_id = $1',
+      [leagueTeamId]
+    );
+
+    // Update starters (set starter = true)
+    if (starters.length > 0) {
+      // Use the ANY operator to match player IDs in the array
       await pool.query(
-          'UPDATE league_team_players SET starter = false WHERE league_team_id = $1',
-          [leagueTeamId]
+        'UPDATE league_team_players SET starter = true WHERE league_team_id = $1 AND player_id = ANY($2::int[])',
+        [leagueTeamId, starters]
       );
+    }
 
-      // Update starters (set starter = true)
-      if (starters.length > 0) {
-          const starterPlaceholders = starters.map((_, idx) => `$${idx + 1}`).join(', ');
-          await pool.query(
-              `UPDATE league_team_players SET starter = true WHERE league_team_id = $${starters.length + 1} AND player_id IN (${starterPlaceholders})`,
-              [...starters, leagueTeamId]
-          );
-      }
+    // Commit transaction
+    await pool.query('COMMIT');
 
-      // Commit transaction
-      await pool.query('COMMIT');
-
-      res.status(200).json({ success: true, message: 'Lineup updated successfully' });
+    res.status(200).json({ success: true, message: 'Lineup updated successfully' });
   } catch (error) {
-      await pool.query('ROLLBACK'); // Rollback transaction on error
-      console.error('Error updating lineup:', error);
-      res.status(500).json({ success: false, message: 'Failed to update lineup' });
+    // Rollback transaction if an error occurred
+    await pool.query('ROLLBACK');
+    console.error('Error updating lineup:', error);
+    res.status(500).json({ success: false, message: 'Failed to update lineup' });
   }
 });
 
@@ -523,6 +526,25 @@ router.get('/current-week', async (req, res) => {
   } catch (error) {
       console.error('Error fetching current week:', error);
       res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
+// GET /api/leagues/weeks
+router.get('/weeks', authenticateToken, async (req, res) => {
+  try {
+    // Query the database to get all weeks
+    const queryText = 'SELECT week_number, start_date FROM weeks ORDER BY week_number ASC';
+    const result = await pool.query(queryText);
+
+    if (!result.rows || result.rows.length === 0) {
+      return res.status(404).json({ message: 'No weeks data found.' });
+    }
+
+    // Send the data as JSON
+    res.json({ weeks: result.rows });
+  } catch (error) {
+    console.error('Error fetching weeks data:', error);
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 

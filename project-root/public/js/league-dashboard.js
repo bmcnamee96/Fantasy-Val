@@ -231,111 +231,146 @@ function showModal(message) {
     }
 }
 
+// -------------------------------------------------------------------------- //
+
+
+let weeksData = []; // Array to store weeks data
+let targetTime = null; // The next target time (start_date of the next week)
+
+
 /**
- * Determines if 'America/New_York' is currently in Daylight Saving Time.
- * @param {Date} date 
- * @returns {boolean} True if in DST, else false.
+ * Fetches the weeks data from the server.
+ * @returns {Promise<void>}
  */
-function isInDST(date = new Date()) {
-    // Months are 0-indexed: March = 2, November = 10
-    const year = date.getFullYear();
+async function fetchWeeksData() {
+    try {
+        const response = await fetch(`/api/leagues/weeks`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-    // Second Sunday in March
-    const startDST = new Date(year, 2, 1);
-    while (startDST.getDay() !== 0) startDST.setDate(startDST.getDate() + 1);
-    startDST.setDate(startDST.getDate() + 7); // Second Sunday
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch weeks data.');
+        }
 
-    // First Sunday in November
-    const endDST = new Date(year, 10, 1);
-    while (endDST.getDay() !== 0) endDST.setDate(endDST.getDate() + 1);
+        const data = await response.json();
+        weeksData = data.weeks; // Assuming the server returns { weeks: [...] }
 
-    return date >= startDST && date < endDST;
+        console.log('Weeks Data Fetched:', weeksData);
+    } catch (error) {
+        console.error('Error fetching weeks data:', error);
+        showToast(`Error: ${error.message}`, 'error');
+    }
 }
 
 /**
- * Gets the current UTC time.
- * @returns {Date} Current UTC time.
+ * Determines the current week based on the current time and weeks data.
  */
-function getCurrentUTC() {
-    return new Date();
-}
+function determineCurrentWeek() {
+    const now = new Date(); // Current UTC time
+    let weekFound = false;
 
-/**
- * Gets the current offset for 'America/New_York' in minutes.
- * @param {Date} date 
- * @returns {number} Offset in minutes from UTC (e.g., -240 for EDT, -300 for EST)
- */
-function getNewYorkOffset(date = new Date()) {
-    return isInDST(date) ? -4 * 60 : -5 * 60;
-}
+    for (let i = 0; i < weeksData.length; i++) {
+        const weekStart = new Date(weeksData[i].start_date);
+        const nextWeekStart = weeksData[i + 1] ? new Date(weeksData[i + 1].start_date) : null;
 
-/**
- * Computes the next occurrence of a specific weekday and time in 'America/New_York' time zone.
- * @param {Date} now 
- * @param {number} targetWeekday 0=Sunday, 1=Monday, ..., 6=Saturday
- * @param {number} targetHour 0-23
- * @param {number} targetMinute 0-59
- * @returns {Date} Target time in UTC
- */
-function getNextOccurrenceUTC(now, targetWeekday, targetHour, targetMinute) {
-    const offset = getNewYorkOffset(now);
-    // Current time in New York
-    const nowNY = new Date(now.getTime() + offset * 60000);
-
-    // Calculate days until target weekday
-    let daysUntil = (targetWeekday - nowNY.getDay() + 7) % 7;
-    if (daysUntil === 0) {
-        // Today, check if target time has passed
-        if (nowNY.getHours() > targetHour || 
-            (nowNY.getHours() === targetHour && nowNY.getMinutes() >= targetMinute)) {
-            daysUntil = 7;
+        if (now >= weekStart && (nextWeekStart === null || now < nextWeekStart)) {
+            currentWeek = weeksData[i].week_number;
+            targetTime = nextWeekStart; // The start of the next week
+            weekFound = true;
+            break;
         }
     }
 
-    // Set target date in New York
-    const targetNY = new Date(nowNY.getTime());
-    targetNY.setDate(nowNY.getDate() + daysUntil);
-    targetNY.setHours(targetHour, targetMinute, 0, 0);
-
-    // Convert back to UTC
-    const targetUTC = new Date(targetNY.getTime() - offset * 60000);
-
-    return targetUTC;
-}
-
-/**
- * Gets the next roster target time and its phase.
- * @returns {{targetTime: Date, phase: string}} Next target time and phase description.
- */
-function getNextRosterTargetAndPhase() {
-    const now = getCurrentUTC();
-    const offset = getNewYorkOffset(now);
-
-    // Define target times: Friday 5pm and Sunday 11pm
-    const nextFriday5pmUTC = getNextOccurrenceUTC(now, 5, 17, 0); // Friday=5
-    const nextSunday11pmUTC = getNextOccurrenceUTC(now, 0, 23, 0); // Sunday=0
-
-    let targetTime;
-    let phase;
-
-    if (now < nextFriday5pmUTC) {
-        targetTime = nextFriday5pmUTC;
-        phase = 'Until Roster Lock';
-    } else if (now < nextSunday11pmUTC) {
-        targetTime = nextSunday11pmUTC;
-        phase = 'Until Roster Unlock';
-    } else {
-        // After Sunday 11pm, set to next Friday 5pm
-        targetTime = getNextOccurrenceUTC(now, 5, 17, 0);
-        phase = 'Until Next Roster Lock';
+    if (!weekFound) {
+        if (now < new Date(weeksData[0].start_date)) {
+            // Before the first week
+            currentWeek = 0;
+            targetTime = new Date(weeksData[0].start_date);
+        } else {
+            // After the last week
+            currentWeek = weeksData[weeksData.length - 1].week_number;
+            targetTime = null; // No next week
+        }
     }
 
-    return { targetTime, phase };
+    updateWeekDisplay();
 }
 
-/**
- * Updates the countdown timer in the DOM.
- */
+// Function to determine if rosters are locked
+function isWithinRosterLockPeriod() {
+    const timeZone = 'America/New_York';
+
+    const now = new Date();
+
+    // Get the date and time components in 'America/New_York' time zone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        weekday: 'long',
+        hour12: false,
+        hour: 'numeric',
+        minute: 'numeric',
+    });
+
+    const parts = formatter.formatToParts(now);
+    const dateTime = {};
+    parts.forEach(({ type, value }) => {
+        dateTime[type] = value;
+    });
+
+    const dayOfWeek = dateTime.weekday; // e.g., 'Friday'
+    const hour = parseInt(dateTime.hour, 10);
+    const minute = parseInt(dateTime.minute, 10);
+
+    const timeInMinutes = hour * 60 + minute;
+
+    // Lock period is from Friday 17:00 to Sunday 23:59
+    const lockStartDay = 'Friday';
+    const lockStartTime = 17 * 60; // 17:00 in minutes
+
+    const lockEndDay = 'Sunday';
+    const lockEndTime = 23 * 60 + 59; // 23:59
+
+    const daysOrder = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    let currentDayIndex = daysOrder.indexOf(dayOfWeek);
+    const lockStartDayIndex = daysOrder.indexOf(lockStartDay);
+    let lockEndDayIndex = daysOrder.indexOf(lockEndDay);
+
+    if (currentDayIndex === -1) {
+        // Should not happen
+        return false;
+    }
+
+    // Adjust indices for week wrap-around
+    if (lockEndDayIndex < lockStartDayIndex) {
+        lockEndDayIndex += 7;
+    }
+    if (currentDayIndex < lockStartDayIndex) {
+        currentDayIndex += 7;
+    }
+
+    if (currentDayIndex === lockStartDayIndex) {
+        // Friday
+        if (timeInMinutes >= lockStartTime) {
+            return true;
+        }
+    } else if (currentDayIndex === lockEndDayIndex) {
+        // Sunday
+        if (timeInMinutes <= lockEndTime) {
+            return true;
+        }
+    } else if (currentDayIndex > lockStartDayIndex && currentDayIndex < lockEndDayIndex) {
+        // Saturday
+        return true;
+    }
+
+    return false;
+}
+
+// Update countdown function
 function updateCountdown() {
     const countdownElement = document.getElementById('countdown');
     if (!countdownElement) {
@@ -343,31 +378,91 @@ function updateCountdown() {
         return;
     }
 
-    const { targetTime, phase } = getNextRosterTargetAndPhase();
-    const now = getCurrentUTC();
+    // Check if rosters are locked
+    if (isWithinRosterLockPeriod()) {
+        countdownElement.innerHTML = 'Rosters Locked';
+        return;
+    } 
+    
+    if (targetTime === null) {
+        // No more weeks to count down to
+        countdownElement.innerHTML = 'Season has ended.';
+        return;
+    }
+
+    const now = new Date();
     const timeDifference = targetTime - now;
 
     if (timeDifference <= 0) {
-        // Phase has changed; recalculate immediately
-        updateCountdown();
+        // Timer has reached zero; increment currentWeek
+        incrementCurrentWeek();
         return;
     }
 
     // Calculate days, hours, minutes, seconds
     const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+    const hours = Math.floor((timeDifference / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((timeDifference / (1000 * 60)) % 60);
+    const seconds = Math.floor((timeDifference / 1000) % 60);
 
     // Update countdown display
-    countdownElement.innerHTML = 
-        `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}<br>${phase}`;
+    countdownElement.innerHTML =
+        `${days}d ${hours.toString().padStart(2, '0')}:` +
+        `${minutes.toString().padStart(2, '0')}:` +
+        `${seconds.toString().padStart(2, '0')}<br>` +
+        `Until Week ${currentWeek + 1} Starts`;
+}
+
+/**
+ * Increments the current week and updates the target time.
+ */
+function incrementCurrentWeek() {
+    currentWeek += 1;
+
+    // Find the index of the new current week
+    const currentWeekIndex = weeksData.findIndex(week => week.week_number === currentWeek);
+
+    if (currentWeekIndex === -1 || currentWeekIndex + 1 >= weeksData.length) {
+        // No more weeks left
+        targetTime = null;
+        updateCountdown(); // Update the countdown to show 'Season has ended.'
+    } else {
+        // Set targetTime to the start_date of the next week
+        targetTime = new Date(weeksData[currentWeekIndex + 1].start_date);
+    }
+
+    updateWeekDisplay();
+}
+
+/**
+ * Updates the current week display in the DOM.
+ */
+function updateWeekDisplay() {
+    const weekDisplay = document.getElementById('currentWeek');
+    if (weekDisplay) {
+        if (currentWeek === 0) {
+            weekDisplay.innerHTML = `Season has not started yet.`;
+        } else {
+            weekDisplay.innerHTML = `Current Week: ${currentWeek}`;
+        }
+    }
 }
 
 /**
  * Starts the countdown timer, updating every second.
  */
-function startCountdown() {
+async function startCountdown() {
+    // Fetch weeks data from the server
+    await fetchWeeksData();
+
+    if (weeksData.length === 0) {
+        console.error('No weeks data available.');
+        return;
+    }
+
+    // Determine the current week and target time
+    determineCurrentWeek();
+
     updateCountdown(); // Initial call
     setInterval(updateCountdown, 1000); // Update every second
 }
@@ -397,26 +492,6 @@ async function fetchCurrentWeek() {
         showToast(`Error: ${error.message}`, 'error');
         return null;
     }
-}
-
-function updateWeekDisplay() {
-    const weekDisplay = document.getElementById('currentWeek');
-    if (weekDisplay) {
-        weekDisplay.innerHTML = `Current Week: ${currentWeek}`;
-    }
-}
-
-function showDebugInfo() {
-    const now = new Date(); // Current local time
-    const nowUTC = new Date(now.toISOString()); // Current time in UTC
-    const currentTargetDateUTC = targetFridaysUTC[currentTargetIndex]; // Get the current target date in UTC
-    const endOfGameUTC = new Date(currentTargetDateUTC.getTime() + 5 * 60 * 1000); // 5 minutes after the target
-
-    // console.log("Current local time:", now);
-    // console.log("Current UTC time:", nowUTC);
-    // console.log("Current target date (UTC):", currentTargetDateUTC);
-    // console.log("End of Game Period (UTC):", endOfGameUTC);
-    // console.log("Current Week:", currentWeek);
 }
 
 // -------------------------------------------------------------------------- //
@@ -513,7 +588,6 @@ async function fetchMyTeam() {
     }
 
     currentWeek = serverCurrentWeek; // Update the global currentWeek
-    updateWeekDisplay(); // Update the UI with the new week
 
     console.log(`Fetching team data for leagueId: ${leagueId}, currentWeek: ${currentWeek}`);
 
