@@ -548,4 +548,42 @@ router.get('/weeks', authenticateToken, async (req, res) => {
   }
 });
 
+// Get schedule for a league
+router.get('/:leagueId/schedule', authenticateToken, async (req, res) => {
+  try {
+      const leagueId = req.params.leagueId;
+
+      // Fetch schedule from the user_schedule table
+      const result = await pool.query(
+          `SELECT us.schedule_id, us.week_number, 
+                  home_team.league_team_id AS home_team_id, home_user.username AS home_team_name,
+                  away_team.league_team_id AS away_team_id, away_user.username AS away_team_name,
+                  us.home_team_score, us.away_team_score, us.winner_team_id, us.is_tie
+           FROM user_schedule us
+           JOIN league_teams home_team ON us.home_team_id = home_team.league_team_id
+           JOIN users home_user ON home_team.user_id = home_user.user_id
+           JOIN league_teams away_team ON us.away_team_id = away_team.league_team_id
+           JOIN users away_user ON away_team.user_id = away_user.user_id
+           WHERE us.league_id = $1
+           ORDER BY us.week_number ASC, us.schedule_id ASC`,
+          [leagueId]
+      );
+
+      // Check if the schedule exists
+      if (result.rows.length === 0) {
+        // Schedule not yet created
+        return res.status(200).json({
+            success: false,
+            message: 'Schedule will be created after the draft!',
+            schedule: []
+        });
+      }
+
+      res.status(200).json({ success: true, schedule: result.rows });
+  } catch (error) {
+      console.error('Error fetching league schedule:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch league schedule.' });
+  }
+});
+
 module.exports = router;

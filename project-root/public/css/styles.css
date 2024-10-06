@@ -1412,6 +1412,26 @@ th[data-sort="desc"]::after {
     background-color: var(--secondary-color);
 }
 
+#league-schedule .week-section {
+    margin-bottom: 20px;
+}
+
+#league-schedule .matchup-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#league-schedule .matchup-table th,
+#league-schedule .matchup-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#league-schedule .matchup-table th {
+    background-color: var(--background-color);
+    text-align: left;
+}
+
 /* =============================== */
 /*      Create League Section       */
 /* =============================== */

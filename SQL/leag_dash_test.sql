@@ -90,7 +90,10 @@ INSERT INTO weeks (week_number, start_date) VALUES
 (2, '2024-10-11 22:00:00'),
 (3, '2024-10-18 22:00:00'),
 (4, '2024-10-25 22:00:00'),
-(5, '2024-10-01 22:00:00')
+(5, '2024-10-01 22:00:00'),
+(6, '2024-10-08 22:00:00'),
+(7, '2024-10-15 22:00:00'),
+(8, '2024-10-22 22:00:00')
 ;
 
 UPDATE weeks
@@ -99,4 +102,6 @@ WHERE week_number = 5;
 
 SELECT * FROM weeks;
 
-TRUNCATE weeks;
+TRUNCATE TABLE weeks, user_schedule;
+
+SELECT * FROM user_schedule;

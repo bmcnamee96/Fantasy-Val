@@ -94,6 +94,22 @@ CREATE TABLE IF NOT EXISTS turn_timers (
     turn_duration INT NOT NULL DEFAULT 60  -- Duration of each turn in seconds
 );
 
+-- user_schedule table
+CREATE TABLE user_schedule (
+    schedule_id SERIAL PRIMARY KEY,
+    league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL REFERENCES weeks(week_number),
+    home_team_id INTEGER NOT NULL REFERENCES league_teams(league_team_id) ON DELETE CASCADE,
+    away_team_id INTEGER NOT NULL REFERENCES league_teams(league_team_id) ON DELETE CASCADE,
+    home_team_score INTEGER,
+    away_team_score INTEGER,
+    winner_team_id INTEGER REFERENCES league_teams(league_team_id),
+    is_tie BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+
 -- Password reset token
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     token_id SERIAL PRIMARY KEY,

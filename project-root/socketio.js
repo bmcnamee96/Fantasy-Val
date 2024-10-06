@@ -10,7 +10,7 @@ const clients = new Map();
 let draftStarted = false;
 let draftEnded = false;
 let currentTurnIndex = 0; // Index of the current turn
-let turnDuration = 45;
+let turnDuration = 3;
 let maxRounds = 7;
 let turnTimer = null;
 let currentTurnTimer = null; // Variable to store the active timer
@@ -399,28 +399,6 @@ async function getTeamNeeds(leagueId, username) {
   }
 }
 
-async function getPlayerRankings() {
-  try {
-    // Query the database for preseason rankings
-    const { rows } = await pool.query(
-      `SELECT player_id, preseason_ranking
-       FROM player
-       WHERE preseason_ranking IS NOT NULL`
-    );
-
-    // Format the rankings into a map of player_id to ranking
-    const rankings = rows.reduce((acc, row) => {
-      acc[row.player_id] = row.preseason_ranking;
-      return acc;
-    }, {});
-
-    return rankings;
-  } catch (error) {
-    console.error('Error fetching player rankings:', error);
-    return {};
-  }
-}
-
 // -------------------------------------------------------------------------- //
 
 // draft order functions
@@ -511,12 +489,6 @@ function broadcastUserList(leagueId) {
 function broadcastDraftStatus(leagueId, draftStatus) {
   logger.debug(`Broadcasting draft status for league ${leagueId}:`, draftStatus);
   io.to(leagueId).emit('draftStatusUpdate', draftStatus);
-}
-
-function emitDraftStatus(draftStatus) {
-  logger.debug(`Broadcasting draft status:`, draftStatus);
-
-  io.emit('draftStatusUpdate', draftStatus);
 }
 
 async function emitAvailablePlayers(leagueId) {
@@ -1003,6 +975,8 @@ function endDraft(leagueId, io) {
     // disconnect all users from the league after the draft has ended
     io.in(leagueId).socketsLeave(leagueId);
 
+    generateAndInsertSchedule(leagueId);
+
     // Cleanup server resources for this league
     cleanupDraftData(leagueId);
   }).catch(error => {
@@ -1024,6 +998,88 @@ function cleanupDraftData(leagueId) {
 }
 
 // -------------------------------------------------------------------------- //
+
+function generateRoundRobinSchedule(teamIds) {
+  const numberOfTeams = teamIds.length;
+  const numberOfWeeks = numberOfTeams - 1;
+  const halfSize = numberOfTeams / 2;
+
+  const teams = teamIds.slice(); // Copy the array
+  const fixedTeam = teams.shift(); // Remove and fix the first team
+
+  const schedule = [];
+
+  for (let week = 0; week < numberOfWeeks; week++) {
+      const matchups = [];
+
+      matchups.push({
+          home: fixedTeam,
+          away: teams[week % teams.length],
+      });
+
+      for (let i = 1; i < halfSize; i++) {
+          const homeIndex = (week + i) % teams.length;
+          const awayIndex = (week + teams.length - i) % teams.length;
+
+          matchups.push({
+              home: teams[homeIndex],
+              away: teams[awayIndex],
+          });
+      }
+
+      schedule.push({
+          week: week + 1,
+          matchups: matchups,
+      });
+  }
+
+  return schedule;
+}
+
+async function generateAndInsertSchedule(leagueId) {
+  // Fetch all team IDs in the league
+  const result = await pool.query(
+      'SELECT league_team_id FROM league_teams WHERE league_id = $1',
+      [leagueId]
+  );
+  const teamIds = result.rows.map(row => row.league_team_id);
+
+  // Check if there are enough teams
+  if (teamIds.length < 2) {
+      console.error('Not enough teams to create a schedule.');
+      return;
+  }
+
+  // If odd number of teams, add a bye (null)
+  if (teamIds.length % 2 !== 0) {
+      teamIds.push(null); // Representing a bye week
+  }
+
+  // Generate the schedule
+  const schedule = generateRoundRobinSchedule(teamIds);
+
+  // Insert the schedule into the database
+  for (const week of schedule) {
+      const weekNumber = week.week;
+      for (const matchup of week.matchups) {
+          const { home, away } = matchup;
+
+          // Skip if there's a bye
+          if (home === null || away === null) {
+              continue;
+          }
+
+          // Insert the matchup into the user_schedule table
+          await pool.query(
+              `INSERT INTO user_schedule (league_id, week_number, home_team_id, away_team_id)
+               VALUES ($1, $2, $3, $4)`,
+              [leagueId, weekNumber, home, away]
+          );
+      }
+  }
+
+  console.log('Schedule generated and inserted successfully.');
+}
 
 async function getTeamDataForUser(userId, leagueId) {
   try {

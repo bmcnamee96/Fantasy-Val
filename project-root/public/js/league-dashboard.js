@@ -299,7 +299,6 @@ function determineCurrentWeek() {
     updateWeekDisplay();
 }
 
-// Function to determine if rosters are locked
 function isWithinRosterLockPeriod() {
     const timeZone = 'America/New_York';
 
@@ -380,7 +379,7 @@ function updateCountdown() {
 
     // Check if rosters are locked
     if (isWithinRosterLockPeriod()) {
-        countdownElement.innerHTML = 'Rosters Locked';
+        countdownElement.innerHTML = 'Games started! Rosters Locked!';
         return;
     } 
     
@@ -496,6 +495,154 @@ async function fetchCurrentWeek() {
 
 // -------------------------------------------------------------------------- //
 
+// Function to fetch the league schedule
+async function fetchLeagueSchedule() {
+    console.log('Fetching league schedule...');
+    try {
+        const response = await fetch(`api/leagues/${leagueId}/schedule`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        console.log(response);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch league schedule');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            if (data.schedule && data.schedule.length > 0) {
+                displayLeagueSchedule(data.schedule);
+            } else {
+                // Schedule is empty
+                displayNoScheduleMessage(data.message);
+            }
+        } else {
+            // Handle the case when success is false
+            displayNoScheduleMessage(data.message);
+        }
+    } catch (error) {
+        console.error('Error fetching league schedule:', error);
+        displayNoScheduleMessage('Schedule will be created after the draft!');
+    }
+}
+
+function displayLeagueSchedule(schedule) {
+    const scheduleContainer = document.getElementById('league-schedule');
+    if (!scheduleContainer) {
+        console.error('Schedule container not found!');
+        return;
+    }
+
+    // Clear any existing content
+    scheduleContainer.innerHTML = '';
+
+    // Group schedule entries by week number
+    const scheduleByWeek = {};
+    schedule.forEach(entry => {
+        if (!scheduleByWeek[entry.week_number]) {
+            scheduleByWeek[entry.week_number] = [];
+        }
+        scheduleByWeek[entry.week_number].push(entry);
+    });
+
+    // Sort the weeks in order
+    const sortedWeeks = Object.keys(scheduleByWeek).sort((a, b) => a - b);
+
+    sortedWeeks.forEach(weekNumber => {
+        const weekEntries = scheduleByWeek[weekNumber];
+
+        // Create a section for the week
+        const weekSection = document.createElement('div');
+        weekSection.classList.add('week-section');
+
+        const weekHeader = document.createElement('h3');
+        weekHeader.textContent = `Week ${weekNumber}`;
+        weekSection.appendChild(weekHeader);
+
+        // Create a table for the matchups
+        const matchupTable = document.createElement('table');
+        matchupTable.classList.add('matchup-table');
+
+        // Table header
+        const tableHeader = document.createElement('thead');
+        tableHeader.innerHTML = `
+            <tr>
+                <th>Home Team</th>
+                <th></th>
+                <th>Away Team</th>
+                <th>Result</th>
+            </tr>
+        `;
+        matchupTable.appendChild(tableHeader);
+
+        const tableBody = document.createElement('tbody');
+
+        weekEntries.forEach(matchup => {
+            const row = document.createElement('tr');
+
+            // Home Team
+            const homeTeamCell = document.createElement('td');
+            homeTeamCell.textContent = matchup.home_team_name;
+            row.appendChild(homeTeamCell);
+
+            // VS Separator
+            const vsCell = document.createElement('td');
+            vsCell.textContent = 'vs';
+            vsCell.style.textAlign = 'center';
+            row.appendChild(vsCell);
+
+            // Away Team
+            const awayTeamCell = document.createElement('td');
+            awayTeamCell.textContent = matchup.away_team_name;
+            row.appendChild(awayTeamCell);
+
+            // Result
+            const resultCell = document.createElement('td');
+            if (matchup.home_team_score !== null && matchup.away_team_score !== null) {
+                resultCell.textContent = `${matchup.home_team_score} - ${matchup.away_team_score}`;
+                if (matchup.is_tie) {
+                    resultCell.textContent += ' (Tie)';
+                } else if (matchup.winner_team_id === matchup.home_team_id) {
+                    resultCell.textContent += ` (Winner: ${matchup.home_team_name})`;
+                } else if (matchup.winner_team_id === matchup.away_team_id) {
+                    resultCell.textContent += ` (Winner: ${matchup.away_team_name})`;
+                }
+            } else {
+                resultCell.textContent = 'Scheduled';
+            }
+            row.appendChild(resultCell);
+
+            tableBody.appendChild(row);
+        });
+
+        matchupTable.appendChild(tableBody);
+        weekSection.appendChild(matchupTable);
+        scheduleContainer.appendChild(weekSection);
+    });
+}
+
+function displayNoScheduleMessage(message) {
+    const scheduleContainer = document.getElementById('league-schedule');
+    if (!scheduleContainer) {
+        console.error('League Schedule container not found!');
+        return;
+    }
+
+    // Clear any existing content
+    scheduleContainer.innerHTML = '';
+
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message || 'Schedule will be created after the draft!';
+    scheduleContainer.appendChild(messageElement);
+}
+
+// -------------------------------------------------------------------------- //
+
 async function fetchLeagueDetails(leagueId) {
     try {
         if (!token) {
@@ -572,7 +719,6 @@ async function fetchLeagueUsers(leagueId) {
         usersList.innerHTML = '<li class="list-group-item">Failed to load users.</li>';
     }
 }
-
 async function fetchMyTeam() {
     if (!leagueId) {
         console.error('No league ID found, cannot fetch team data.');
@@ -591,16 +737,40 @@ async function fetchMyTeam() {
 
     console.log(`Fetching team data for leagueId: ${leagueId}, currentWeek: ${currentWeek}`);
 
-    try {
-        const response = await fetch(`/api/leagues/my-team/${leagueId}?week=${currentWeek}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch team data.');
+    let teamData = [];
+    let weekToFetch = currentWeek;
 
-        const teamData = await response.json();
-        console.log('My Team Fetched:', teamData);
+    try {
+        // Loop to fetch team data from currentWeek down to week 1
+        while (weekToFetch >= 1) {
+            const response = await fetch(`/api/leagues/my-team/${leagueId}?week=${weekToFetch}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch team data.');
+
+            teamData = await response.json();
+            console.log(`Team Data Fetched for week ${weekToFetch}:`, teamData);
+
+            if (teamData && teamData.length > 0) {
+                // Check if the lineup is not empty
+                if (teamData.some(player => player.starter)) {
+                    break; // Found team data with a lineup
+                }
+            }
+
+            // If teamData is empty or no starters, decrement week and try again
+            weekToFetch--;
+        }
+
+        if (!teamData || teamData.length === 0) {
+            console.log('No team data found for any week.');
+            // Handle the case where no team data is found
+            renderTeam([]);
+            return;
+        }
+
         renderTeam(teamData);
 
         // Populate currentLineup based on fetched team data
@@ -769,7 +939,6 @@ function renderTeam(teamData) {
         });
     }
 }
-
 
 function renderAvailablePlayers(players) {
     const freeAgentsContainer = document.getElementById('free-agents-container');
@@ -1112,6 +1281,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Fetch users
     await fetchLeagueUsers(leagueId);
+
+    // fetch schedule
+    await fetchLeagueSchedule(leagueId);
 
     // Automatically activate the first tab content and run fetchMyTeam on page load
     document.getElementById('my-team-content').classList.add('active');
