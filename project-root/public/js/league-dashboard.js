@@ -810,6 +810,7 @@ async function fetchLeagueUsers(leagueId) {
         usersList.innerHTML = '<li class="list-group-item">Failed to load users.</li>';
     }
 }
+
 async function fetchMyTeam() {
     if (!leagueId) {
         console.error('No league ID found, cannot fetch team data.');
@@ -924,7 +925,6 @@ async function fetchPlayerIdsByName(playerNames) {
     }
 }
 
-// THIS NEEDS TO BE FIXED.  FETCH FROM LEAGUETEAMPLAYERS NOT DRAFTED PLAYERS
 async function fetchAvailablePlayers() {
     try {
         const response = await fetch(`/api/leagues/${leagueId}/available-players`, {
@@ -1046,9 +1046,157 @@ function renderAvailablePlayers(players) {
         playerElement.innerHTML = `
             <span>${player.team_abrev} ${player.player_name}</span>
             <span>Role: ${player.role}</span>
+            <button class="sign-button" data-player-id="${player.player_id}" data-role="${player.role}">Sign</button>
         `;
         freeAgentsContainer.appendChild(playerElement);
     });
+
+    // Attach event listeners to all "Sign" buttons
+    const signButtons = document.querySelectorAll('.sign-button');
+    signButtons.forEach(button => {
+        button.addEventListener('click', handleSignPlayer);
+    });
+}
+
+// Function to handle "Sign" button click
+async function handleSignPlayer(event) {
+    const button = event.target;
+    const playerIdToSign = button.getAttribute('data-player-id');
+    const roleToSign = button.getAttribute('data-role');
+
+    console.log('Signing player:', playerIdToSign, 'Role:', roleToSign);
+
+    if (!leagueId || leagueId === "null" || !token) {
+        console.error('League ID or token is missing.');
+        showToast('Unable to sign player. Please ensure you are logged in and have selected a league.', 'error');
+        return;
+    }
+
+    try {
+        // Fetch bench players via the separate endpoint
+        const benchResponse = await fetch(`/api/leagues/${leagueId}/bench-players`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!benchResponse.ok) {
+            throw new Error('Failed to fetch bench players.');
+        }
+
+        const benchData = await benchResponse.json();
+        console.log('Bench Players:', benchData);
+
+        if (!benchData.success || !Array.isArray(benchData.availableBenchPlayers)) {
+            throw new Error('Invalid bench players data.');
+        }
+
+        // Filter bench players by the same role
+        const eligibleBenchPlayers = benchData.availableBenchPlayers.filter(player => player.role === roleToSign);
+
+        if (eligibleBenchPlayers.length === 0) {
+            showToast('No eligible bench players to drop for this role.', 'info');
+            return;
+        }
+
+        // Prompt user to select a player to drop (using modal)
+        openDropPlayerModal(eligibleBenchPlayers, playerIdToSign);
+    } catch (error) {
+        console.error('Error signing player:', error);
+        showToast(error.message || 'An error occurred while signing the player.', 'error');
+    }
+}
+
+// Function to open the modal and populate bench players
+function openDropPlayerModal(eligiblePlayers, playerIdToSign) {
+    const modal = document.getElementById('dropPlayerModal');
+    const select = document.getElementById('benchPlayersSelect');
+    const confirmButton = document.getElementById('confirmDrop');
+    const closeButton = document.querySelector('.close-button');
+
+    // Clear previous options
+    select.innerHTML = '';
+
+    // Populate the select with eligible players
+    eligiblePlayers.forEach(player => {
+        const option = document.createElement('option');
+        option.value = player.player_id;
+        option.textContent = `${player.team_abrev} ${player.player_name}`;
+        select.appendChild(option);
+    });
+
+    // Show the modal
+    modal.style.display = 'block';
+
+    // Handle the confirm button click
+    confirmButton.onclick = async () => {
+        const playerToDropId = select.value;
+        if (!playerToDropId) {
+            showToast('Please select a player to drop.', 'info');
+            return;
+        }
+
+        // Close the modal
+        modal.style.display = 'none';
+
+        // Send the sign and drop request to the backend
+        await signPlayer(leagueId, token, playerIdToSign, playerToDropId);
+    };
+
+    // Handle the close button click
+    closeButton.onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    // Handle clicks outside the modal to close it
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    };
+}
+
+// Function to send the sign and drop request
+async function signPlayer(leagueId, token, playerIdToSign, playerIdToDrop) {
+    try {
+        const signResponse = await fetch(`/api/leagues/${leagueId}/sign-player`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                playerIdToSign: playerIdToSign,
+                playerIdToDrop: playerIdToDrop,
+            }),
+        });
+
+        const signData = await signResponse.json();
+        console.log('Sign Response:', signData);
+
+        if (signResponse.ok && signData.success) {
+            showToast('Player signed successfully!', 'success');
+            // Refresh available players and team roster
+            fetchAvailablePlayers(leagueId, token);
+            fetchMyTeam(); // Refresh team data to update benchPlayers
+        } else {
+            let errorMessage = 'Failed to sign player.';
+            
+            // Check if the error is due to roster lock (403 Forbidden)
+            if (signResponse.status === 403 && signData.message) {
+                errorMessage = signData.message;
+            }
+
+            // Optionally, handle other specific error messages here
+
+            throw new Error(errorMessage);
+        }
+    } catch (error) {
+        console.error('Error signing player:', error);
+        showToast(error.message || 'An error occurred while signing the player.', 'error');
+    }
 }
 
 // -------------------------------------------------------------------------- //

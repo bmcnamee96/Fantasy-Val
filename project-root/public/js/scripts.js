@@ -1,5 +1,75 @@
 // scripts.js
 
+/**
+ * Display a toast message.
+ * @param {string} message - The message to display.
+ * @param {string} type - The type of message ('success', 'error'). Defaults to 'success'.
+ */
+function showToast(message, type = 'success') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.top = '20px';
+        toastContainer.style.right = '20px';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Create the toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    // Style the toast
+    toast.style.minWidth = '200px';
+    toast.style.marginTop = '10px';
+    toast.style.padding = '15px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.color = '#fff';
+    toast.style.opacity = '0.9';
+    toast.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+    toast.style.fontFamily = 'Arial, sans-serif';
+    toast.style.fontSize = '14px';
+    toast.style.cursor = 'pointer';
+    toast.style.transition = 'opacity 0.5s ease';
+
+    // Set background color based on type
+    switch(type) {
+        case 'success':
+            toast.style.backgroundColor = '#28a745';
+            break;
+        case 'error':
+            toast.style.backgroundColor = '#dc3545';
+            break;
+        default:
+            toast.style.backgroundColor = '#333';
+    }
+
+    // Remove toast on click
+    toast.addEventListener('click', () => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toastContainer.removeChild(toast);
+        }, 500);
+    });
+
+    // Append the toast to the container
+    toastContainer.appendChild(toast);
+
+    // Automatically remove the toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (toastContainer.contains(toast)) {
+                toastContainer.removeChild(toast);
+            }
+        }, 500);
+    }, 3000);
+}
+
 // Function to update the UI based on the login state
 function updateUI() {
     const username = localStorage.getItem('username');
@@ -395,10 +465,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                alert('User registered successfully');
+                showToast('User registered successfully', 'success');
                 signupModal.style.display = 'none';
             } else {
-                alert('Error registering user');
+                showToast('Error registering user', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
@@ -436,13 +506,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Sign in successful. Data:', data); // Log data received from server
                 localStorage.setItem('token', data.token); // Store the token in local storage
                 localStorage.setItem('username', data.username);
-                alert('Sign in successful');
+                showToast('Sign in successful', 'success');
                 updateUI();
                 signinModal.style.display = 'none';
                 window.location.href = '/my-dashboard.html'; // Redirect to dashboard page
             } else {
                 console.error('Sign in failed:', response.status, response.statusText);
-                alert('Invalid username or password');
+                showToast('Invalid username or password', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
@@ -488,14 +558,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok) {
                     const result = await response.json();
                     console.log('Password recovery initiated:', result.message);
+                    showToast('Password recovery initiated. Please check your email.', 'success');
                     // Optionally show a success message or redirect the user
                 } else {
                     console.error('Failed to recover password:', response.status, response.statusText);
+                    const errorData = await response.json();
+                    showToast('Failed to recover password: ' + (errorData.message || 'Unknown error'), 'error');
                     // Handle error response, e.g., show an error message to the user
                 }
             } catch (error) {
                 console.error('Error recovering password:', error);
-                res.status(500).json({ message: 'Internal server error' });
+                showToast('Internal server error', 'error');
             }
         });
     }

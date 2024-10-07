@@ -388,25 +388,138 @@ router.get('/:leagueId/available-players', authenticateToken, async (req, res) =
   const { leagueId } = req.params;
 
   try {
-      // Optionally check if the league exists
+    // Check if the league exists
+    const leagueCheck = await pool.query('SELECT 1 FROM leagues WHERE league_id = $1', [leagueId]);
+    if (leagueCheck.rowCount === 0) {
+      return res.status(404).json({ error: 'League not found' });
+    }
+
+    // Updated SQL query using league_team_players and joining with league_teams
+    const result = await pool.query(
+      `SELECT p.player_id, p.player_name, p.team_abrev, p.role
+       FROM player p
+       LEFT JOIN league_team_players ltp ON p.player_id = ltp.player_id
+       LEFT JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id AND lt.league_id = $1
+       WHERE lt.league_id IS NULL`,
+      [leagueId]
+    );
+
+    const availablePlayers = result.rows;
+    res.json(availablePlayers); // Maintains the same response structure
+  } catch (error) {
+    logger.error('Error fetching available players:', error);
+    res.status(500).json({ error: 'Failed to fetch available players' });
+  }
+});
+
+// Endpoint to sign a free agent
+router.post('/:leagueId/sign-player', authenticateToken, checkRosterLock, async (req, res) => {
+  const { leagueId } = req.params;
+  const { playerIdToSign, playerIdToDrop } = req.body;
+  const userId = req.user.userId; // Assuming user ID is available from the token
+
+  // Validate input
+  if (!playerIdToSign || !playerIdToDrop) {
+    return res.status(400).json({ success: false, error: 'Missing player IDs.' });
+  }
+
+  try {
+      // Check if the league exists
       const leagueCheck = await pool.query('SELECT 1 FROM leagues WHERE league_id = $1', [leagueId]);
       if (leagueCheck.rowCount === 0) {
-          return res.status(404).json({ error: 'League not found' });
+          return res.status(404).json({ success: false, error: 'League not found.' });
       }
 
-      const result = await pool.query(
+      // Fetch the role of the player to sign
+      const playerToSignResult = await pool.query(
+          `SELECT role FROM player WHERE player_id = $1`,
+          [playerIdToSign]
+      );
+      if (playerToSignResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Player to sign not found.' });
+      }
+      const roleToSign = playerToSignResult.rows[0].role;
+
+      // Fetch the role of the player to drop and ensure they are on the bench
+      const playerToDropResult = await pool.query(
+          `SELECT p.role
+           FROM player p
+           INNER JOIN league_team_players ltp ON p.player_id = ltp.player_id
+           INNER JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
+           WHERE p.player_id = $1 AND lt.league_id = $2 AND lt.user_id = $3 AND ltp.starter = FALSE`,
+          [playerIdToDrop, leagueId, userId]
+      );
+      if (playerToDropResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Player to drop not found on your bench.' });
+      }
+      const roleToDrop = playerToDropResult.rows[0].role;
+
+      // Ensure roles match
+      if (roleToSign !== roleToDrop) {
+          return res.status(400).json({ success: false, error: 'Role mismatch. You can only sign a player with the same role as the player you are dropping.' });
+      }
+
+      // Start a transaction
+      await pool.query('BEGIN');
+
+      // Remove the player to drop from the team
+      const removePlayerQuery = `
+          DELETE FROM league_team_players
+          WHERE player_id = $1 AND league_team_id = (
+              SELECT league_team_id FROM league_teams WHERE league_id = $2 AND user_id = $3
+          )
+      `;
+      await pool.query(removePlayerQuery, [playerIdToDrop, leagueId, userId]);
+
+      // Add the player to sign to the team as a bench player (starter = FALSE)
+      const addPlayerQuery = `
+          INSERT INTO league_team_players (league_team_id, player_id, starter)
+          VALUES (
+              (SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2),
+              $3,
+              FALSE
+          )
+      `;
+      await pool.query(addPlayerQuery, [leagueId, userId, playerIdToSign]);
+
+      // Commit the transaction
+      await pool.query('COMMIT');
+
+      res.status(200).json({ success: true, message: 'Player signed successfully.' });
+  } catch (error) {
+      // Rollback in case of error
+      await pool.query('ROLLBACK');
+      logger.error('Error signing player:', error);
+      res.status(500).json({ success: false, error: 'Failed to sign player.' });
+  }
+});
+
+// Endpoint to get user's bench players
+router.get('/:leagueId/bench-players', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  const userId = req.user.userId; // Assuming user ID is available from the token
+
+  try {
+      // Check if the league exists
+      const leagueCheck = await pool.query('SELECT 1 FROM leagues WHERE league_id = $1', [leagueId]);
+      if (leagueCheck.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'League not found.' });
+      }
+
+      // Fetch bench players where starter is FALSE
+      const benchPlayers = await pool.query(
           `SELECT p.player_id, p.player_name, p.team_abrev, p.role
            FROM player p
-           LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
-           WHERE dp.player_id IS NULL`,
-          [leagueId]
+           INNER JOIN league_team_players ltp ON p.player_id = ltp.player_id
+           INNER JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
+           WHERE lt.league_id = $1 AND lt.user_id = $2 AND ltp.starter = FALSE`,
+          [leagueId, userId]
       );
 
-      const availablePlayers = result.rows;
-      res.json(availablePlayers);
+      res.status(200).json({ success: true, availableBenchPlayers: benchPlayers.rows });
   } catch (error) {
-      logger.error('Error fetching available players:', error);
-      res.status(500).json({ error: 'Failed to fetch available players' });
+      logger.error('Error fetching bench players:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch bench players.' });
   }
 });
 
