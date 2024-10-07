@@ -97,11 +97,61 @@ INSERT INTO weeks (week_number, start_date) VALUES
 ;
 
 UPDATE weeks
-SET start_date = '2024-10-31 22:00:00+00'
-WHERE week_number = 5;
+SET start_date = CASE week_number
+    WHEN 1 THEN '2024-09-20 17:00:00+00'
+    WHEN 2 THEN '2024-09-29 23:59:59+00'
+    WHEN 3 THEN '2024-10-06 23:59:59+00'
+    WHEN 4 THEN '2024-10-13 23:59:59+00'
+    WHEN 5 THEN '2024-10-20 23:59:59+00'
+	WHEN 6 THEN '2024-10-27 23:59:59+00'
+	WHEN 7 THEN '2024-11-03 23:59:59+00'
+	WHEN 8 THEN '2024-11-10 23:59:59+00'
+    ELSE start_date
+END
+WHERE week_number BETWEEN 1 AND 8;
 
+
+SELECT NOW();
 SELECT * FROM weeks;
+SELECT * FROM user_schedule;
+SELECT * FROM system_settings;
+
+SELECT start_date, data_type
+FROM information_schema.columns
+WHERE table_name = 'weeks';
+
+
 
 TRUNCATE TABLE weeks, user_schedule;
 
-SELECT * FROM user_schedule;
+UPDATE system_settings
+	SET value = 1
+	WHERE key = 'last_processed_week';
+
+SELECT * FROM system_settings;
+SELECT * FROM team_standings;
+SELECT * FROM player_stats;
+SELECT * FROM series;
+SELECT * FROM series_player_stats;
+
+UPDATE user_schedule
+SET home_team_score = NULL, 
+    away_team_score = NULL, 
+    winner_team_id = NULL;
+
+SELECT player_id, adjusted_points
+FROM series_player_stats
+WHERE week = 2;
+
+SELECT player_id
+     FROM league_team_players
+     WHERE league_team_id = 13 AND starter = true
+
+SELECT sps.player_id, sps.adjusted_points AS points
+FROM series_player_stats sps
+JOIN series s ON sps.series_id = s.series_id
+WHERE s.week = 2 AND player_id = 19;
+
+
+SELECT * FROM league_team_players;
+SELECT * FROM league_teams;

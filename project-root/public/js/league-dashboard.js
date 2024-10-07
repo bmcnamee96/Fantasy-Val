@@ -2,9 +2,10 @@
 
 const token = localStorage.getItem('token');
 let leagueId = getLeagueIdFromUrl(); // Extract league ID from URL
-// let currentTargetIndex = 0; // Start with the first target date (first Friday)
 let currentWeek = null; // Start with the first week
 let timerInterval = null;
+let weeksData = []; // Array to store weeks data
+let targetTime = null; // The next target time (start_date of the next week)
 let benchPlayers = {}; // Stores available players categorized by role
 let currentLineup = []; // Stores the current lineup of players
 let originalLineup = [];
@@ -232,11 +233,6 @@ function showModal(message) {
 }
 
 // -------------------------------------------------------------------------- //
-
-
-let weeksData = []; // Array to store weeks data
-let targetTime = null; // The next target time (start_date of the next week)
-
 
 /**
  * Fetches the weeks data from the server.
@@ -534,7 +530,7 @@ async function fetchLeagueSchedule() {
 function displayLeagueSchedule(schedule) {
     const scheduleContainer = document.getElementById('league-schedule');
     if (!scheduleContainer) {
-        console.error('Schedule container not found!');
+        console.error('League Schedule container not found!');
         return;
     }
 
@@ -573,8 +569,10 @@ function displayLeagueSchedule(schedule) {
         tableHeader.innerHTML = `
             <tr>
                 <th>Home Team</th>
+                <th>Home Points</th>
                 <th></th>
                 <th>Away Team</th>
+                <th>Away Points</th>
                 <th>Result</th>
             </tr>
         `;
@@ -590,6 +588,11 @@ function displayLeagueSchedule(schedule) {
             homeTeamCell.textContent = matchup.home_team_name;
             row.appendChild(homeTeamCell);
 
+            // Home Team Points
+            const homePointsCell = document.createElement('td');
+            homePointsCell.textContent = matchup.home_team_score !== null ? matchup.home_team_score : '-';
+            row.appendChild(homePointsCell);
+
             // VS Separator
             const vsCell = document.createElement('td');
             vsCell.textContent = 'vs';
@@ -601,16 +604,22 @@ function displayLeagueSchedule(schedule) {
             awayTeamCell.textContent = matchup.away_team_name;
             row.appendChild(awayTeamCell);
 
+            // Away Team Points
+            const awayPointsCell = document.createElement('td');
+            awayPointsCell.textContent = matchup.away_team_score !== null ? matchup.away_team_score : '-';
+            row.appendChild(awayPointsCell);
+
             // Result
             const resultCell = document.createElement('td');
             if (matchup.home_team_score !== null && matchup.away_team_score !== null) {
-                resultCell.textContent = `${matchup.home_team_score} - ${matchup.away_team_score}`;
                 if (matchup.is_tie) {
-                    resultCell.textContent += ' (Tie)';
+                    resultCell.textContent = 'Tie';
                 } else if (matchup.winner_team_id === matchup.home_team_id) {
-                    resultCell.textContent += ` (Winner: ${matchup.home_team_name})`;
+                    resultCell.textContent = `Winner: ${matchup.home_team_name}`;
                 } else if (matchup.winner_team_id === matchup.away_team_id) {
-                    resultCell.textContent += ` (Winner: ${matchup.away_team_name})`;
+                    resultCell.textContent = `Winner: ${matchup.away_team_name}`;
+                } else {
+                    resultCell.textContent = 'Result Pending';
                 }
             } else {
                 resultCell.textContent = 'Scheduled';
@@ -639,6 +648,88 @@ function displayNoScheduleMessage(message) {
     const messageElement = document.createElement('p');
     messageElement.textContent = message || 'Schedule will be created after the draft!';
     scheduleContainer.appendChild(messageElement);
+}
+
+async function fetchNextOpponent(leagueId, token) {
+    try {
+      const response = await fetch(`/api/leagues/next-opponent/${leagueId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (response.status === 401) {
+        // Handle unauthorized access
+        window.location.href = '/login.html';
+        return;
+      }
+  
+      const data = await response.json();
+  
+      if (data.error) {
+        throw new Error(data.error);
+      }
+  
+      if (data.message) {
+        document.getElementById('opponent-name').textContent = data.message;
+      } else {
+        updateOpponentDisplay(data.opponent_name, data.week_number);
+      }
+    } catch (error) {
+      console.error('Error fetching next opponent:', error);
+      document.getElementById('opponent-name').textContent = 'Error fetching opponent.';
+    }
+}
+  
+function updateOpponentDisplay(opponentName, weekNumber) {
+    const opponentNameElement = document.getElementById('opponent-name');
+    opponentNameElement.textContent = `${opponentName} (Week ${weekNumber})`;
+}
+
+async function fetchLeagueStandings(leagueId, token) {
+    try {
+      const response = await fetch(`/api/leagues/${leagueId}/standings`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (response.status === 401) {
+        // Handle unauthorized access
+        window.location.href = '/login.html';
+        return;
+      }
+  
+      if (!response.ok) {
+        throw new Error('Failed to fetch league standings.');
+      }
+  
+      const data = await response.json();
+      if (data.success) {
+        updateStandingsDisplay(data.standings);
+      } else {
+        console.error(data.message);
+        document.getElementById('standings-list').innerHTML = `<li>${data.message}</li>`;
+      }
+    } catch (error) {
+      console.error('Error fetching league standings:', error);
+      document.getElementById('standings-list').innerHTML = '<li>Error loading standings.</li>';
+    }
+}
+  
+function updateStandingsDisplay(standings) {
+    const standingsList = document.getElementById('standings-list');
+    standingsList.innerHTML = ''; // Clear existing list items
+  
+    standings.forEach((team, index) => {
+      const listItem = document.createElement('li');
+      listItem.textContent = `${team.team_name} - ${team.points} pts`;
+      standingsList.appendChild(listItem);
+    });
 }
 
 // -------------------------------------------------------------------------- //
@@ -1284,6 +1375,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // fetch schedule
     await fetchLeagueSchedule(leagueId);
+
+    // fetch the next opponent
+    if (leagueId && token) {
+        fetchNextOpponent(leagueId, token);
+    } else {
+        document.getElementById('opponent-name').textContent = 'League or authentication information missing.';
+    }
+
+    if (leagueId && token) {
+        fetchLeagueStandings(leagueId, token);
+    } else {
+        console.error('League ID or token is missing.');
+        document.getElementById('standings-list').innerHTML = '<li>Error loading standings.</li>';
+    }
 
     // Automatically activate the first tab content and run fetchMyTeam on page load
     document.getElementById('my-team-content').classList.add('active');

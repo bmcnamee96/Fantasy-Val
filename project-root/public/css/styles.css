@@ -1432,6 +1432,49 @@ th[data-sort="desc"]::after {
     text-align: left;
 }
 
+.opponent {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 10px;
+}
+  
+.opponent h2 {
+margin-top: 0;
+}
+  
+.opponent p {
+font-size: 1.2em;
+color: #333;
+}
+
+.ranking table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.ranking th, .ranking td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.ranking th {
+    background-color: #f2f2f2;
+}
+
+.ranking tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.ranking tr:hover {
+    background-color: #e9e9e9;
+}
+
+.ranking td:first-child, .ranking th:first-child {
+    width: 50px;
+}
+  
 /* =============================== */
 /*      Create League Section       */
 /* =============================== */

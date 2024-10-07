@@ -109,6 +109,19 @@ CREATE TABLE user_schedule (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- system settings table
+CREATE TABLE IF NOT EXISTS system_settings (
+    key VARCHAR PRIMARY KEY,
+    value VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS team_standings (
+    league_team_id INT PRIMARY KEY,
+    wins INT DEFAULT 0,
+    losses INT DEFAULT 0,
+    ties INT DEFAULT 0,
+    FOREIGN KEY (league_team_id) REFERENCES league_teams(league_team_id)
+);
 
 -- Password reset token
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -214,7 +227,7 @@ CREATE TABLE IF NOT EXISTS series_player_stats (
     series_aces NUMERIC DEFAULT 0,
     avg_adr_per_series FLOAT DEFAULT 0.0,
     series_points FLOAT DEFAULT 0.0,
-	adjusted_series_points FLOAT DEFAULT 0.0,
+	adjusted_points FLOAT DEFAULT 0.0,
     FOREIGN KEY (series_id) REFERENCES series(series_id),
     FOREIGN KEY (player_id) REFERENCES player(player_id),
     CONSTRAINT unique_player_series UNIQUE (series_id, player_id)

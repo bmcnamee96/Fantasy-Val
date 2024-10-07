@@ -8,6 +8,7 @@ const saltRounds = 10; // Define the salt rounds for bcrypt
 const authenticateToken = require('../middleware/authMiddleware');
 const checkRosterLock = require('../middleware/checkRosterLock');
 const logger = require('../utils/logger');
+const cron = require('node-cron'); // For scheduling tasks
 
 const router = express.Router();
 
@@ -138,7 +139,7 @@ router.post('/join-league', authenticateToken, async (req, res) => {
 
     const userCount = parseInt(userCountResult.rows[0].user_count, 10);
 
-    if (userCount >= 7) {
+    if (userCount >= 8) {
       await pool.query('ROLLBACK');
       return res.status(400).json({ success: false, message: 'League has reached the maximum number of users (7)' });
     }
@@ -585,5 +586,321 @@ router.get('/:leagueId/schedule', authenticateToken, async (req, res) => {
       res.status(500).json({ success: false, message: 'Failed to fetch league schedule.' });
   }
 });
+
+// Endpoint to get the next opponent for the user's team
+router.get('/next-opponent/:leagueId', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  const userId = req.user.userId; // Extracted from authenticated token
+
+  try {
+    // Get the user's team ID in the league
+    const teamResult = await pool.query(
+      `SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2`,
+      [leagueId, userId]
+    );
+
+    if (teamResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Team not found for user in this league.' });
+    }
+
+    const leagueTeamId = teamResult.rows[0].league_team_id;
+
+    // Get the current week
+    const now = new Date();
+    const weekResult = await pool.query(
+      `SELECT week_number FROM weeks WHERE start_date <= $1 ORDER BY start_date DESC LIMIT 1`,
+      [now]
+    );
+
+    if (weekResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Current week not found.' });
+    }
+
+    const currentWeek = weekResult.rows[0].week_number;
+
+    // Get the next matchup for the team
+    const matchupResult = await pool.query(
+      `SELECT us.week_number, lt.team_name AS opponent_name
+       FROM user_schedule us
+       JOIN league_teams lt ON (us.home_team_id = lt.league_team_id OR us.away_team_id = lt.league_team_id)
+       WHERE us.league_id = $1
+         AND us.week_number >= $2
+         AND (us.home_team_id = $3 OR us.away_team_id = $3)
+         AND lt.league_team_id != $3
+       ORDER BY us.week_number ASC
+       LIMIT 1`,
+      [leagueId, currentWeek, leagueTeamId]
+    );
+
+    if (matchupResult.rows.length === 0) {
+      return res.status(404).json({ message: 'No upcoming matchups found.' });
+    }
+
+    const nextOpponent = matchupResult.rows[0];
+
+    res.json({
+      week_number: nextOpponent.week_number,
+      opponent_name: nextOpponent.opponent_name,
+    });
+  } catch (error) {
+    console.error('Error fetching next opponent:', error);
+    res.status(500).json({ error: 'An error occurred while fetching the next opponent.' });
+  }
+});
+
+// Endpoint to get league standings
+router.get('/:leagueId/standings', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT
+          ts.wins,
+          ts.losses,
+          ts.ties,
+          lt.team_name,
+          u.username,
+          (ts.wins * 3 + ts.ties) AS points
+       FROM
+          team_standings ts
+          INNER JOIN league_teams lt ON ts.league_team_id = lt.league_team_id
+          INNER JOIN users u ON lt.user_id = u.user_id
+       WHERE
+          lt.league_id = $1
+       ORDER BY
+          points DESC,
+          ts.wins DESC,
+          ts.ties DESC,
+          ts.losses ASC`,
+      [leagueId]
+    );
+
+    res.status(200).json({ success: true, standings: result.rows });
+  } catch (error) {
+    console.error('Error fetching league standings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch league standings.' });
+  }
+});
+
+// -------------------------------------------------------------------------- //
+
+async function processWeekIncrement() {
+  const now = new Date();
+
+  // Get the current week
+  const currentWeekResult = await pool.query(
+    `SELECT week_number
+     FROM weeks
+     WHERE start_date <= $1
+     ORDER BY start_date DESC
+     LIMIT 1`,
+    [now]
+  );
+
+  if (currentWeekResult.rows.length === 0) {
+    console.log('No current week found.');
+    return;
+  }
+
+  const currentWeek = parseInt(currentWeekResult.rows[0].week_number, 10);
+
+  // Get last processed week from database
+  const lastProcessedWeekResult = await pool.query(
+    `SELECT value FROM system_settings WHERE key = 'last_processed_week'`
+  );
+
+  let lastProcessedWeek = parseInt(lastProcessedWeekResult.rows[0].value, 10);
+
+  // Check if the week has incremented
+  if (currentWeek > lastProcessedWeek) {
+    console.log(`Week has incremented from ${lastProcessedWeek} to ${currentWeek}`);
+
+    // Process matchups for the previous week if not the first week
+    if (lastProcessedWeek > 0) {
+      const dataAvailable = await isPlayerDataAvailableForWeek(lastProcessedWeek);
+      if (!dataAvailable) {
+        console.log(`Player performance data not available for Week ${lastProcessedWeek}. Skipping processing.`);
+        return;
+      }
+
+      await processMatchupsForAllLeagues(lastProcessedWeek);
+    }
+
+    // Update lastProcessedWeek in database
+    await pool.query(
+      `UPDATE system_settings SET value = $1 WHERE key = 'last_processed_week'`,
+      [currentWeek]
+    );
+  } else {
+    console.log(`Week has not changed. Current week: ${currentWeek}`);
+  }
+}
+
+async function processMatchupsForAllLeagues(weekNumber) {
+  // Fetch all active leagues
+  const leaguesResult = await pool.query(
+    `SELECT league_id FROM leagues`
+  );
+
+  const leagues = leaguesResult.rows;
+
+  for (const league of leagues) {
+    await processMatchupsForWeek(league.league_id, weekNumber);
+  }
+}
+
+async function processMatchupsForWeek(leagueId, weekNumber) {
+  try {
+    // Fetch all matchups for the given league and week
+    const result = await pool.query(
+      `SELECT schedule_id, home_team_id, away_team_id
+       FROM user_schedule
+       WHERE league_id = $1 AND week_number = $2`,
+      [leagueId, weekNumber]
+    );
+
+    const matchups = result.rows;
+
+    // Process each matchup
+    for (const matchup of matchups) {
+      await processSingleMatchup(matchup, weekNumber);
+    }
+
+    console.log(`Matchups for League ${leagueId}, Week ${weekNumber} processed successfully.`);
+  } catch (error) {
+    console.error(`Error processing matchups for League ${leagueId}, Week ${weekNumber}:`, error);
+    throw error;
+  }
+}
+
+async function processSingleMatchup(matchup, weekNumber) {
+  const { schedule_id, home_team_id, away_team_id } = matchup;
+
+  // Fetch starters for both teams
+  const homeStarters = await getStartersForTeam(home_team_id);
+  const awayStarters = await getStartersForTeam(away_team_id);
+
+  // Fetch player performance data
+  const allPlayerIds = [...homeStarters, ...awayStarters];
+  const performanceData = await getPlayersPerformance(allPlayerIds, weekNumber);
+
+  // Calculate total points
+  const homePoints = calculateTotalPoints(homeStarters, performanceData);
+  const awayPoints = calculateTotalPoints(awayStarters, performanceData);
+
+  // Determine winner
+  let winnerTeamId = null;
+  let isTie = false;
+  if (homePoints > awayPoints) {
+    winnerTeamId = home_team_id;
+  } else if (awayPoints > homePoints) {
+    winnerTeamId = away_team_id;
+  } else {
+    isTie = true;
+  }
+
+  // Update matchup record in the database
+  await pool.query(
+    `UPDATE user_schedule
+     SET home_team_score = $1,
+         away_team_score = $2,
+         winner_team_id = $3,
+         is_tie = $4
+     WHERE schedule_id = $5`,
+    [homePoints, awayPoints, winnerTeamId, isTie, schedule_id]
+  );
+
+  // Optionally, update team standings
+  await updateTeamStandings(home_team_id, homePoints, awayPoints);
+  await updateTeamStandings(away_team_id, awayPoints, homePoints);
+}
+
+async function getStartersForTeam(leagueTeamId) {
+  const result = await pool.query(
+    `SELECT player_id
+     FROM league_team_players
+     WHERE league_team_id = $1 AND starter = true`,
+    [leagueTeamId]
+  );
+  return result.rows.map(row => row.player_id);
+}
+
+async function getPlayersPerformance(playerIds, weekNumber) {
+  const result = await pool.query(
+    `SELECT sps.player_id, sps.adjusted_points AS points
+     FROM series_player_stats sps
+     JOIN series s ON sps.series_id = s.series_id
+     WHERE sps.player_id = ANY($1::int[]) AND s.week = $2`,
+    [playerIds, weekNumber]
+  );
+  
+  const performanceData = {};
+  result.rows.forEach(row => {
+    performanceData[row.player_id] = row.points;
+  });
+
+  return performanceData;
+}
+
+function calculateTotalPoints(starters, performanceData) {
+  let totalPoints = 0;
+  starters.forEach(playerId => {
+    totalPoints += performanceData[playerId] || 0;
+  });
+  return totalPoints;
+}
+
+async function updateTeamStandings(teamId, teamPoints, opponentPoints) {
+  // Fetch current standings
+  const result = await pool.query(
+    `SELECT wins, losses, ties
+     FROM team_standings
+     WHERE league_team_id = $1`,
+    [teamId]
+  );
+
+  let { wins, losses, ties } = result.rows[0] || { wins: 0, losses: 0, ties: 0 };
+
+  // Update standings based on match result
+  if (teamPoints > opponentPoints) {
+    wins += 1;
+  } else if (teamPoints < opponentPoints) {
+    losses += 1;
+  } else {
+    ties += 1;
+  }
+
+  // Upsert the standings
+  await pool.query(
+    `INSERT INTO team_standings (league_team_id, wins, losses, ties)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (league_team_id) DO UPDATE
+     SET wins = EXCLUDED.wins,
+         losses = EXCLUDED.losses,
+         ties = EXCLUDED.ties`,
+    [teamId, wins, losses, ties]
+  );
+}
+
+// Scheduled Task to Process Week Increments and Matchups ('0 1 * * MON' - every Monday at 1 am)
+cron.schedule('0 1 * * MON', async () => {
+  try {
+    await processWeekIncrement();
+  } catch (error) {
+    console.error('Error in week increment task:', error);
+  }
+});
+
+async function isPlayerDataAvailableForWeek(weekNumber) {
+  const result = await pool.query(
+    `SELECT COUNT(*) FROM player_stats ps
+     JOIN series s ON ps.series_id = s.series_id
+     WHERE s.week = $1`,
+    [weekNumber]
+  );
+  return parseInt(result.rows[0].count, 10) > 0;
+}
+
+// -------------------------------------------------------------------------- //
 
 module.exports = router;
