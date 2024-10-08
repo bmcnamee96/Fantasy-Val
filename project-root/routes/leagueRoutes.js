@@ -317,6 +317,40 @@ router.get('/:leagueId/users', authenticateToken, async (req, res) => {
   }
 });
 
+// API Endpoint to Get Team Information for a User
+router.get('/:userId/:leagueId/team', authenticateToken, async (req, res) => {
+  const userId = req.params.userId;
+  const leagueId = req.params.leagueId;
+
+  try {
+    // Fetch the team information for the user
+    // Assuming that a user has one team per league
+    // Adjust the query based on your actual database schema
+
+    const teamResult = await pool.query(
+      `SELECT ltp.league_team_id, ltp.player_id, ltp.starter
+       FROM league_team_players ltp
+       JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
+       WHERE lt.user_id = $1 AND lt.league_id = $2`,
+      [userId, leagueId]
+    );
+
+    if (teamResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No team found for the user.' });
+    }
+
+    const teams = teamResult.rows.map(row => ({
+      playeId: row.player_id,
+      lineup: row.starter
+    }));
+
+    res.json({ teams });
+  } catch (error) {
+    logger.error('Error fetching team information:', error);
+    res.status(500).json({ error: 'Failed to fetch team information.' });
+  }
+});
+
 // API Endpoint to fetch the user's team data with points for the current week
 router.get('/my-team/:leagueId', authenticateToken, async (req, res) => {
   const { leagueId } = req.params;

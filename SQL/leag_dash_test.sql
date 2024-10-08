@@ -155,3 +155,8 @@ WHERE s.week = 2 AND player_id = 19;
 
 SELECT * FROM league_team_players;
 SELECT * FROM league_teams;
+
+SELECT ltp.league_team_id, ltp.player_id, ltp.starter
+FROM league_team_players ltp
+JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
+WHERE lt.user_id = 1 AND lt.league_id = 3;

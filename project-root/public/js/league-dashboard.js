@@ -801,13 +801,109 @@ async function fetchLeagueUsers(leagueId) {
             usersList.innerHTML = '<li class="list-group-item">No users found in this league.</li>';
         } else {
             usersList.innerHTML = users.map(user => `
-                <li class="list-group-item">${user.username}</li>
+                <li class="list-group-item">
+                    <a href="#" class="user-name" data-user-id="${user.user_id}" data-username="${user.username}">${user.username}</a>
+                    <div class="team-info mt-2" id="team-${user.id}" style="display: none;">
+                        <!-- Team details will be inserted here -->
+                    </div>
+                </li>
             `).join('');
         }
     } catch (error) {
         console.error('Error fetching users:', error);
         const usersList = document.querySelector('#users-list');
         usersList.innerHTML = '<li class="list-group-item">Failed to load users.</li>';
+    }
+}
+
+// Function to toggle team info visibility
+function toggleTeamInfo(event) {
+    event.preventDefault(); // Prevent default link behavior
+
+    const clickedElement = event.target;
+
+    // Ensure the clicked element has the 'user-name' class
+    if (clickedElement.classList.contains('user-name')) {
+        const userId = clickedElement.getAttribute('data-user-id');
+        const teamDiv = document.getElementById(`team-${userId}`);
+
+        if (teamDiv) {
+            // Toggle display
+            if (teamDiv.style.display === 'none') {
+                teamDiv.style.display = 'block';
+            } else {
+                teamDiv.style.display = 'none';
+            }
+        }
+    }
+}
+
+// Function to fetch and display team info in modal
+async function fetchAndShowTeamModal(event) {
+    event.preventDefault();
+
+    // Use closest to ensure you get the <a> element even if a child element was clicked
+    const userLink = event.target.closest('.user-name');
+
+    if (userLink) {
+        const userId = userLink.getAttribute('data-user-id');
+        console.log(userId);
+        const username = userLink.getAttribute('data-username');
+        console.log(username);
+
+        if (!userId || !username) {
+            console.error('User ID or Username not found in data attributes.');
+            return;
+        }
+
+        try {
+            // Show a loading indicator in the modal body
+            document.querySelector('#teamModal .modal-body').innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            `;
+
+            // Set modal title
+            document.getElementById('teamModalLabel').textContent = `${username}'s Team`;
+
+            // Show the modal
+            const teamModalInstance = new bootstrap.Modal(document.getElementById('teamModal'));
+            teamModalInstance.show();
+
+            console.log('userId sent to server', userId)
+            console.log('leagueId sent to server', leagueId)
+
+            // Fetch team data
+            const response = await fetch(`/api/leagues/${userId}/${leagueId}/team`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Handle unauthorized access (e.g., token expired)
+                    alert('Session expired. Please log in again.');
+                    window.location.href = '/login'; // Redirect to login page
+                    return;
+                }
+                const errorText = await response.text();
+                console.error('Error fetching team:', errorText);
+                document.querySelector('#teamModal .modal-body').textContent = 'Failed to load team information.';
+                return;
+            }
+
+            const teamData = await response.json();
+            console.log('Team data:', teamData);
+
+            // Display team information in the modal body
+            document.querySelector('#teamModal .modal-body').textContent = `Team: ${teamData}`;
+        } catch (error) {
+            console.error('Error fetching team:', error);
+            document.querySelector('#teamModal .modal-body').textContent = 'Error loading team information.';
+        }
     }
 }
 
@@ -1520,6 +1616,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Fetch users
     await fetchLeagueUsers(leagueId);
+    // Add event listener to the users list (event delegation)
+    document.getElementById('users-list').addEventListener('click', toggleTeamInfo);
+    // Add event listener to the users list (event delegation)
+    document.getElementById('users-list').addEventListener('click', fetchAndShowTeamModal);
+
 
     // fetch schedule
     await fetchLeagueSchedule(leagueId);
