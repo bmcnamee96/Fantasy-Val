@@ -847,9 +847,7 @@ async function fetchAndShowTeamModal(event) {
 
     if (userLink) {
         const userId = userLink.getAttribute('data-user-id');
-        console.log(userId);
         const username = userLink.getAttribute('data-username');
-        console.log(username);
 
         if (!userId || !username) {
             console.error('User ID or Username not found in data attributes.');
@@ -858,21 +856,11 @@ async function fetchAndShowTeamModal(event) {
 
         try {
             // Show a loading indicator in the modal body
-            document.querySelector('#teamModal .modal-body').innerHTML = `
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            `;
+            const modalBody = document.getElementById('modal-body');
+            modalBody.innerHTML = '<p>Loading...</p>';
 
             // Set modal title
             document.getElementById('teamModalLabel').textContent = `${username}'s Team`;
-
-            // Show the modal
-            const teamModalInstance = new bootstrap.Modal(document.getElementById('teamModal'));
-            teamModalInstance.show();
-
-            console.log('userId sent to server', userId)
-            console.log('leagueId sent to server', leagueId)
 
             // Fetch team data
             const response = await fetch(`/api/leagues/${userId}/${leagueId}/team`, {
@@ -891,21 +879,91 @@ async function fetchAndShowTeamModal(event) {
                 }
                 const errorText = await response.text();
                 console.error('Error fetching team:', errorText);
-                document.querySelector('#teamModal .modal-body').textContent = 'Failed to load team information.';
+                modalBody.innerHTML = '<p>Failed to load team information.</p>';
                 return;
             }
 
-            const teamData = await response.json();
-            console.log('Team data:', teamData);
+            let teamData = await response.json();
 
-            // Display team information in the modal body
-            document.querySelector('#teamModal .modal-body').textContent = `Team: ${teamData}`;
+            // Debugging: Log teamData to verify structure
+            console.log('Fetched team data:', teamData);
+
+            // Clear the loading indicator
+            modalBody.innerHTML = '';
+
+            // Map player IDs to player names using the provided function
+            teamData.teams = await mapPlayerIdsToNames(teamData.teams);
+
+            // Debugging: Log mapped team data
+            console.log('Mapped team data:', teamData);
+
+            // Check if teamData has players
+            if (teamData.teams && teamData.teams.length > 0) {
+                // Build the HTML content for the team
+                let teamHtml = '<ul>';
+
+                teamData.teams.forEach(player => {
+                    // Ensure player_name and team_abrev exist
+                    const playerName = player.player_name.player_name || 'Unknown';
+                    const teamAbrev = player.player_name.team_abrev || 'Unknown';
+                    const lineupStatus = player.lineup ? 'Starter' : 'Bench';
+                    const badgeClass = player.lineup ? 'starting' : 'bench';
+
+                    // Access playerId correctly (fix typo)
+                    const playerId = player.playeId || player.player_id || 'Unknown';
+
+                    // Display team_abrev followed by player_name
+                    teamHtml += `
+                        <li>
+                            <span>${teamAbrev} ${playerName}</span>
+                            <span class="badge ${badgeClass}">${lineupStatus}</span>
+                            <button>Trade</button>
+                        </li>
+                    `;
+                });
+
+                teamHtml += '</ul>';
+
+                // Insert the generated team HTML into the modal body
+                modalBody.innerHTML = teamHtml;
+            } else {
+                // If no team data found, display a message
+                modalBody.innerHTML = '<p>No players found for this team.</p>';
+            }
+
+            // Show the modal
+            openModal();
+
         } catch (error) {
             console.error('Error fetching team:', error);
-            document.querySelector('#teamModal .modal-body').textContent = 'Error loading team information.';
+            modalBody.innerHTML = '<p>Error loading team information.</p>';
         }
     }
 }
+
+// Function to open the modal
+function openModal() {
+    const modal = document.getElementById('teamModal');
+    modal.style.display = 'block';
+}
+
+// Function to close the modal
+function closeModal() {
+    const modal = document.getElementById('teamModal');
+    modal.style.display = 'none';
+}
+
+// Event listeners for close buttons
+document.querySelector('.close-button').addEventListener('click', closeModal);
+document.getElementById('close').addEventListener('click', closeModal);
+
+// Optionally, close the modal when clicking outside of it
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('teamModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+});
 
 async function fetchMyTeam() {
     if (!leagueId) {
@@ -1021,6 +1079,23 @@ async function fetchPlayerIdsByName(playerNames) {
     }
 }
 
+async function fetchPlayerNamesByIds(playerIds) {
+    const response = await fetch(`/api/leagues/ids-to-names`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ playerIds })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch player names');
+    }
+
+    return await response.json(); // Should return an object like { "player_id_1": "player_name_1", "player_id_2": "player_name_2", ... }
+}
+
 async function fetchAvailablePlayers() {
     try {
         const response = await fetch(`/api/leagues/${leagueId}/available-players`, {
@@ -1071,6 +1146,18 @@ async function mapPlayerNamesToIds(players) {
     return players.map(player => ({
         ...player,
         player_id: playerMap[player.player_name] || null // Use player name to find player_id
+    }));
+}
+
+async function mapPlayerIdsToNames(players) {
+    const playerIds = players.map(player => player.playeId); // Collect player IDs
+    const playerMap = await fetchPlayerNamesByIds(playerIds); // Fetch player names
+
+    console.log('playerMap:', playerMap); // Log the playerMap for debugging
+
+    return players.map(player => ({
+        ...player,
+        player_name: playerMap[player.playeId] || 'Unknown' // Use player ID to find player_name
     }));
 }
 
@@ -1208,19 +1295,34 @@ async function handleSignPlayer(event) {
 // Function to open the modal and populate bench players
 function openDropPlayerModal(eligiblePlayers, playerIdToSign) {
     const modal = document.getElementById('dropPlayerModal');
-    const select = document.getElementById('benchPlayersSelect');
+    const benchPlayersContainer = document.getElementById('benchPlayersSelect');
     const confirmButton = document.getElementById('confirmDrop');
+    const cancelButton = document.getElementById('cancelDrop');
     const closeButton = document.querySelector('.close-button');
+    let selectedPlayerId = null; // Track the selected player to drop
 
-    // Clear previous options
-    select.innerHTML = '';
+    // Clear previous content
+    benchPlayersContainer.innerHTML = '';
 
-    // Populate the select with eligible players
+    // Populate the container with eligible players as clickable items
     eligiblePlayers.forEach(player => {
-        const option = document.createElement('option');
-        option.value = player.player_id;
-        option.textContent = `${player.team_abrev} ${player.player_name}`;
-        select.appendChild(option);
+        const playerItem = document.createElement('div');
+        playerItem.className = 'player-item';
+        playerItem.textContent = `${player.team_abrev} ${player.player_name}`;
+        playerItem.dataset.playerId = player.player_id;
+
+        // Handle click to select the player
+        playerItem.onclick = () => {
+            // Deselect all other player items
+            document.querySelectorAll('.player-item').forEach(item => item.classList.remove('selected'));
+            
+            // Mark the clicked player as selected
+            playerItem.classList.add('selected');
+            selectedPlayerId = player.player_id;
+        };
+
+        // Add the player item to the container
+        benchPlayersContainer.appendChild(playerItem);
     });
 
     // Show the modal
@@ -1228,8 +1330,7 @@ function openDropPlayerModal(eligiblePlayers, playerIdToSign) {
 
     // Handle the confirm button click
     confirmButton.onclick = async () => {
-        const playerToDropId = select.value;
-        if (!playerToDropId) {
+        if (!selectedPlayerId) {
             showToast('Please select a player to drop.', 'info');
             return;
         }
@@ -1238,7 +1339,12 @@ function openDropPlayerModal(eligiblePlayers, playerIdToSign) {
         modal.style.display = 'none';
 
         // Send the sign and drop request to the backend
-        await signPlayer(leagueId, token, playerIdToSign, playerToDropId);
+        await signPlayer(leagueId, token, playerIdToSign, selectedPlayerId);
+    };
+
+    // Handle the cancel button click to close the modal
+    cancelButton.onclick = () => {
+        modal.style.display = 'none';
     };
 
     // Handle the close button click
@@ -1620,6 +1726,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('users-list').addEventListener('click', toggleTeamInfo);
     // Add event listener to the users list (event delegation)
     document.getElementById('users-list').addEventListener('click', fetchAndShowTeamModal);
+    // Add an event listener for closing the modal
+    document.getElementById('teamModal').addEventListener('hidden.bs.modal', closeModal);
 
 
     // fetch schedule

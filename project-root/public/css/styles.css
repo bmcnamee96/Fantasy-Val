@@ -664,17 +664,40 @@ body.dark-theme #message-area {
     gap: 10px; /* Adjust the spacing between items */
 }
 
+/* Style for each player item */
 .player-item {
-    flex: 1 1 calc(33.333% - 10px); /* 3 columns with a gap of 10px */
-    box-sizing: border-box;
     padding: 10px;
-    border: 1px solid var(--table-border-color);
-    border-radius: var(--border-radius);
-    background-color: var(--card-background);
+    margin: 5px 0;
+    background-color: var(--background-color);
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
 }
 
-.player-item button {
-    margin-top: 5px;
+/* Style for the selected player */
+.player-item.selected {
+    background-color: var(--accent-color);
+    color: var(--text-color);
+}
+
+/* Cancel button style */
+#cancelDrop #confirmDrop {
+    border: 1px solid var(--secondary-color);
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+/* Hover effect for player items */
+.player-item:hover {
+    background-color: var(--button-bg-color);
+}
+
+#confirmDrop:hover {
+    background-color: var(--accent-color);
+}
+
+#cancelDrop:hover {
+    background-color: var(--accent-color);
 }
 
 /* =============================== */
@@ -1387,7 +1410,7 @@ th[data-sort="desc"]::after {
 .my-leagues-card,
 .actions {
     background-color: var(--my-leagues-card-bg);
-    color: var(--my-leagues-card-text);
+    color: var(--my-leagues-area-text);
     border: 1px solid var(--table-border-color);
     transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
@@ -1444,7 +1467,7 @@ margin-top: 0;
   
 .opponent p {
 font-size: 1.2em;
-color: #333;
+color: var(--text-color);
 }
 
 .ranking table {
@@ -1529,7 +1552,7 @@ color: #333;
     left: 50%;
     transform: translateX(-50%);
     background-color: #dc3a25; /* Red background */
-    color: #ffffff; /* White text */
+    color: var(--card-text-color); /* White text */
     padding: 15px;
     border-radius: 5px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -1587,6 +1610,74 @@ color: #333;
     background-color: #ccc;
 }
 
+/* Modal header */
+#teamModalLabel {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* List of players */
+#modal-body ul {
+    list-style: none;
+    padding: 0;
+}
+
+#modal-body li {
+    background-color: var(--background-color);
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Player ID text */
+#modal-body li span {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+/* Status badge (lineup/bench) */
+.badge {
+    padding: 0.5em 1em;
+    border-radius: 5px;
+    font-size: 0.9rem;
+}
+
+.badge.starting {
+    background-color: var(--starter-bg); /* Green for Starting Lineup */
+    color: var(--card-text-color);
+}
+
+.badge.bench {
+    background-color: var(--bench-bg); /* Red for Bench */
+    color: var(--card-text-color);
+}
+
+/* Close button styling */
+.action-button.close {
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.action-button.close:hover {
+    background-color: var(--accent-color);
+}
+
+/* Responsive modal */
+@media screen and (max-width: 768px) {
+    .modal-content {
+        width: 90%;
+    }
+}
 
 /* =============================== */
 /*        Accessibility Styles      */
@@ -1711,7 +1802,7 @@ button {
 /* =============================== */
 /* League Link Styles */
 .league-link {
-    color: var(--text-color);
+    color: var(--card-text-color);
     text-decoration: none;
     font-size: 1.25rem;
     display: block;
@@ -1765,3 +1856,4 @@ footer {
     transition: background-color 0.3s, color 0.3s;
     margin-top: 0;
 }
+

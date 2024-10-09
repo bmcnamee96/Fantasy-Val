@@ -244,30 +244,46 @@
             <div class="modal-content">
                 <span class="close-button">&times;</span>
                 <h3>Select a Player to Drop</h3>
-                <select id="benchPlayersSelect">
+                <div id="benchPlayersSelect">
                     <!-- Bench players will be populated here -->
-                </select>
+                </div>
                 <button id="confirmDrop">Confirm</button>
+                <button id="cancelDrop">Cancel</button> 
             </div>
         </div>
 
-        <!-- Users Team Modal Structure -->
-        <div class="modal fade" id="teamModal" tabindex="-1" aria-labelledby="teamModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
+        <!-- Team Modal -->
+        <div id="teamModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h3 id="teamModalLabel">Team Info</h3>
+                <div id="modal-body">
+                    <!-- Team content will be injected here -->
+                </div>
+                <button id="close" class="action-button close">Close</button>
+            </div>
+        </div>
+
+
+
+
+        <!-- <div class="modal" id="teamModal" tabindex="-1" aria-labelledby="teamModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                <h1 class="modal-title fs-5" id="teamModalLabel">Team Information</h1>
+                <h5 class="modal-title" id="teamModalLabel">Team Info</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                <!-- Team details will be inserted here -->
+
                 </div>
                 <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
             </div>
-        </div>
+        </div> -->
+  
 
     </main>
 

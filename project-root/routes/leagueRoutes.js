@@ -656,6 +656,42 @@ router.post('/player-names-to-id', async (req, res) => {
   }
 });
 
+// Route to fetch player names by player IDs
+router.post('/ids-to-names', async (req, res) => {
+  const { playerIds } = req.body; // Get the array of player IDs from the request body
+
+  if (!playerIds || !Array.isArray(playerIds)) {
+      return res.status(400).json({ error: 'Invalid input, expected an array of player IDs.' });
+  }
+
+  try {
+      // Query the database for the player names and team abbreviations based on the provided IDs
+      const query = `
+          SELECT player_id, player_name, team_abrev
+          FROM player
+          WHERE player_id = ANY($1::int[])
+      `;
+      const result = await pool.query(query, [playerIds]);
+
+      // Create a mapping of player_id to an object containing player_name and team_abrev
+      const playerMap = {};
+      result.rows.forEach(row => {
+          playerMap[row.player_id] = {
+              player_name: row.player_name,
+              team_abrev: row.team_abrev || 'Unknown'  // Return 'Unknown' if team_abrev is null
+          };
+      });
+
+      // Return the mapping
+      return res.json(playerMap);
+
+  } catch (error) {
+      console.error('Error fetching player names and team abbreviations:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 router.get('/current-week', async (req, res) => {
   try {
       const now = new Date(); // Current server time in UTC
