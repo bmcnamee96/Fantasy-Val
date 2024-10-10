@@ -2,6 +2,8 @@
 
 const token = localStorage.getItem('token');
 let leagueId = getLeagueIdFromUrl(); // Extract league ID from URL
+const currentUserId = getUserIdFromToken();
+let currentUserTeamId;
 let currentWeek = null; // Start with the first week
 let timerInterval = null;
 let weeksData = []; // Array to store weeks data
@@ -90,7 +92,8 @@ function getLeagueIdFromUrl() {
     return urlParams.get('leagueId');
 }
 
-function getUserIdFromToken(token) {
+function getUserIdFromToken() {
+    const token = localStorage.getItem('token')
     if (!token) {
         console.error('No token provided');
         return null;
@@ -109,6 +112,34 @@ function getUserIdFromToken(token) {
         return null;
     }
 }
+
+// Function to fetch the current user's team ID
+async function fetchCurrentUserTeamId() {
+    try {
+        const response = await fetch(`/api/leagues/${leagueId}/team-id`, {
+            headers: {
+                'Authorization': `Bearer ${token}` // Replace with your actual token
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch user team ID: ' + response.statusText);
+        }
+
+        const result = await response.json();
+        currentUserTeamId = result.teamId; // Set the currentUserTeamId
+        console.log('Current User Team ID:', currentUserTeamId);
+    } catch (error) {
+        console.error('Error fetching current user team ID:', error);
+    }
+}
+
+// Fetch the current user's team ID when the page loads
+document.addEventListener('DOMContentLoaded', async () => {
+    await fetchCurrentUserTeamId();
+    await fetchAndDisplayActiveTrades(); // Fetch active trades after setting currentUserTeamId
+});
+
 
 async function openDraft() {
     try {
@@ -910,14 +941,13 @@ async function fetchAndShowTeamModal(event) {
                     const badgeClass = player.lineup ? 'starting' : 'bench';
 
                     // Access playerId correctly (fix typo)
-                    const playerId = player.playeId || player.player_id || 'Unknown';
+                    const playerId = player.playerId || player.player_id || 'Unknown';
 
                     // Display team_abrev followed by player_name
                     teamHtml += `
                         <li>
                             <span>${teamAbrev} ${playerName}</span>
                             <span class="badge ${badgeClass}">${lineupStatus}</span>
-                            <button>Trade</button>
                         </li>
                     `;
                 });
@@ -1150,14 +1180,14 @@ async function mapPlayerNamesToIds(players) {
 }
 
 async function mapPlayerIdsToNames(players) {
-    const playerIds = players.map(player => player.playeId); // Collect player IDs
+    const playerIds = players.map(player => player.playerId); // Collect player IDs
     const playerMap = await fetchPlayerNamesByIds(playerIds); // Fetch player names
 
     console.log('playerMap:', playerMap); // Log the playerMap for debugging
 
     return players.map(player => ({
         ...player,
-        player_name: playerMap[player.playeId] || 'Unknown' // Use player ID to find player_name
+        player_name: playerMap[player.playerId] || 'Unknown' // Use player ID to find player_name
     }));
 }
 
@@ -1704,6 +1734,298 @@ async function saveLineup() {
 
 // -------------------------------------------------------------------------- //
 
+const startTradeBtn = document.getElementById('startTrade');
+const tradeModal = document.getElementById('tradeModal');
+const tradeForm = document.getElementById('tradeForm');
+const recipientSelect = document.getElementById('recipient');
+const myPlayerSelect = document.getElementById('myPlayer');
+const theirPlayerSelect = document.getElementById('theirPlayer');
+const sendTradeRequestBtn = document.getElementById('sendTradeRequest');
+
+// Open Modal
+startTradeBtn.addEventListener('click', openTradeModal);
+window.addEventListener('click', (event) => {
+    if (event.target == tradeModal) {
+        closeTradeModal();
+    }
+});
+
+// Modal functions
+function openTradeModal() {
+    tradeModal.style.display = 'block';
+    populateTradeForm();
+}
+
+function closeTradeModal() {
+    tradeModal.style.display = 'none';
+}
+
+// Fetch users and players to populate the form
+async function populateTradeForm() {
+    console.log(leagueId);
+    try {
+        const response = await fetch(`/api/leagues/${leagueId}/users`, {
+            headers: {
+                'Authorization': `Bearer ${token}` // Replace with your actual token
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
+
+        const users = await response.json();
+        console.log('Fetched Users:', users);
+
+        // Populate recipients (exclude current user)
+        recipientSelect.innerHTML = `<option value="">Select a user</option>` +
+            users
+            .filter(user => user.user_id !== currentUserId)
+            .map(user => `<option value="${user.user_id}">${user.username}</option>`)
+            .join('');
+
+        const myPlayersResponse = await fetch(`/api/leagues/${currentUserId}/${leagueId}/team`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!myPlayersResponse.ok) {
+            throw new Error('Failed to fetch my players: ' + myPlayersResponse.statusText);
+        }
+
+        const myPlayers = await myPlayersResponse.json();
+
+        // MAP PLAYER IDS TO NAMES HERE
+        const playerIds = myPlayers.teams.map(player => player.playerId);
+
+        // Fetch player details for all player IDs
+        try {
+            const players = await fetchPlayerNamesByIds(playerIds);
+            console.log('My Players:', players);
+
+            // Map player details to the dropdown options
+            myPlayerSelect.innerHTML = `<option value="">Select your player</option>` +
+                playerIds
+                    .map(playerId => {
+                        const player = players[playerId];
+                        return `<option value="${playerId}">${player.team_abrev} ${player.player_name} (${player.role})</option>`;
+                    })
+                    .join('');
+
+        } catch (error) {
+            console.error('Failed to fetch player details:', error);
+        }
+
+        // Add event listener to recipientSelect to fetch and populate their players
+        recipientSelect.addEventListener('change', async function () {
+            const selectedUserId = recipientSelect.value;
+            if (!selectedUserId) {
+                // Clear the "Their Players" dropdown if no user is selected
+                theirPlayerSelect.innerHTML = `<option value="">Select their player</option>`;
+                return;
+            }
+
+            try {
+                // Fetch the selected user's players
+                const theirPlayersResponse = await fetch(`/api/leagues/${selectedUserId}/${leagueId}/team`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!theirPlayersResponse.ok) {
+                    throw new Error('Failed to fetch their players: ' + theirPlayersResponse.statusText);
+                }
+
+                const theirPlayers = await theirPlayersResponse.json();
+                
+
+                // Map player IDs to names
+                const theirPlayerIds = theirPlayers.teams.map(player => player.playerId);
+                const theirPlayersDetails = await fetchPlayerNamesByIds(theirPlayerIds);
+
+                console.log('Their Players:', theirPlayersDetails);
+
+                // Populate "Their Players" dropdown
+                theirPlayerSelect.innerHTML = `<option value="">Select their player</option>` +
+                    theirPlayerIds
+                        .map(playerId => {
+                            const player = theirPlayersDetails[playerId];
+                            return `<option value="${playerId}">${player.team_abrev} ${player.player_name} (${player.role})</option>`;
+                        })
+                        .join('');
+            } catch (error) {
+                console.error('Failed to fetch or populate their players:', error);
+            }
+        });
+
+    } catch (error) {
+        console.error('Error populating trade form:', error);
+    }
+}
+
+// Handle sending trade request
+sendTradeRequestBtn.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const selectedRecipient = recipientSelect.value;
+    const selectedMyPlayer = myPlayerSelect.value;
+    const selectedTheirPlayer = theirPlayerSelect.value;
+
+    // Validate form inputs
+    if (!selectedRecipient || !selectedMyPlayer || !selectedTheirPlayer) {
+        alert('Please select a recipient and players for the trade.');
+        return;
+    }
+
+    try {
+        // Make a POST request to send the trade request
+        const response = await fetch(`/api/leagues/${leagueId}/trade-request`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                senderPlayerId: selectedMyPlayer,
+                receiverPlayerId: selectedTheirPlayer,
+                receiverUserId: selectedRecipient
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to send trade request.');
+        }
+
+        // Refresh the trade list after a successful trade request
+        await fetchAndDisplayActiveTrades();
+
+        // Show success message and close the modal
+        alert('Trade request sent successfully!');
+        closeTradeModal();
+    } catch (error) {
+        console.error('Failed to send trade request:', error);
+        alert('Failed to send trade request: ' + error.message);
+    }
+});
+
+const tradesContent = document.getElementById('trades-content');
+
+async function fetchAndDisplayActiveTrades() {
+    try {
+        const response = await fetch(`/api/leagues/${leagueId}/active-trades`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch active trades: ' + response.statusText);
+        }
+
+        const result = await response.json();
+        const { trades } = result;
+
+        // Get the tradeList container
+        const tradeList = document.getElementById('tradeList');
+        tradeList.innerHTML = ''; // Clear the existing trade list content
+
+        // Add each active trade to the tradeList div
+        trades.forEach(trade => {
+            const tradeDiv = document.createElement('div');
+            tradeDiv.classList.add('trade');
+
+            // Add a different class based on whether the user initiated or received the trade
+            const tradeStatusClass = trade.sender_team_id === currentUserTeamId ? 'trade-initiated' : 'trade-requested';
+            tradeDiv.classList.add(tradeStatusClass);
+
+            const tradeWithUser = trade.sender_team_id === currentUserTeamId ? trade.receiver_username : trade.sender_username;
+
+            (async () => {
+                // Map the player IDs to player names
+                const mappedSenderPlayer = await mapPlayerIdsToNames([{ playerId: trade.sender_player_id }]);
+                const mappedReceiverPlayer = await mapPlayerIdsToNames([{ playerId: trade.receiver_player_id }]);
+
+                // Add trade details
+                tradeDiv.innerHTML = `
+                    <span>Trade with ${tradeWithUser}: ${mappedSenderPlayer[0].player_name.team_abrev} 
+                    ${mappedSenderPlayer[0].player_name.player_name} for ${mappedReceiverPlayer[0].player_name.team_abrev} 
+                    ${mappedReceiverPlayer[0].player_name.player_name}</span>
+                `;
+
+                // Create Accept button
+                if (trade.receiver_team_id === currentUserTeamId && trade.status === 'Pending') {
+                    const acceptButton = document.createElement('button');
+                    acceptButton.textContent = 'Accept';
+                    acceptButton.addEventListener('click', () => handleTradeAction(trade.trade_request_id, 'accept'));
+                    tradeDiv.appendChild(acceptButton);
+                }
+
+                // Create Reject button
+                if (trade.receiver_team_id === currentUserTeamId && trade.status === 'Pending') {
+                    const rejectButton = document.createElement('button');
+                    rejectButton.textContent = 'Reject';
+                    rejectButton.addEventListener('click', () => handleTradeAction(trade.trade_request_id, 'reject'));
+                    tradeDiv.appendChild(rejectButton);
+                }
+
+                // Create Cancel button for the trade initiator
+                if (trade.sender_team_id === currentUserTeamId && trade.status === 'Pending') {
+                    const cancelButton = document.createElement('button');
+                    cancelButton.textContent = 'Cancel';
+                    cancelButton.addEventListener('click', () => handleTradeAction(trade.trade_request_id, 'cancel'));
+                    tradeDiv.appendChild(cancelButton);
+                }
+            })();
+
+            tradeList.appendChild(tradeDiv);
+        });
+    } catch (error) {
+        console.error('Error fetching or displaying active trades:', error);
+    }
+}
+
+async function handleTradeAction(tradeRequestId, action) {
+    try {
+        let endpoint;
+        if (action === 'accept') {
+            endpoint = `/api/leagues/trade-request/${tradeRequestId}/accept`;
+        } else if (action === 'reject') {
+            endpoint = `/api/leagues/trade-request/${tradeRequestId}/reject`;
+        } else if (action === 'cancel') {
+            endpoint = `/api/leagues/trade-request/${tradeRequestId}/cancel`;
+        }
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || `Failed to ${action} trade request.`);
+        }
+
+        // Refresh the trade list after the action
+        await fetchAndDisplayActiveTrades();
+
+        // Show a success message
+        alert(`Trade request ${action}ed successfully!`);
+    } catch (error) {
+        console.error(`Failed to ${action} trade request:`, error);
+        alert(`Failed to ${action} trade request: ${error.message}`);
+    }
+}
+
+// -------------------------------------------------------------------------- //
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for league-dashboard.js');
 
@@ -1728,6 +2050,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('users-list').addEventListener('click', fetchAndShowTeamModal);
     // Add an event listener for closing the modal
     document.getElementById('teamModal').addEventListener('hidden.bs.modal', closeModal);
+
+    await fetchCurrentUserTeamId();
+    // Initial fetch of active trades
+    fetchAndDisplayActiveTrades();
 
 
     // fetch schedule

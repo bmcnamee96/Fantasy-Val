@@ -160,3 +160,5 @@ SELECT ltp.league_team_id, ltp.player_id, ltp.starter
 FROM league_team_players ltp
 JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
 WHERE lt.user_id = 1 AND lt.league_id = 3;
+
+SELECT * FROM trade_requests;

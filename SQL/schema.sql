@@ -73,6 +73,24 @@ CREATE TABLE IF NOT EXISTS league_team_players (
     CONSTRAINT unique_player_per_team UNIQUE(league_team_id, player_id)
 );
 
+-- trade requests table
+CREATE TABLE trade_requests (
+    trade_request_id SERIAL PRIMARY KEY,
+    league_id INTEGER NOT NULL,
+    sender_team_id INTEGER NOT NULL,
+    receiver_team_id INTEGER NOT NULL,
+    sender_player_id INTEGER NOT NULL,
+    receiver_player_id INTEGER NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Pending', -- 'Pending', 'Accepted', 'Rejected'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (league_id) REFERENCES leagues(league_id),
+    FOREIGN KEY (sender_team_id) REFERENCES league_teams(league_team_id),
+    FOREIGN KEY (receiver_team_id) REFERENCES league_teams(league_team_id),
+    FOREIGN KEY (sender_player_id) REFERENCES player(player_id),
+    FOREIGN KEY (receiver_player_id) REFERENCES player(player_id)
+);
+
+
 -- drafted players table
 CREATE TABLE IF NOT EXISTS drafted_players (
     drafted_player_id SERIAL PRIMARY KEY,

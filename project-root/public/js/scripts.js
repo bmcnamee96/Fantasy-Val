@@ -94,6 +94,11 @@ function updateUI() {
     }
 }
 
+function toggleMenu() {
+    const navLinksContainer = document.querySelector(".nav-links-container");
+    navLinksContainer.classList.toggle("show");
+}
+
 // Theme Toggle Functionality
 
 // Function to update the theme icon
@@ -202,11 +207,16 @@ async function fetchUserLeagues() {
                 const leagueCard = document.createElement('div');
                 leagueCard.className = 'card mb-3';
 
-                leagueCard.innerHTML = `
+                // Truncate description to the first 50 characters and add "..."
+                const truncatedDescription = league.description && league.description.length > 50 
+                    ? league.description.substring(0, 50) + '...'
+                    : league.description || 'No description available.';
+
+                    leagueCard.innerHTML = `
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="card-title mb-1">${league.league_name}</h5>
-                            <p class="card-text mb-0">${league.description || 'No description available.'}</p>
+                            <p class="card-text mb-0">${truncatedDescription}</p>
                         </div>
                         <button class="btn btn-primary" onclick="location.href='league-dashboard.html?leagueId=${league.league_id}'">View League</button>
                     </div>
@@ -414,13 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const signinBtn = document.getElementById("signinBtn");
     const signupClose = document.getElementById("signupClose");
     const signinClose = document.getElementById("signinClose");
-
-    console.log('signupModal:', signupModal);
-    console.log('signinModal:', signinModal);
-    console.log('signupBtn:', signupBtn);
-    console.log('signinBtn:', signinBtn);
-    console.log('signupClose:', signupClose);
-    console.log('signinClose:', signinClose);
 
     // Show signup modal on click
     if (signupBtn) {

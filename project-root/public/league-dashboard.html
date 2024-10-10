@@ -51,23 +51,30 @@
             <a href="index.html" class="logo-section">
                 <img src="images/favicon.png" alt="FV Logo">
             </a>
-            <ul class="nav-links">
-                <li><a href="my-dashboard.html">My Dashboard</a></li>
-                <li><a href="player-stats.html">Player Stats</a></li>
-                <li><a href="feedback.html">Feedback</a></li>
-            </ul>
             
-            <div class="nav-right">
-                <div id="authLinks" class="auth-buttons">
-                    <button id="signupBtn">Sign Up</button>
-                    <button id="signinBtn">Sign In</button>
-                </div>
-                <div id="welcomeMessage" class="welcome-message" style="display: none;">
-                    WELCOME&nbsp;&nbsp;<span id="usernameSpan" class="username"></span>!
-                </div>
-                <button id="signoutBtn" style="display: none;">Sign Out</button>
+            <!-- Menu Toggle Button for Small Screens -->
+            <button class="menu-toggle" aria-label="Toggle Navigation" onclick="toggleMenu()">☰</button>
 
-                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌙</button>
+            <!-- Navigation Links Container -->
+            <div class="nav-links-container" id="navLinksContainer">
+                <ul class="nav-links">
+                    <li><a href="my-dashboard.html">My Dashboard</a></li>
+                    <li><a href="player-stats.html">Player Stats</a></li>
+                    <li><a href="feedback.html">Feedback</a></li>
+                </ul>
+                
+                <div class="nav-right">
+                    <div id="authLinks" class="auth-buttons">
+                        <button id="signupBtn">Sign Up</button>
+                        <button id="signinBtn">Sign In</button>
+                    </div>
+                    <div id="welcomeMessage" class="welcome-message" style="display: none;">
+                        WELCOME&nbsp;&nbsp;<span id="usernameSpan" class="username"></span>!
+                    </div>
+                    <button id="signoutBtn" style="display: none;">Sign Out</button>
+
+                    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌙</button>
+                </div>
             </div>
         </div>
     </nav>
@@ -155,15 +162,11 @@
                     </div>
                 </div>
                 <div id="trades-content" class="tab-content">
-                    <div class="trade trade-initiated">
-                        <span>Trade with User A</span>
-                        <span>Initiated</span>
-                    </div>
-                    <div class="trade trade-requested">
-                        <span>Trade with User B</span>
-                        <span>Requested</span>
-                    </div>
+                    <button id="startTrade">Start Trade Request</button>
+                    <div id="tradeList"></div> 
+                        <!-- Trades will be dynamically inserted here -->
                 </div>
+                             
                 <div id="free-agents-content" class="tab-content">
                     <div id="free-agents-container"></div>
                         <!-- Players will be dynamically inserted here -->
@@ -242,7 +245,6 @@
         <!-- Modal for Selecting Player to Drop -->
         <div id="dropPlayerModal" class="modal">
             <div class="modal-content">
-                <span class="close-button">&times;</span>
                 <h3>Select a Player to Drop</h3>
                 <div id="benchPlayersSelect">
                     <!-- Bench players will be populated here -->
@@ -252,10 +254,34 @@
             </div>
         </div>
 
+        <!-- Trade Form Modal -->
+        <div id="tradeModal" class="modal">
+            <div class="modal-content">
+                <h2>Start a Trade</h2>
+                <form id="tradeForm">
+                    <label for="recipient">Trade with:</label>
+                    <select id="recipient" name="recipient" required>
+                        <!-- Options populated dynamically -->
+                    </select>
+
+                    <label for="myPlayer">Your Player:</label>
+                    <select id="myPlayer" name="myPlayer" required>
+                        <!-- Options populated dynamically -->
+                    </select>
+
+                    <label for="theirPlayer">Their Player:</label>
+                    <select id="theirPlayer" name="theirPlayer" required>
+                        <!-- Options populated dynamically -->
+                    </select>
+
+                    <button id="sendTradeRequest" type="submit">Send Trade Request</button>
+                </form>
+            </div>
+        </div>
+
         <!-- Team Modal -->
         <div id="teamModal" class="modal" style="display: none;">
             <div class="modal-content">
-                <span class="close-button">&times;</span>
                 <h3 id="teamModalLabel">Team Info</h3>
                 <div id="modal-body">
                     <!-- Team content will be injected here -->

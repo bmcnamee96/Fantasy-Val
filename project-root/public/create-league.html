@@ -121,10 +121,9 @@
 
     <!-- Main Content -->
     <main class="container-fluid">
-        <h1>Create a League</h1>
-
-        <!-- Create League and Join a League Sections -->
-        <div class="col">
+        <!-- Create League Section -->
+        <div class="col" id="create-league-section">
+            <h1 id="createLeague">Create a League</h1>
             <form id="create-league-form" class="form">
                 <div class="form-group row">
                     <div class="col-md-6">
@@ -135,14 +134,15 @@
                     </div>
                     <div class="col-md-12">
                         <textarea class="form-control" id="description" name="description" placeholder="Description" rows="4" maxlength="250"></textarea>
-                        <small id="charCount" class="form-text text-muted">0/250</small>
                     </div>
-                    <input type="text" name="team_name" placeholder="Enter your team name" required>
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="team_name" name="team_name" placeholder="Enter your team name" required>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary">Create League</button>
             </form>
 
-            <!--Error Message Popup for Creating Leagues!-->
+            <!-- Error Message Popup for Creating Leagues -->
             <div id="error-modal" class="modal">
                 <div class="modal-content">
                     <span class="close-button">&times;</span>
@@ -151,6 +151,7 @@
             </div>
         </div>
     </main>
+
 
 
 

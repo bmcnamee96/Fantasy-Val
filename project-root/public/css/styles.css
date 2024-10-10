@@ -128,29 +128,87 @@ body.theme-ready {
     opacity: 1;
 }
 
+/* Base Navbar Styles */
 nav {
     background-color: var(--nav-background);
     color: var(--nav-text-color);
-    position: fixed; 
+    position: fixed;
     top: 0;
     width: 100%;
-    z-index: 1100; 
+    z-index: 1100;
     padding: 10px 0;
     transition: background-color 0.3s, color 0.3s;
 }
 
+/* Menu Toggle Button for Small Screens */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--nav-text-color);
+}
+
+/* Navbar Container */
 nav .container {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
+/* Logo Styling */
 .logo-section img {
-    max-width: 60px; /* Adjust the maximum width of the logo */
-    height: auto; /* Maintain aspect ratio */
-    margin-right: 10px; /* Add spacing between logo and links */
+    max-width: 60px;
+    height: auto;
+    margin-right: 10px;
 }
 
+/* Base Navbar Styles */
+nav {
+    background-color: var(--nav-background);
+    color: var(--nav-text-color);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1100;
+    padding: 10px 0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Menu Toggle Button for Small Screens */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--nav-text-color);
+}
+
+/* Navbar Container */
+nav .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Logo Styling */
+.logo-section img {
+    max-width: 60px;
+    height: auto;
+    margin-right: 10px;
+}
+
+/* Navigation Links Container */
+.nav-links-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-grow: 1;
+}
+
+/* Navigation Links */
 .nav-links {
     list-style: none;
     display: flex;
@@ -175,9 +233,72 @@ nav .container {
     background-color: var(--red-light);
 }
 
+/* Auth and Theme Controls */
 .nav-right {
     display: flex;
     align-items: center;
+}
+
+/* Responsive Styles for Small Screens */
+@media (max-width: 768px) {
+    .nav-links-container {
+        display: none; /* Hide menu initially */
+        flex-direction: column;
+        width: 100%;
+        background-color: var(--nav-background);
+        position: fixed;
+        top: 60px; /* Adjust based on navbar height */
+        left: 0;
+        z-index: 1000;
+        padding: 10px 0;
+    }
+
+    .nav-links-container.show {
+        display: flex; /* Show menu when toggled */
+    }
+
+    .menu-toggle {
+        display: block; /* Show toggle button */
+        position: absolute;
+        top: 10px;
+        right: 20px;
+    }
+
+    .nav-links {
+        flex-direction: column;
+        width: 100%;
+        text-align: left;
+    }
+
+    .nav-links li {
+        margin-bottom: 10px;
+    }
+
+    .nav-right {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 10px;
+    }
+}
+
+/* Very Small Screen Styles */
+@media (max-width: 480px) {
+    .nav-links-container {
+        top: 50px; /* Adjust based on smaller navbar height */
+    }
+
+    .menu-toggle {
+        top: 5px;
+        right: 15px;
+    }
+
+    .nav-links a {
+        padding: 8px 10px;
+    }
+
+    .nav-right {
+        margin-top: 5px;
+    }
 }
 
 .auth-buttons button {
@@ -369,30 +490,62 @@ hr#divider-line {
     display: block;
 }
 
+/* Container for the Edit Lineup Button */
+#my-team-content {
+    position: relative; /* Ensure the container is positioned relative for button positioning */
+}
+
+/* Style for the Edit Lineup Button */
 .edit-lineup-btn {
-    position: absolute;
-    top: 85px;
-    right: 41px;
-    padding: 2px 4px; /* Further reduced padding */
-    font-size: 1rem; /* Further reduced font size */
+    position: absolute; /* Position the button absolutely within the container */
+    top: 10px; /* Adjust top position within the container */
+    right: 10px; /* Adjust right position within the container */
+    padding: 10px 20px; /* Responsive padding */
+    font-size: 1rem; /* Font size for the button text */
     background-color: var(--button-bg-color);
     color: var(--button-text-color);
     border: none;
-    border-radius: var(--border-radius);
+    border-radius: 8px; /* Rounded corners for a modern look */
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s, transform 0.3s;
-    width: 80px; /* Set a specific width */
-    height: 50px; /* Set a specific height */
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9999px; /* Makes the button pill-shaped */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Light shadow for a 3D effect */
 }
 
+/* Hover effect */
 .edit-lineup-btn:hover {
     background-color: var(--accent-color);
     color: var(--white-primary);
+    transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
+
+/* Active state */
+.edit-lineup-btn:active {
+    background-color: var(--button-bg-color);
+    transform: scale(0.95); /* Slightly reduce size on click */
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .edit-lineup-btn {
+        top: 8px; /* Adjust positioning for smaller screens */
+        right: 8px;
+        font-size: 0.9rem; /* Smaller font size */
+        padding: 8px 16px; /* Smaller padding */
+    }
+}
+
+@media (max-width: 480px) {
+    .edit-lineup-btn {
+        top: 6px; /* Further adjust positioning for very small screens */
+        right: 6px;
+        font-size: 0.8rem; /* Even smaller font size */
+        padding: 6px 12px; /* Minimal padding */
+    }
+}
+
 
 .players {
     display: flex;
@@ -429,6 +582,39 @@ hr#divider-line {
     margin-bottom: 10px;
     background-color: var(--trade-initiated-bg);
     transition: background-color 0.3s, color 0.3s;
+}
+
+/* Style for the Start Trade button */
+#startTrade {
+    background: linear-gradient(135deg, #4CAF50, #45A049); /* Green gradient */
+    color: white;
+    border: none;
+    border-radius: 8px; /* Rounded corners */
+    padding: 12px 24px; /* Padding for the button */
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Light shadow for a 3D effect */
+    margin-bottom: 20px; /* Add some space below the button */
+}
+
+/* Hover effect */
+#startTrade:hover {
+    background: linear-gradient(135deg, #45A049, #4CAF50); /* Reverse gradient on hover */
+    transform: translateY(-2px); /* Slight lift on hover */
+}
+
+/* Active state */
+#startTrade:active {
+    background: linear-gradient(135deg, #388E3C, #2E7D32); /* Darker shade when active */
+    transform: translateY(0); /* Remove the lift on click */
+}
+
+/* Focus state */
+#startTrade:focus {
+    outline: none; /* Remove default focus outline */
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5); /* Add a green glow on focus */
 }
 
 .trade-requested {
@@ -1166,30 +1352,30 @@ form button:hover {
     padding: 20px;
     margin: 20px 0;
     display: flex;
-    flex-direction: column; /* Stack children vertically */
-    box-sizing: border-box; /* Include padding in width/height calculation */
-    position: relative; /* For absolute positioning of buttons */
+    flex-direction: column;
+    box-sizing: border-box;
+    position: relative;
     width: 100%;
-    height: auto; /* Allow height to adjust based on content */
+    height: auto;
     background-color: var(--background-color);
     color: var(--text-color);
-    border: 1px solid var(--filter-border-color); /* Add border to the box */
+    border: 1px solid var(--filter-border-color);
 }
 
 .filter-container {
     display: flex;
-    flex-wrap: wrap; /* Wrap filters on smaller screens */
-    justify-content: flex-start; /* Align filters to the left */
-    align-items: center; /* Center vertically */
-    margin-bottom: 10px; /* Space between filters and text box */
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
 .filter-item {
     display: flex;
     flex-direction: column;
-    align-items: flex-start; /* Align items to the left */
-    margin-right: 20px; /* Add spacing between filter items */
-    margin-bottom: 10px; /* Space between rows on small screens */
+    align-items: flex-start;
+    margin-right: 20px;
+    margin-bottom: 10px;
 }
 
 .filter-label {
@@ -1202,7 +1388,7 @@ form button:hover {
 .text-box {
     padding: 10px;
     width: 100%;
-    max-width: 200px; /* Adjusted to fit within the box */
+    max-width: 200px;
     border: 1px solid var(--filter-border-color);
     border-radius: 4px;
     background-color: var(--background-color);
@@ -1210,17 +1396,17 @@ form button:hover {
 }
 
 .text-box {
-    max-width: 400px; /* Adjusted to be larger */
-    margin-left: auto; /* Shift to the right */
-    margin-right: 5px; /* Space between text box and the right edge */
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: 5px;
 }
 
 .button-container {
     display: flex;
-    flex-direction: row; /* Align buttons side by side */
-    position: absolute; /* Positioning buttons at the bottom right */
-    bottom: 30px; /* Adjust spacing from the bottom */
-    right: 25px; /* Adjust spacing from the right */
+    flex-direction: row;
+    position: absolute;
+    bottom: 30px;
+    right: 25px;
 }
 
 .primary-button,
@@ -1228,7 +1414,7 @@ form button:hover {
     padding: 10px 20px;
     border: none;
     cursor: pointer;
-    margin-left: 10px; /* Space between buttons */
+    margin-left: 10px;
     border-radius: var(--border-radius);
     background-color: var(--primary-color);
     color: var(--white-primary);
@@ -1243,26 +1429,26 @@ form button:hover {
 /* Table Container */
 .table-container {
     width: 80%;
-    margin: 20px auto; /* Center the container */
+    margin: 20px auto;
+    overflow-x: auto; /* Enable horizontal scrolling */
 }
 
 .table-container h1 {
     margin-bottom: 20px;
-    text-align: center; /* Center the heading text */
+    text-align: center;
     color: var(--text-color);
 }
 
 table {
     width: 100%;
-    margin: 20px auto; /* Center the table */
     border-collapse: collapse;
     background-color: var(--background-color);
-    border: 1px solid var(--table-border-color); /* Add border to the table */
+    border: 1px solid var(--table-border-color);
 }
 
 table tbody tr:hover {
-    background-color: var(--table-row-hover-bg); /* Use variable for hover color */
-    transition: background-color 0.3s ease; /* Smooth transition */
+    background-color: var(--table-row-hover-bg);
+    transition: background-color 0.3s ease;
 }
 
 th,
@@ -1312,37 +1498,74 @@ th[data-sort="desc"]::after {
 /* Responsive table styling */
 @media (max-width: 768px) {
     .filter-container {
-        flex-direction: column; /* Stack filters vertically on smaller screens */
+        flex-direction: column;
         align-items: flex-start;
+        margin-top: 60px; 
     }
 
     .filter-item,
     .text-box {
-        width: 100%; /* Full width on small screens */
+        width: 100%;
         max-width: 100%;
         margin-bottom: 10px;
     }
 
     .text-box {
-        margin-left: 0; /* Reset left margin */
-        margin-right: 0; /* Reset right margin */
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .button-container {
-        position: static; /* Reset position */
-        margin-top: 10px; /* Add space above buttons */
-        align-self: flex-end; /* Align buttons to the right */
+        position: static;
+        margin-top: 10px;
+        align-self: flex-end;
     }
 
     table {
-        width: 100%; /* Make table full width on smaller screens */
+        width: 100%;
+        min-width: 600px; /* Set a minimum width for the table */
     }
 
     th,
     td {
-        padding: 10px;
+        padding: 8px 10px; /* Adjust padding for smaller screens */
+    }
+
+    /* Hide less important columns on smaller screens */
+    .hide-on-mobile {
+        display: none;
     }
 }
+
+@media (max-width: 480px) {
+    .button-container {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 60px;
+    }
+
+    .primary-button,
+    .secondary-button {
+        width: 100%;
+        margin-left: 0;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-container {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 60px; /* Make space for the navbar */
+    }
+}
+
+
+/* Enable horizontal scrolling on small screens */
+.table-container {
+    overflow-x: auto;
+}
+
 
 /* =============================== */
 /*          Dashboard Styles       */
@@ -1499,50 +1722,98 @@ color: var(--text-color);
 }
   
 /* =============================== */
-/*      Create League Section       */
+/*      Create / Join League Section       */
 /* =============================== */
 .row {
     margin-left: 0;
     margin-right: 0;
 }
 
-#create-league-section h2 {
-    color: var(--text-color);
-    margin-bottom: 1rem;
+/* Center the Create a League heading */
+#createLeague,
+#joinLeague {
+    text-align: center; /* Center the text */
+    width: 100%; /* Ensure the heading takes up the full width */
+    display: block; /* Make it a block-level element */
+    margin: 0 auto 1rem auto; /* Center with auto margins and add bottom margin */
 }
 
-#create-league-form .form-control {
+#create-league-section h2,
+#join-league-form h2 {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+#create-league-form .form-control,
+#join-league-form .form-control {
+    background-color: var(--background-color);
+    color: var(--text-color);
     margin-bottom: 1rem;
     border-radius: 0.25rem;
     border: 1px solid var(--filter-border-color);
 }
 
-#create-league-form button {
-    background-color: var(--black-primary);
-    color: var(--white-primary);
+/* Button Styling */
+#create-league-form button,
+#join-league-form button {
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
     border: none;
-    padding: 0.5rem 1rem;
-    margin-left: 15px;
+    padding: 0.75rem 1.5rem; /* Increased padding for better appearance */
+    margin-top: 1rem; /* Added margin to separate from the fields */
     border-radius: var(--border-radius);
     transition: background-color 0.3s;
     cursor: pointer;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-#create-league-form button:hover {
+/* Button Hover Effect */
+#create-league-form button:hover,
+#join-league-form button:hover {
     background-color: var(--secondary-color);
     color: var(--white-primary);
 }
 
+/* Textarea Styling */
 #description {
     padding-bottom: 30px; /* Ensure space for the character count */
+    position: relative;
 }
 
-#charCount {
-    position: absolute;
-    bottom: 16px;
-    right: 22px;
-    font-size: 0.875em;
-    color: var(--text-color-secondary);
+/* Modal Styling */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5); /* Black background with opacity */
+}
+
+.modal-content {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid var(--filter-border-color);
+    width: 80%;
+    max-width: 600px;
+    border-radius: var(--border-radius);
+}
+
+.close-button {
+    color: var(--text-color);
+    float: right;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 /* Custom Alert Styles */

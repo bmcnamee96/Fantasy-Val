@@ -122,27 +122,33 @@
 
     <!-- Main Content -->
     <main class="container-fluid">
-        <h1>Join a League</h1>
-        <form id="join-league-form" class="form">
-            <div class="form-group">
-                <input type="text" class="form-control" id="join_league_name" name="join_league_name" placeholder="League Name" required>
-            </div>
-            <div class="form-group">
-                <input type="password" class="form-control" id="passcode" name="passcode" placeholder="League Password" required>
-            </div>
-            <input type="text" name="team_name" placeholder="Enter your team name" required>
-            <button type="submit" class="btn btn-secondary">Join League</button>
-        </form>
+        <div class="col"> 
+            <h1 id="joinLeague">Join a League</h1>
+            <form id="join-league-form" class="form">
+                <div class="form-group row"> <!-- Grouping inputs in a row -->
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="join_league_name" name="join_league_name" placeholder="League Name" required>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="password" class="form-control" id="passcode" name="passcode" placeholder="League Password" required>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="team_name" name="team_name" placeholder="Enter your team name" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-secondary">Join League</button>
+            </form>
 
-
-        <!--Error Message Popup for Creating Leagues!-->
-        <div id="error-modal" class="modal">
-            <div class="modal-content">
-                <span class="close-button">&times;</span>
-                <p id="modal-message"></p>
+            <!--Error Message Popup for Creating Leagues!-->
+            <div id="error-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close-button">&times;</span>
+                    <p id="modal-message"></p>
+                </div>
             </div>
         </div>
-
     </main>
 
     <!-- Footer -->

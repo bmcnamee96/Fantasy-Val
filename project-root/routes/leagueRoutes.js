@@ -317,6 +317,32 @@ router.get('/:leagueId/users', authenticateToken, async (req, res) => {
   }
 });
 
+// Endpoint to get the current user's team ID for a league
+router.get('/:leagueId/team-id', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  const userId = req.user.userId; // Assuming user ID is available from the token
+
+  try {
+      // Query to get the user's team ID in the specified league
+      const userTeamQuery = `
+          SELECT league_team_id
+          FROM league_teams
+          WHERE league_id = $1 AND user_id = $2
+      `;
+      const userTeamResult = await pool.query(userTeamQuery, [leagueId, userId]);
+
+      if (userTeamResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Team not found for the current user in this league.' });
+      }
+
+      const userTeamId = userTeamResult.rows[0].league_team_id;
+      res.status(200).json({ success: true, teamId: userTeamId });
+  } catch (error) {
+      logger.error('Error fetching user team ID:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch user team ID.' });
+  }
+});
+
 // API Endpoint to Get Team Information for a User
 router.get('/:userId/:leagueId/team', authenticateToken, async (req, res) => {
   const userId = req.params.userId;
@@ -340,7 +366,7 @@ router.get('/:userId/:leagueId/team', authenticateToken, async (req, res) => {
     }
 
     const teams = teamResult.rows.map(row => ({
-      playeId: row.player_id,
+      playerId: row.player_id,
       lineup: row.starter
     }));
 
@@ -474,19 +500,20 @@ router.post('/:leagueId/sign-player', authenticateToken, checkRosterLock, async 
       }
       const roleToSign = playerToSignResult.rows[0].role;
 
-      // Fetch the role of the player to drop and ensure they are on the bench
+      // Fetch the role and starter status of the player to drop
       const playerToDropResult = await pool.query(
-          `SELECT p.role
+          `SELECT p.role, ltp.starter
            FROM player p
            INNER JOIN league_team_players ltp ON p.player_id = ltp.player_id
            INNER JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
-           WHERE p.player_id = $1 AND lt.league_id = $2 AND lt.user_id = $3 AND ltp.starter = FALSE`,
+           WHERE p.player_id = $1 AND lt.league_id = $2 AND lt.user_id = $3`,
           [playerIdToDrop, leagueId, userId]
       );
       if (playerToDropResult.rowCount === 0) {
-          return res.status(404).json({ success: false, error: 'Player to drop not found on your bench.' });
+          return res.status(404).json({ success: false, error: 'Player to drop not found on your team.' });
       }
       const roleToDrop = playerToDropResult.rows[0].role;
+      const isStarter = playerToDropResult.rows[0].starter;
 
       // Ensure roles match
       if (roleToSign !== roleToDrop) {
@@ -505,16 +532,16 @@ router.post('/:leagueId/sign-player', authenticateToken, checkRosterLock, async 
       `;
       await pool.query(removePlayerQuery, [playerIdToDrop, leagueId, userId]);
 
-      // Add the player to sign to the team as a bench player (starter = FALSE)
+      // Add the player to sign to the team, with the same starter status as the player being dropped
       const addPlayerQuery = `
           INSERT INTO league_team_players (league_team_id, player_id, starter)
           VALUES (
               (SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2),
               $3,
-              FALSE
+              $4
           )
       `;
-      await pool.query(addPlayerQuery, [leagueId, userId, playerIdToSign]);
+      await pool.query(addPlayerQuery, [leagueId, userId, playerIdToSign, isStarter]);
 
       // Commit the transaction
       await pool.query('COMMIT');
@@ -546,7 +573,7 @@ router.get('/:leagueId/bench-players', authenticateToken, async (req, res) => {
            FROM player p
            INNER JOIN league_team_players ltp ON p.player_id = ltp.player_id
            INNER JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
-           WHERE lt.league_id = $1 AND lt.user_id = $2 AND ltp.starter = FALSE`,
+           WHERE lt.league_id = $1 AND lt.user_id = $2`,
           [leagueId, userId]
       );
 
@@ -667,7 +694,7 @@ router.post('/ids-to-names', async (req, res) => {
   try {
       // Query the database for the player names and team abbreviations based on the provided IDs
       const query = `
-          SELECT player_id, player_name, team_abrev
+          SELECT player_id, player_name, team_abrev, role
           FROM player
           WHERE player_id = ANY($1::int[])
       `;
@@ -678,7 +705,8 @@ router.post('/ids-to-names', async (req, res) => {
       result.rows.forEach(row => {
           playerMap[row.player_id] = {
               player_name: row.player_name,
-              team_abrev: row.team_abrev || 'Unknown'  // Return 'Unknown' if team_abrev is null
+              team_abrev: row.team_abrev,  // Return 'Unknown' if team_abrev is null
+              role: row.role
           };
       });
 
@@ -690,7 +718,6 @@ router.post('/ids-to-names', async (req, res) => {
       return res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 router.get('/current-week', async (req, res) => {
   try {
@@ -862,6 +889,273 @@ router.get('/:leagueId/standings', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching league standings:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch league standings.' });
+  }
+});
+
+// Endpoint to create a trade request
+router.post('/:leagueId/trade-request', authenticateToken, checkRosterLock, async (req, res) => {
+  const { leagueId } = req.params;
+  const { senderPlayerId, receiverPlayerId, receiverUserId } = req.body;
+  const userId = req.user.userId; // Assuming user ID is available from the token
+
+  // Validate input
+  if (!senderPlayerId || !receiverPlayerId || !receiverUserId) {
+      return res.status(400).json({ success: false, error: 'Missing required information.' });
+  }
+
+  try {
+      // Check if the league exists
+      const leagueCheck = await pool.query('SELECT 1 FROM leagues WHERE league_id = $1', [leagueId]);
+      if (leagueCheck.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'League not found.' });
+      }
+
+      // Get the sender's team ID
+      const senderTeamResult = await pool.query(
+          `SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2`,
+          [leagueId, userId]
+      );
+      if (senderTeamResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Sender team not found.' });
+      }
+      const senderTeamId = senderTeamResult.rows[0].league_team_id;
+
+      // Get the receiver's team ID
+      const receiverTeamResult = await pool.query(
+          `SELECT league_team_id FROM league_teams WHERE league_id = $1 AND user_id = $2`,
+          [leagueId, receiverUserId]
+      );
+      if (receiverTeamResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Receiver team not found.' });
+      }
+      const receiverTeamId = receiverTeamResult.rows[0].league_team_id;
+
+      // Check if either player is involved in an active trade request
+      const activeTradeCheck = await pool.query(
+          `SELECT 1 FROM trade_requests 
+           WHERE league_id = $1 
+           AND status = 'Pending'
+           AND (sender_player_id = $2 OR receiver_player_id = $2 OR sender_player_id = $3 OR receiver_player_id = $3)`,
+          [leagueId, senderPlayerId, receiverPlayerId]
+      );
+
+      if (activeTradeCheck.rowCount > 0) {
+          return res.status(400).json({ success: false, error: 'One of the players is already involved in an active trade request.' });
+      }
+
+      // Fetch the roles of the players being traded
+      const senderPlayerRoleResult = await pool.query(
+          `SELECT role FROM player WHERE player_id = $1`,
+          [senderPlayerId]
+      );
+      const receiverPlayerRoleResult = await pool.query(
+          `SELECT role FROM player WHERE player_id = $1`,
+          [receiverPlayerId]
+      );
+
+      if (senderPlayerRoleResult.rowCount === 0 || receiverPlayerRoleResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Player not found.' });
+      }
+      const senderPlayerRole = senderPlayerRoleResult.rows[0].role;
+      const receiverPlayerRole = receiverPlayerRoleResult.rows[0].role;
+
+      // Ensure the roles match
+      if (senderPlayerRole !== receiverPlayerRole) {
+          return res.status(400).json({ success: false, error: 'Players must have the same role for a trade.' });
+      }
+
+      // Insert the trade request into the database
+      const insertTradeRequestQuery = `
+          INSERT INTO trade_requests (league_id, sender_team_id, receiver_team_id, sender_player_id, receiver_player_id, status)
+          VALUES ($1, $2, $3, $4, $5, 'Pending')
+          RETURNING trade_request_id
+      `;
+      const tradeRequestResult = await pool.query(insertTradeRequestQuery, [
+          leagueId,
+          senderTeamId,
+          receiverTeamId,
+          senderPlayerId,
+          receiverPlayerId
+      ]);
+
+      const tradeRequestId = tradeRequestResult.rows[0].trade_request_id;
+
+      // Respond with the success message
+      res.status(200).json({ success: true, message: 'Trade request sent successfully.', tradeRequestId });
+  } catch (error) {
+      logger.error('Error sending trade request:', error);
+      res.status(500).json({ success: false, error: 'Failed to send trade request.' });
+  }
+});
+
+// Endpoint to accept a trade request
+router.post('/trade-request/:tradeRequestId/accept', authenticateToken, checkRosterLock, async (req, res) => {
+  const { tradeRequestId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+      // Start a transaction
+      await pool.query('BEGIN');
+
+      // Fetch the trade request details
+      const tradeRequestResult = await pool.query(
+          `SELECT league_id, sender_team_id, receiver_team_id, sender_player_id, receiver_player_id, status
+           FROM trade_requests
+           WHERE trade_request_id = $1 AND status = 'Pending'`,
+          [tradeRequestId]
+      );
+
+      if (tradeRequestResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Trade request not found or already processed.' });
+      }
+
+      const tradeRequest = tradeRequestResult.rows[0];
+
+      // Ensure the user is the receiver of the trade request
+      const receiverTeamResult = await pool.query(
+          `SELECT user_id FROM league_teams WHERE league_team_id = $1`,
+          [tradeRequest.receiver_team_id]
+      );
+
+      if (receiverTeamResult.rowCount === 0 || receiverTeamResult.rows[0].user_id !== userId) {
+          return res.status(403).json({ success: false, error: 'You are not authorized to accept this trade request.' });
+      }
+
+      // Swap the players between the teams
+      const updateSenderTeamQuery = `
+          UPDATE league_team_players
+          SET player_id = $1
+          WHERE player_id = $2 AND league_team_id = $3
+      `;
+      const updateReceiverTeamQuery = `
+          UPDATE league_team_players
+          SET player_id = $1
+          WHERE player_id = $2 AND league_team_id = $3
+      `;
+      await pool.query(updateSenderTeamQuery, [tradeRequest.receiver_player_id, tradeRequest.sender_player_id, tradeRequest.sender_team_id]);
+      await pool.query(updateReceiverTeamQuery, [tradeRequest.sender_player_id, tradeRequest.receiver_player_id, tradeRequest.receiver_team_id]);
+
+      // Update the trade request status to 'Accepted'
+      await pool.query(
+          `UPDATE trade_requests SET status = 'Accepted' WHERE trade_request_id = $1`,
+          [tradeRequestId]
+      );
+
+      // Commit the transaction
+      await pool.query('COMMIT');
+
+      res.status(200).json({ success: true, message: 'Trade request accepted.' });
+  } catch (error) {
+      // Rollback in case of error
+      await pool.query('ROLLBACK');
+      logger.error('Error accepting trade request:', error);
+      res.status(500).json({ success: false, error: 'Failed to accept trade request.' });
+  }
+});
+
+// Endpoint to reject a trade request
+router.post('/trade-request/:tradeRequestId/reject', authenticateToken, checkRosterLock, async (req, res) => {
+  const { tradeRequestId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+      // Fetch the trade request details
+      const tradeRequestResult = await pool.query(
+          `SELECT receiver_team_id, status FROM trade_requests WHERE trade_request_id = $1 AND status = 'Pending'`,
+          [tradeRequestId]
+      );
+
+      if (tradeRequestResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Trade request not found or already processed.' });
+      }
+
+      // Ensure the user is the receiver of the trade request
+      const receiverTeamResult = await pool.query(
+          `SELECT user_id FROM league_teams WHERE league_team_id = $1`,
+          [tradeRequestResult.rows[0].receiver_team_id]
+      );
+
+      if (receiverTeamResult.rowCount === 0 || receiverTeamResult.rows[0].user_id !== userId) {
+          return res.status(403).json({ success: false, error: 'You are not authorized to reject this trade request.' });
+      }
+
+      // Update the trade request status to 'Rejected'
+      await pool.query(
+          `UPDATE trade_requests SET status = 'Rejected' WHERE trade_request_id = $1`,
+          [tradeRequestId]
+      );
+
+      res.status(200).json({ success: true, message: 'Trade request rejected.' });
+  } catch (error) {
+      logger.error('Error rejecting trade request:', error);
+      res.status(500).json({ success: false, error: 'Failed to reject trade request.' });
+  }
+});
+
+// Endpoint to cancel a trade request
+router.post('/trade-request/:tradeRequestId/cancel', authenticateToken, checkRosterLock, async (req, res) => {
+  const { tradeRequestId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+      // Fetch the trade request details
+      const tradeRequestResult = await pool.query(
+          `SELECT sender_team_id, status FROM trade_requests WHERE trade_request_id = $1 AND status = 'Pending'`,
+          [tradeRequestId]
+      );
+
+      if (tradeRequestResult.rowCount === 0) {
+          return res.status(404).json({ success: false, error: 'Trade request not found or already processed.' });
+      }
+
+      // Ensure the user is the sender of the trade request
+      const senderTeamResult = await pool.query(
+          `SELECT user_id FROM league_teams WHERE league_team_id = $1`,
+          [tradeRequestResult.rows[0].sender_team_id]
+      );
+
+      if (senderTeamResult.rowCount === 0 || senderTeamResult.rows[0].user_id !== userId) {
+          return res.status(403).json({ success: false, error: 'You are not authorized to cancel this trade request.' });
+      }
+
+      // Update the trade request status to 'Cancelled'
+      await pool.query(
+          `UPDATE trade_requests SET status = 'Cancelled' WHERE trade_request_id = $1`,
+          [tradeRequestId]
+      );
+
+      res.status(200).json({ success: true, message: 'Trade request cancelled successfully.' });
+  } catch (error) {
+      logger.error('Error cancelling trade request:', error);
+      res.status(500).json({ success: false, error: 'Failed to cancel trade request.' });
+  }
+});
+
+// Endpoint to get active trade requests for a league
+router.get('/:leagueId/active-trades', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+  const userId = req.user.userId; // Assuming user ID is available from the token
+
+  try {
+      // Query to get active trade requests involving the user's team in the league
+      const activeTradesQuery = `
+          SELECT tr.trade_request_id, tr.sender_team_id, tr.receiver_team_id, tr.sender_player_id, tr.receiver_player_id, tr.status, 
+                 u1.username as sender_username, u2.username as receiver_username
+          FROM trade_requests tr
+          INNER JOIN league_teams lt1 ON tr.sender_team_id = lt1.league_team_id
+          INNER JOIN league_teams lt2 ON tr.receiver_team_id = lt2.league_team_id
+          INNER JOIN users u1 ON lt1.user_id = u1.user_id
+          INNER JOIN users u2 ON lt2.user_id = u2.user_id
+          WHERE tr.league_id = $1 
+            AND tr.status = 'Pending'
+            AND (lt1.user_id = $2 OR lt2.user_id = $2)
+      `;
+      const activeTradesResult = await pool.query(activeTradesQuery, [leagueId, userId]);
+
+      res.status(200).json({ success: true, trades: activeTradesResult.rows });
+  } catch (error) {
+      logger.error('Error fetching active trades:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch active trades.' });
   }
 });
 
