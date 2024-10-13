@@ -93,7 +93,9 @@ INSERT INTO weeks (week_number, start_date) VALUES
 (5, '2024-10-01 22:00:00'),
 (6, '2024-10-08 22:00:00'),
 (7, '2024-10-15 22:00:00'),
-(8, '2024-10-22 22:00:00')
+(8, '2024-10-22 22:00:00'),
+(9, '2024-11-24 23:59:59+00'),
+(10, '2024-12-01 23:59:59+00')
 ;
 
 UPDATE weeks
@@ -105,10 +107,12 @@ SET start_date = CASE week_number
     WHEN 5 THEN '2024-10-20 23:59:59+00'
 	WHEN 6 THEN '2024-10-27 23:59:59+00'
 	WHEN 7 THEN '2024-11-03 23:59:59+00'
-	WHEN 8 THEN '2024-11-10 23:59:59+00'
+	WHEN 8 THEN '2024-11-17 23:59:59+00'
+	WHEN 9 THEN '2024-11-24 23:59:59+00'
+	WHEN 10 THEN '2024-12-01 23:59:59+00'
     ELSE start_date
 END
-WHERE week_number BETWEEN 1 AND 8;
+WHERE week_number BETWEEN 1 AND 10;
 
 
 SELECT NOW();
@@ -150,7 +154,10 @@ SELECT player_id
 SELECT sps.player_id, sps.adjusted_points AS points
 FROM series_player_stats sps
 JOIN series s ON sps.series_id = s.series_id
-WHERE s.week = 2 AND player_id = 19;
+JOIN league_team_players ltp ON sps.player_id = ltp.player_id
+WHERE s.week = 2
+  AND ltp.league_team_id = 97;
+
 
 
 SELECT * FROM league_team_players;
@@ -162,3 +169,7 @@ JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
 WHERE lt.user_id = 1 AND lt.league_id = 3;
 
 SELECT * FROM trade_requests;
+
+SELECT * FROM drafted_players;
+SELECT * FROM league_team_players
+	WHERE league_team_id = 97;

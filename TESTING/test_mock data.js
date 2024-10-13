@@ -57,7 +57,11 @@ function createBalancedSchedule(users, weeks, maxRetries = 1000) {
                 }
             }
 
-            if (schedule.some(week => week.length < 2)) {
+            if (schedule.some(week => week.length < 3)) {
+                throw new Error("A week with fewer than 2 games was found.");
+            }
+
+            if (schedule.some(week => week.length > 6)) {
                 throw new Error("A week with fewer than 2 games was found.");
             }
 
@@ -111,7 +115,7 @@ function shuffleArray(array) {
 }
 
 // Example Usage
-const users = ["User1", "User2", "User3", "User4"];
+const users = ["User1", "User2", "User3", "User4", "User5", "User6", "User7", "Users8"];
 const weeks = 10;
 const schedule = createBalancedSchedule(users, weeks);
 const { gamesCountArray, matchupCountArray } = analyzeSchedule(schedule, users);

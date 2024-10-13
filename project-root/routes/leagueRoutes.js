@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10; // Define the salt rounds for bcrypt
 const authenticateToken = require('../middleware/authMiddleware');
 const checkRosterLock = require('../middleware/checkRosterLock');
+const { isWithinRosterLockPeriod } = require('../utils/timeUtils');
 const logger = require('../utils/logger');
 const cron = require('node-cron'); // For scheduling tasks
 
@@ -454,20 +455,24 @@ router.get('/:leagueId/available-players', authenticateToken, async (req, res) =
       return res.status(404).json({ error: 'League not found' });
     }
 
-    // Updated SQL query using league_team_players and joining with league_teams
+    // Updated SQL query to only return players not assigned to any team in the given league
     const result = await pool.query(
       `SELECT p.player_id, p.player_name, p.team_abrev, p.role
        FROM player p
-       LEFT JOIN league_team_players ltp ON p.player_id = ltp.player_id
-       LEFT JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id AND lt.league_id = $1
-       WHERE lt.league_id IS NULL`,
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM league_team_players ltp
+         JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
+         WHERE ltp.player_id = p.player_id
+           AND lt.league_id = $1
+       )`,
       [leagueId]
     );
 
     const availablePlayers = result.rows;
-    res.json(availablePlayers); // Maintains the same response structure
+    res.json(availablePlayers); // Return only available players
   } catch (error) {
-    logger.error('Error fetching available players:', error);
+    console.error('Error fetching available players:', error);
     res.status(500).json({ error: 'Failed to fetch available players' });
   }
 });
@@ -797,7 +802,7 @@ router.get('/:leagueId/schedule', authenticateToken, async (req, res) => {
   }
 });
 
-// Endpoint to get the next opponent for the user's team
+// Endpoint to get the current week's opponents for the user's team in a given league
 router.get('/next-opponent/:leagueId', authenticateToken, async (req, res) => {
   const { leagueId } = req.params;
   const userId = req.user.userId; // Extracted from authenticated token
@@ -828,33 +833,32 @@ router.get('/next-opponent/:leagueId', authenticateToken, async (req, res) => {
 
     const currentWeek = weekResult.rows[0].week_number;
 
-    // Get the next matchup for the team
+    // Get only the matchups for the current week
     const matchupResult = await pool.query(
       `SELECT us.week_number, lt.team_name AS opponent_name
        FROM user_schedule us
        JOIN league_teams lt ON (us.home_team_id = lt.league_team_id OR us.away_team_id = lt.league_team_id)
        WHERE us.league_id = $1
-         AND us.week_number >= $2
+         AND us.week_number = $2
          AND (us.home_team_id = $3 OR us.away_team_id = $3)
          AND lt.league_team_id != $3
-       ORDER BY us.week_number ASC
-       LIMIT 1`,
+       ORDER BY us.week_number ASC`,
       [leagueId, currentWeek, leagueTeamId]
     );
 
     if (matchupResult.rows.length === 0) {
-      return res.status(404).json({ message: 'No upcoming matchups found.' });
+      return res.status(404).json({ message: 'No upcoming matchups found for the current week.' });
     }
 
-    const nextOpponent = matchupResult.rows[0];
+    const opponents = matchupResult.rows.map(row => ({
+      week_number: row.week_number,
+      opponent_name: row.opponent_name,
+    }));
 
-    res.json({
-      week_number: nextOpponent.week_number,
-      opponent_name: nextOpponent.opponent_name,
-    });
+    res.json({ opponents });
   } catch (error) {
-    console.error('Error fetching next opponent:', error);
-    res.status(500).json({ error: 'An error occurred while fetching the next opponent.' });
+    console.error('Error fetching current week opponents:', error);
+    res.status(500).json({ error: 'An error occurred while fetching the current week opponents.' });
   }
 });
 
@@ -1359,12 +1363,18 @@ async function updateTeamStandings(teamId, teamPoints, opponentPoints) {
   );
 }
 
-// Scheduled Task to Process Week Increments and Matchups ('0 1 * * MON' - every Monday at 1 am)
-cron.schedule('0 1 * * MON', async () => {
+// Scheduled Task to Process Data Every 15 Minutes From Friday 5 PM EST to Sunday 11:59 PM EST
+cron.schedule('* * * * *', async () => {
   try {
-    await processWeekIncrement();
+    // Check if we are within the roster lock period (Friday 5 PM to Sunday 11:59 PM EST)
+    if (isWithinRosterLockPeriod()) {
+      await processWeekIncrement(); // Perform your processing logic
+      console.log('Week increment processed successfully.');
+    } else {
+      console.log('Not within the weekend processing window.');
+    }
   } catch (error) {
-    console.error('Error in week increment task:', error);
+    console.error('Error in weekend data processing task:', error);
   }
 });
 

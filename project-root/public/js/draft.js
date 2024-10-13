@@ -22,6 +22,78 @@ const userId = getUserIdFromToken(token);
 
 // -------------------------------------------------------------------------- //
 
+/**
+ * Display a toast message.
+ * @param {string} message - The message to display.
+ * @param {string} type - The type of message ('success', 'error'). Defaults to 'success'.
+ */
+function showToast(message, type = 'success') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.top = '20px';
+        toastContainer.style.right = '20px';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Create the toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    // Style the toast
+    toast.style.minWidth = '200px';
+    toast.style.marginTop = '10px';
+    toast.style.padding = '15px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.color = '#fff';
+    toast.style.opacity = '0.9';
+    toast.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+    toast.style.fontFamily = 'Arial, sans-serif';
+    toast.style.fontSize = '14px';
+    toast.style.cursor = 'pointer';
+    toast.style.transition = 'opacity 0.5s ease';
+
+    // Set background color based on type
+    switch(type) {
+        case 'success':
+            toast.style.backgroundColor = '#28a745';
+            break;
+        case 'error':
+            toast.style.backgroundColor = '#dc3545';
+            break;
+        default:
+            toast.style.backgroundColor = '#333';
+    }
+
+    // Remove toast on click
+    toast.addEventListener('click', () => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toastContainer.removeChild(toast);
+        }, 500);
+    });
+
+    // Append the toast to the container
+    toastContainer.appendChild(toast);
+
+    // Automatically remove the toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (toastContainer.contains(toast)) {
+                toastContainer.removeChild(toast);
+            }
+        }, 500);
+    }, 3000);
+}
+
+// -------------------------------------------------------------------------- //
+
 // initialize DOM
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded and parsed for draft.js');
@@ -597,19 +669,19 @@ async function initializeSocket() {
         // Event handler for draft started event
         socketInstance.on('draftStarted', async (data) => {
             console.log('draftStarted event data:', data);
-        
+
             if (data) {
                 // Handle draftOrder first
                 if (Array.isArray(data.draftOrder)) {
                     draftOrder = data.draftOrder;
-        
+
                     // Handle remainingTime if defined
                     if (typeof data.remainingTime === 'number' && !isNaN(data.remainingTime)) {
                         startCountdown(data.remainingTime);
                     } else {
                         console.error('Invalid remainingTime:', data.remainingTime);
                     }
-        
+
                     // Handle currentTurnIndex if defined
                     if (typeof data.currentTurnIndex === 'number' && !isNaN(data.currentTurnIndex)) {
                         updateCurrentTurnUI(data.currentTurnIndex);
@@ -637,10 +709,16 @@ async function initializeSocket() {
             showModal(successModal, data);
         });
 
+        // Event handler for draft error event (handle draftError message properly)
         socketInstance.on('draftError', (data) => {
-            console.log('draftError', data)
-            showModal(errorModal, data);
-        })
+            if (data && data.message) {
+                // Display the error message in a user-friendly way
+                console.error('Draft Error:', data.message);
+                showToast(data.message); // Or update the UI to show the message
+            } else {
+                console.error('Invalid draftError data:', data);
+            }
+        });
         
         // Event handler for draft ended event
         socketInstance.on('draftEnded', async (data) => {

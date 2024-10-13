@@ -555,6 +555,21 @@ async function draftState(socket, leagueId, draftStarted, draftEnded, turnDurati
 
 async function startDraft(leagueId, turnDuration, io) {
   try {
+      // Check the number of users in the league
+      const userCountResult = await pool.query(
+          'SELECT COUNT(*) AS user_count FROM user_leagues WHERE league_id = $1',
+          [leagueId]
+      );
+      
+      const userCount = parseInt(userCountResult.rows[0].user_count, 10);
+      
+      // If there are fewer than 4 users, do not start the draft
+      if (userCount < 4) {
+          io.to(leagueId).emit('draftError', { message: 'Not enough users to start the draft. Minimum 4 users required.' });
+          console.error('Not enough users to start the draft. Minimum 4 users required.');
+          return;
+      }
+
       // Set draftStarted to true and draftEnded to false
       draftStarted = true;
       draftEnded = false;
@@ -997,90 +1012,6 @@ function cleanupDraftData(leagueId) {
     });
 }
 
-// -------------------------------------------------------------------------- //
-
-function generateRoundRobinSchedule(teamIds) {
-  const numberOfTeams = teamIds.length;
-  const numberOfWeeks = numberOfTeams - 1;
-  const halfSize = numberOfTeams / 2;
-
-  const teams = teamIds.slice(); // Copy the array
-  const fixedTeam = teams.shift(); // Remove and fix the first team
-
-  const schedule = [];
-
-  for (let week = 0; week < numberOfWeeks; week++) {
-      const matchups = [];
-
-      matchups.push({
-          home: fixedTeam,
-          away: teams[week % teams.length],
-      });
-
-      for (let i = 1; i < halfSize; i++) {
-          const homeIndex = (week + i) % teams.length;
-          const awayIndex = (week + teams.length - i) % teams.length;
-
-          matchups.push({
-              home: teams[homeIndex],
-              away: teams[awayIndex],
-          });
-      }
-
-      schedule.push({
-          week: week + 1,
-          matchups: matchups,
-      });
-  }
-
-  return schedule;
-}
-
-async function generateAndInsertSchedule(leagueId) {
-  // Fetch all team IDs in the league
-  const result = await pool.query(
-      'SELECT league_team_id FROM league_teams WHERE league_id = $1',
-      [leagueId]
-  );
-  const teamIds = result.rows.map(row => row.league_team_id);
-
-  // Check if there are enough teams
-  if (teamIds.length < 2) {
-      console.error('Not enough teams to create a schedule.');
-      return;
-  }
-
-  // If odd number of teams, add a bye (null)
-  if (teamIds.length % 2 !== 0) {
-      teamIds.push(null); // Representing a bye week
-  }
-
-  // Generate the schedule
-  const schedule = generateRoundRobinSchedule(teamIds);
-
-  // Insert the schedule into the database
-  for (const week of schedule) {
-      const weekNumber = week.week;
-      for (const matchup of week.matchups) {
-          const { home, away } = matchup;
-
-          // Skip if there's a bye
-          if (home === null || away === null) {
-              continue;
-          }
-
-          // Insert the matchup into the user_schedule table
-          await pool.query(
-              `INSERT INTO user_schedule (league_id, week_number, home_team_id, away_team_id)
-               VALUES ($1, $2, $3, $4)`,
-              [leagueId, weekNumber, home, away]
-          );
-      }
-  }
-
-  console.log('Schedule generated and inserted successfully.');
-}
-
 async function getTeamDataForUser(userId, leagueId) {
   try {
     // Query to get the league_team_id for the user
@@ -1112,6 +1043,123 @@ async function getTeamDataForUser(userId, leagueId) {
     console.error('Error fetching team data:', error);
     throw error;
   }
+}
+
+// -------------------------------------------------------------------------- //
+
+// Predefined schedules for each league size
+const schedules = {
+  4: [
+    { week: 1, matchups: [{ home: 'User2', away: 'User4' }, { home: 'User1', away: 'User4' }, { home: 'User1', away: 'User3' }] },
+    { week: 2, matchups: [{ home: 'User2', away: 'User3' }, { home: 'User1', away: 'User2' }, { home: 'User3', away: 'User4' }] },
+    { week: 3, matchups: [{ home: 'User2', away: 'User3' }, { home: 'User1', away: 'User4' }] },
+    { week: 4, matchups: [{ home: 'User1', away: 'User2' }, { home: 'User3', away: 'User4' }] },
+    { week: 5, matchups: [{ home: 'User3', away: 'User4' }, { home: 'User1', away: 'User2' }] },
+    { week: 6, matchups: [{ home: 'User2', away: 'User4' }, { home: 'User1', away: 'User4' }] },
+    { week: 7, matchups: [{ home: 'User2', away: 'User4' }, { home: 'User2', away: 'User3' }] },
+    { week: 8, matchups: [{ home: 'User2', away: 'User4' }, { home: 'User1', away: 'User2' }, { home: 'User1', away: 'User3' }] },
+    { week: 9, matchups: [{ home: 'User1', away: 'User3' }, { home: 'User1', away: 'User4' }, { home: 'User2', away: 'User3' }] },
+    { week: 10, matchups: [{ home: 'User1', away: 'User3' }, { home: 'User3', away: 'User4' }] },
+  ],
+  5: [
+    { week: 1, matchups: [{ home: 'User1', away: 'User2' }, { home: 'User3', away: 'User4' }, { home: 'User3', away: 'User5' }] },
+    { week: 2, matchups: [{ home: 'User1', away: 'User3' }, { home: 'User4', away: 'User5' }, { home: 'User2', away: 'User5' }] },
+    { week: 3, matchups: [{ home: 'User1', away: 'User2' }, { home: 'User2', away: 'User4' }, { home: 'User3', away: 'User5' }] },
+    { week: 4, matchups: [{ home: 'User2', away: 'User3' }, { home: 'User2', away: 'User4' }, { home: 'User1', away: 'User5' }] },
+    { week: 5, matchups: [{ home: 'User2', away: 'User3' }, { home: 'User1', away: 'User5' }, { home: 'User1', away: 'User4' }] },
+    { week: 6, matchups: [{ home: 'User1', away: 'User4' }, { home: 'User3', away: 'User4' }, { home: 'User1', away: 'User2' }] },
+    { week: 7, matchups: [{ home: 'User2', away: 'User3' }, { home: 'User4', away: 'User5' }, { home: 'User1', away: 'User5' }] },
+    { week: 8, matchups: [{ home: 'User3', away: 'User5' }, { home: 'User1', away: 'User3' }, { home: 'User4', away: 'User5' }] },
+    { week: 9, matchups: [{ home: 'User2', away: 'User4' }, { home: 'User2', away: 'User5' }, { home: 'User1', away: 'User4' }] },
+    { week: 10, matchups: [{ home: 'User3', away: 'User4' }, { home: 'User2', away: 'User5' }, { home: 'User1', away: 'User3' }] },
+  ],
+  6: [
+    { week: 1, matchups: [{ home: 'User1', away: 'User5' }, { home: 'User4', away: 'User5' }, { home: 'User2', away: 'User6' }] },
+    { week: 2, matchups: [{ home: 'User5', away: 'User6' }, { home: 'User1', away: 'User5' }, { home: 'User4', away: 'User6' }] },
+    { week: 3, matchups: [{ home: 'User3', away: 'User4' }, { home: 'User5', away: 'User6' }, { home: 'User1', away: 'User6' }] },
+    { week: 4, matchups: [{ home: 'User2', away: 'User5' }, { home: 'User1', away: 'User2' }, { home: 'User3', away: 'User6' }] },
+    { week: 5, matchups: [{ home: 'User3', away: 'User5' }, { home: 'User1', away: 'User2' }, { home: 'User3', away: 'User4' }] },
+    { week: 6, matchups: [{ home: 'User2', away: 'User3' }, { home: 'User4', away: 'User5' }, { home: 'User1', away: 'User4' }] },
+    { week: 7, matchups: [{ home: 'User2', away: 'User4' }, { home: 'User1', away: 'User3' }, { home: 'User3', away: 'User5' }] },
+    { week: 8, matchups: [{ home: 'User2', away: 'User5' }, { home: 'User1', away: 'User6' }, { home: 'User2', away: 'User4' }] },
+    { week: 9, matchups: [{ home: 'User2', away: 'User6' }, { home: 'User1', away: 'User4' }, { home: 'User3', away: 'User6' }] },
+    { week: 10, matchups: [{ home: 'User1', away: 'User3' }, { home: 'User2', away: 'User3' }, { home: 'User4', away: 'User6' }] },
+  ],
+  7: [
+    { week: 1, matchups: [{ home: 'User4', away: 'User7' }, { home: 'User6', away: 'User7' }, { home: 'User2', away: 'User5' }, { home: 'User1', away: 'User3' }] },
+    { week: 2, matchups: [{ home: 'User1', away: 'User7' }, { home: 'User3', away: 'User5' }, { home: 'User4', away: 'User7' }, { home: 'User5', away: 'User6' }] },
+    { week: 3, matchups: [{ home: 'User4', away: 'User6' }, { home: 'User3', away: 'User6' }, { home: 'User1', away: 'User7' }, { home: 'User2', away: 'User3' }, { home: 'User2', away: 'User5' }] },
+    { week: 4, matchups: [{ home: 'User2', away: 'User7' }, { home: 'User2', away: 'User3' }, { home: 'User4', away: 'User5' }, { home: 'User1', away: 'User6' }] },
+    { week: 5, matchups: [{ home: 'User1', away: 'User3' }, { home: 'User1', away: 'User6' }, { home: 'User5', away: 'User7' }, { home: 'User2', away: 'User7' }, { home: 'User2', away: 'User4' }] },
+    { week: 6, matchups: [{ home: 'User2', away: 'User6' }, { home: 'User1', away: 'User2' }, { home: 'User5', away: 'User6' }, { home: 'User3', away: 'User7' }] },
+    { week: 7, matchups: [{ home: 'User3', away: 'User7' }, { home: 'User3', away: 'User6' }, { home: 'User1', away: 'User5' }, { home: 'User2', away: 'User4' }] },
+    { week: 8, matchups: [{ home: 'User2', away: 'User6' }, { home: 'User3', away: 'User4' }, { home: 'User1', away: 'User2' }, { home: 'User4', away: 'User5' }] },
+    { week: 9, matchups: [{ home: 'User6', away: 'User7' }, { home: 'User1', away: 'User4' }, { home: 'User1', away: 'User5' }, { home: 'User3', away: 'User4' }] },
+    { week: 10, matchups: [{ home: 'User4', away: 'User6' }, { home: 'User3', away: 'User5' }, { home: 'User1', away: 'User4' }, { home: 'User5', away: 'User7' }] },
+  ],
+  8: [
+    { week: 1, matchups: [{ home: 'User1', away: 'User8' }, { home: 'User5', away: 'User7' }, { home: 'User2', away: 'User3' }, { home: 'User4', away: 'User6' }] },
+    { week: 2, matchups: [{ home: 'User1', away: 'User8' }, { home: 'User4', away: 'User8' }, { home: 'User2', away: 'User5' }, { home: 'User3', away: 'User4' }, { home: 'User3', away: 'User6' }, { home: 'User2', away: 'User7' }] },
+    { week: 3, matchups: [{ home: 'User5', away: 'User8' }, { home: 'User1', away: 'User5' }, { home: 'User1', away: 'User7' }, { home: 'User6', away: 'User7' }, { home: 'User4', away: 'User8' }, { home: 'User2', away: 'User4' }] },
+    { week: 4, matchups: [{ home: 'User3', away: 'User5' }, { home: 'User3', away: 'User7' }, { home: 'User7', away: 'User8' }, { home: 'User2', away: 'User5' }, { home: 'User1', away: 'User6' }, { home: 'User1', away: 'User4' }] },
+    { week: 5, matchups: [{ home: 'User1', away: 'User4' }, { home: 'User6', away: 'User8' }, { home: 'User3', away: 'User8' }, { home: 'User5', away: 'User7' }, { home: 'User2', away: 'User6' }] },
+    { week: 6, matchups: [{ home: 'User1', away: 'User2' }, { home: 'User2', away: 'User3' }, { home: 'User7', away: 'User8' }, { home: 'User4', away: 'User6' }, { home: 'User5', away: 'User6' }] },
+    { week: 7, matchups: [{ home: 'User3', away: 'User4' }, { home: 'User2', away: 'User8' }, { home: 'User3', away: 'User5' }, { home: 'User4', away: 'User7' }, { home: 'User6', away: 'User7' }, { home: 'User1', away: 'User6' }] },
+    { week: 8, matchups: [{ home: 'User1', away: 'User7' }, { home: 'User5', away: 'User8' }, { home: 'User2', away: 'User8' }, { home: 'User5', away: 'User6' }, { home: 'User1', away: 'User3' }, { home: 'User2', away: 'User4' }] },
+    { week: 9, matchups: [{ home: 'User2', away: 'User7' }, { home: 'User3', away: 'User7' }, { home: 'User3', away: 'User6' }, { home: 'User1', away: 'User2' }, { home: 'User1', away: 'User5' }, { home: 'User4', away: 'User5' }] },
+    { week: 10, matchups: [{ home: 'User4', away: 'User5' }, { home: 'User3', away: 'User8' }, { home: 'User4', away: 'User7' }, { home: 'User6', away: 'User8' }, { home: 'User2', away: 'User6' }, { home: 'User1', away: 'User3' }] },
+  ],
+};
+
+async function generateAndInsertSchedule(leagueId) {
+  // Fetch all team IDs in the league
+  const result = await pool.query(
+    'SELECT league_team_id FROM league_teams WHERE league_id = $1',
+    [leagueId]
+  );
+  const teamIds = result.rows.map(row => row.league_team_id);
+
+  const numberOfTeams = teamIds.length;
+
+  // Check if we have a predefined schedule for this league size
+  const predefinedSchedule = schedules[numberOfTeams];
+
+  if (!predefinedSchedule) {
+    console.error('No predefined schedule available for this league size.');
+    return;
+  }
+
+  // Shuffle the team IDs to randomly assign them to predefined user slots
+  const shuffledTeams = shuffleArray(teamIds); // Implement or use a shuffle function
+
+  // Assign the shuffled teams to the schedule
+  const userMap = {};
+  for (let i = 0; i < shuffledTeams.length; i++) {
+    userMap[`User${i + 1}`] = shuffledTeams[i];
+  }
+
+  // Insert the schedule into the database
+  for (const week of predefinedSchedule) {
+    const weekNumber = week.week;
+    for (const matchup of week.matchups) {
+      const home = userMap[matchup.home];
+      const away = userMap[matchup.away];
+
+      // Skip if there's a bye
+      if (!home || !away) {
+        continue;
+      }
+
+      // Insert the matchup into the user_schedule table
+      await pool.query(
+        `INSERT INTO user_schedule (league_id, week_number, home_team_id, away_team_id)
+          VALUES ($1, $2, $3, $4)`,
+        [leagueId, weekNumber, home, away]
+      );
+    }
+  }
+
+  console.log('Schedule generated and inserted successfully.');
 }
 
 // -------------------------------------------------------------------------- //

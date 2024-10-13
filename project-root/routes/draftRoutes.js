@@ -294,7 +294,6 @@ router.get('/leagues/:leagueId/current-turn', authenticateToken, async (req, res
     }
 });
 
-  
 // Endpoint to get all players for a specific team
 router.get('/teams/:teamId/players', authenticateToken, async (req, res) => {
     const { teamId } = req.params;

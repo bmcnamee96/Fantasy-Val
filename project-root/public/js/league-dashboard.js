@@ -140,7 +140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchAndDisplayActiveTrades(); // Fetch active trades after setting currentUserTeamId
 });
 
-
 async function openDraft() {
     try {
         // Fetch draft status
@@ -683,34 +682,42 @@ function displayNoScheduleMessage(message) {
 
 async function fetchNextOpponent(leagueId, token) {
     try {
-      const response = await fetch(`/api/leagues/next-opponent/${leagueId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-  
-      if (response.status === 401) {
-        // Handle unauthorized access
-        window.location.href = '/login.html';
-        return;
-      }
-  
-      const data = await response.json();
-  
-      if (data.error) {
-        throw new Error(data.error);
-      }
-  
-      if (data.message) {
-        document.getElementById('opponent-name').textContent = data.message;
-      } else {
-        updateOpponentDisplay(data.opponent_name, data.week_number);
-      }
+        const response = await fetch(`/api/leagues/next-opponent/${leagueId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (response.status === 401) {
+            // Handle unauthorized access
+            window.location.href = '/login.html';
+            return;
+        }
+
+        const data = await response.json();
+        console.log(data);
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        const opponentContainer = document.getElementById('opponent-names');
+        opponentContainer.innerHTML = ''; // Clear existing content
+
+        if (data.opponents && data.opponents.length > 0) {
+            data.opponents.forEach(opponent => {
+                const opponentElement = document.createElement('p');
+                opponentElement.textContent = `${opponent.opponent_name}`;
+                opponentContainer.appendChild(opponentElement);
+            });
+        } else {
+            opponentContainer.textContent = 'No opponent this week.';
+        }
     } catch (error) {
-      console.error('Error fetching next opponent:', error);
-      document.getElementById('opponent-name').textContent = 'Error fetching opponent.';
+        console.error('Error fetching next opponent:', error);
+        document.getElementById('opponent-names').textContent = 'Error fetching opponent.';
     }
 }
   
