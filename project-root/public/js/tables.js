@@ -46,17 +46,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Fetch data from the API for PlayerStats
         async function fetchPlayerStats(team_abrev = '') {
             try {
-                const response = await fetch(`/api/val-stats/player-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
-                const data = await response.json();
-                console.log('Fetched data:', data); // Debug log
-                populatePlayerStatsTable(data);
+              const response = await fetch(`/api/val-stats/player-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
+              const data = await response.json();
+          
+              if (data.error) {
+                console.error('Error fetching player stats:', data.details); // Log error message
+                return; // Stop processing if there was an error
+              }
+          
+              console.log('Fetched data:', data); // Debug log
+              populatePlayerStatsTable(data);
             } catch (error) {
-                console.error('Error fetching player stats:', error);
+              console.error('Error fetching player stats:', error);
             }
-        }
+        }          
 
         function populatePlayerStatsTable(data) {
             const tableBody = document.querySelector('#player-stats-table tbody');
@@ -72,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${row.player_name}</td>
+                    <td>${row.player.player_name}</td>
                     <td>${row.team_abrev}</td>
                     <td>${row.total_maps_played}</td>
                     <td>${row.total_kills}</td>

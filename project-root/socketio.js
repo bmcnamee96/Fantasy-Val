@@ -24,10 +24,6 @@ const pool = new Pool({
   port: 5432,
 });
 
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
-
 // -------------------------------------------------------------------------- //
 
 function getUserIdFromSocketId(socketId) {
@@ -1165,7 +1161,10 @@ async function generateAndInsertSchedule(leagueId) {
 // -------------------------------------------------------------------------- //
 
 // Starting the Socket.IO server
-function startSocketIOServer() {
+function startSocketIOServer(server) {
+
+  const io = socketIo(server); // Initialize Socket.IO with the provided server
+
   io.on('connection', (socket) => {
       const { userId, leagueId } = socket.handshake.query;
 
@@ -1262,15 +1261,6 @@ function startSocketIOServer() {
           logger.error('Socket.IO error:', error);
       });
   });
-
-  server.listen(8080, () => {
-      logger.info('Socket.IO server is listening on port 8080');
-  });
 }
 
 module.exports = startSocketIOServer;
-
-// Ensure this file is only executed if run directly, preventing double-start issues
-if (require.main === module) {
-startSocketIOServer();
-}

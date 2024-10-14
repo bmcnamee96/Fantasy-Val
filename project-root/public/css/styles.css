@@ -1252,7 +1252,7 @@ form button:hover {
     padding: 0; /* Remove padding */
     margin: 0; /* Remove margin */
     list-style: none; /* Remove default list styling */
-    z-index: 999; /* Ensure the indicators are above other elements */
+    z-index: 500; /* Ensure the indicators are above other elements */
 }
 
 .carousel-indicators li {
@@ -1788,7 +1788,7 @@ color: var(--text-color);
 .modal {
     display: none;
     position: fixed;
-    z-index: 1;
+    z-index: 1000;
     left: 0;
     top: 0;
     width: 100%;

@@ -4,6 +4,7 @@ SELECT * FROM league_team_players;
 SELECT * FROM user_leagues;
 SELECT * FROM draft_orders;
 SELECT * FROM draft_status;
+SELECT * FROM users;
 
 DELETE FROM draft_status
 	WHERE league_id <> 3;
@@ -173,3 +174,5 @@ SELECT * FROM trade_requests;
 SELECT * FROM drafted_players;
 SELECT * FROM league_team_players
 	WHERE league_team_id = 97;
+
+SELECT * FROM user_schedule;
