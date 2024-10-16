@@ -1,3 +1,5 @@
+// routes/authRoutes.js
+
 // #region Dependencies
 const express = require('express');
 const bcrypt = require('bcrypt');
@@ -6,12 +8,10 @@ const { sendPasswordResetEmail } = require('../services/emailService');
 const { JWT_SECRET } = require('../utils/auth');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
-const { createClient } = require('@supabase/supabase-js');
 
 const router = express.Router();
 
-// Initialize Supabase client
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const pool = require('../db'); // Import the db.js connection
 
 // Endpoint to register a new user
 router.post('/signup', async (req, res) => {
@@ -25,16 +25,12 @@ router.post('/signup', async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
   
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .insert([{ username, password: hashedPassword, email }])
-      .select('user_id');
+    const result = await pool.query(
+      `INSERT INTO users (username, password, email) VALUES ($1, $2, $3) RETURNING user_id`,
+      [username, hashedPassword, email]
+    );
 
-    if (error) {
-      throw error;
-    }
-
-    const user = data[0];
+    const user = result.rows[0];
     const token = jwt.sign({ userId: user.user_id }, JWT_SECRET, { expiresIn: '1h' });
 
     logger.info(`User registered: ${username}`);
@@ -55,26 +51,25 @@ router.post('/signin', async (req, res) => {
   }
   
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('user_id, username, password')
-      .eq('username', username)
-      .single(); // Fetch single record
+    const result = await pool.query(
+      `SELECT user_id, username, password FROM users WHERE username = $1`,
+      [username]
+    );
 
-    if (error || !data) {
-      logger.warn(`Invalid username attempt: ${username}`);
-      return res.status(401).send('Invalid username or password');
-    }
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const isValidPassword = await bcrypt.compare(password, user.password);
 
-    const user = data;
-    const isValidPassword = await bcrypt.compare(password, user.password);
-
-    if (isValidPassword) {
-      const token = jwt.sign({ userId: user.user_id }, JWT_SECRET, { expiresIn: '1h' });
-      logger.info(`User signed in: ${username}`);
-      res.status(200).json({ token, username: user.username });
+      if (isValidPassword) {
+        const token = jwt.sign({ userId: user.user_id }, JWT_SECRET, { expiresIn: '1h' });
+        logger.info(`User signed in: ${username}`);
+        res.status(200).json({ token, username: user.username });
+      } else {
+        logger.warn(`Invalid password attempt for user: ${username}`);
+        res.status(401).send('Invalid username or password');
+      }
     } else {
-      logger.warn(`Invalid password attempt for user: ${username}`);
+      logger.warn(`Invalid username attempt: ${username}`);
       res.status(401).send('Invalid username or password');
     }
   } catch (err) {
@@ -95,26 +90,23 @@ router.post('/recover-password', async (req, res) => {
   logger.info('Password recovery request received for email:', email);
 
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('email')
-      .eq('email', email)
-      .single(); // Fetch single record
+    const client = await pool.connect();
 
-    if (error || !data) {
+    const userResult = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userResult.rowCount === 0) {
+      client.release();
       logger.warn('Email not found in the database:', email);
       return res.status(400).json({ message: 'Email not found' });
     }
 
     const token = crypto.randomBytes(20).toString('hex');
 
-    const { error: tokenError } = await supabase
-      .from('password_reset_tokens')
-      .upsert([{ email, token, created_at: new Date() }], { onConflict: ['email'] });
-
-    if (tokenError) {
-      throw tokenError;
-    }
+    await client.query(
+      'INSERT INTO password_reset_tokens (email, token) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET token = $2, created_at = NOW()',
+      [email, token]
+    );
+    
+    client.release();
 
     await sendPasswordResetEmail(email, token);
 

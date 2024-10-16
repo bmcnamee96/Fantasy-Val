@@ -3,7 +3,6 @@
 const http = require('http');
 const express = require('express');
 const socketIo = require('socket.io');
-const { Pool } = require('pg'); // Database connection
 const logger = require('./utils/logger');
 const clients = new Map();
 
@@ -15,14 +14,11 @@ let maxRounds = 7;
 let turnTimer = null;
 let currentTurnTimer = null; // Variable to store the active timer
 
-// Create a new pool instance for database connection
-const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'fan_val',
-  password: 'pgadmin',
-  port: 5432,
-});
+const pool = require('./db'); // Import the db.js connection
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
 // -------------------------------------------------------------------------- //
 
@@ -61,53 +57,30 @@ async function getAvailablePlayers(leagueId) {
 
   console.log('Fetching available players for leagueId:', leagueIdInt);
 
+  // Updated query to filter based on the league_id
   const query = `
-      SELECT p.player_id, p.player_name, p.team_abrev, p.role
-      FROM player p
-      LEFT JOIN drafted_players dp
-      ON p.player_id = dp.player_id AND dp.league_id = $1
-      WHERE p.team_abrev IN (
-          SELECT team_abrev
-          FROM league_teams
-          WHERE league_id = $1
-      ) AND dp.player_id IS NULL
+    SELECT p.player_id, p.player_name, t.team_abrev, p.role
+    FROM player p
+    LEFT JOIN drafted_players dp ON p.player_id = dp.player_id AND dp.league_id = $1
+    JOIN teams t ON t.team_id = p.team_id
+    WHERE dp.player_id IS NULL
   `;
 
   try {
-      // Execute the query with the integer leagueId
-      const result = await pool.query(query, [leagueIdInt]);
-      return result.rows.map(player => ({
-          id: player.player_id,
-          name: player.player_name,
-          team_abrev: player.team_abrev,
-          role: player.role || 'unknown role'
-      }));
+    // Execute the query with the integer leagueId
+    const result = await pool.query(query, [leagueIdInt]);
+    return result.rows.map(player => ({
+      id: player.player_id,
+      name: player.player_name,
+      team_abrev: player.team_abrev,
+      role: player.role || 'unknown role'
+    }));
   } catch (error) {
-      console.error('Error fetching available players:', error);
-      return [];
+    console.error('Error fetching available players:', error);
+    return [];
   }
 }
 
-async function getUsernameFromId(userId) {
-  try {
-    const { rows: userRows } = await pool.query(
-      `SELECT username 
-       FROM users 
-       WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (userRows.length === 0) {
-      console.error('User not found:', userId);
-      return null; // Return null if user is not found
-    }
-
-    return userRows[0].username;
-  } catch (error) {
-    console.error('Error fetching username:', error);
-    throw error; // Propagate the error
-  }
-}
 
 async function getIdFromUsername(username) {
   try {
@@ -1026,9 +999,10 @@ async function getTeamDataForUser(userId, leagueId) {
 
     // Query to get the players for the league_team_id
     const playerQuery = `
-      SELECT p.player_name, p.role, p.team_abrev
+      SELECT p.player_name, p.role, t.team_abrev
       FROM league_team_players ltp
       JOIN player p ON ltp.player_id = p.player_id
+      JOIN teams t on t.team_id = p.team_id
       WHERE ltp.league_team_id = $1
     `;
     const playerResult = await pool.query(playerQuery, [leagueTeamId]);
@@ -1161,10 +1135,7 @@ async function generateAndInsertSchedule(leagueId) {
 // -------------------------------------------------------------------------- //
 
 // Starting the Socket.IO server
-function startSocketIOServer(server) {
-
-  const io = socketIo(server); // Initialize Socket.IO with the provided server
-
+function startSocketIOServer() {
   io.on('connection', (socket) => {
       const { userId, leagueId } = socket.handshake.query;
 
@@ -1261,6 +1232,15 @@ function startSocketIOServer(server) {
           logger.error('Socket.IO error:', error);
       });
   });
+
+  server.listen(8080, () => {
+      logger.info('Socket.IO server is listening on port 8080');
+  });
 }
 
 module.exports = startSocketIOServer;
+
+// Ensure this file is only executed if run directly, preventing double-start issues
+if (require.main === module) {
+startSocketIOServer();
+}

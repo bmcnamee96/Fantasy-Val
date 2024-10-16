@@ -2,7 +2,6 @@
 
 // #region Dependencies
 const express = require('express');
-const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const saltRounds = 10; // Define the salt rounds for bcrypt
 const authenticateToken = require('../middleware/authMiddleware');
@@ -13,14 +12,7 @@ const cron = require('node-cron'); // For scheduling tasks
 
 const router = express.Router();
 
-// Create a pool of connections to the PostgreSQL database
-const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'fan_val',
-  password: 'pgadmin',
-  port: 5432,
-});
+const pool = require('../db'); // Import the db.js connection
 
 // API endpoint to create a league
 router.post('/create-league', authenticateToken, async (req, res) => {

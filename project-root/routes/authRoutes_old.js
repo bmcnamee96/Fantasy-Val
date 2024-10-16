@@ -2,7 +2,6 @@
 
 // #region Dependencies
 const express = require('express');
-const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { sendPasswordResetEmail } = require('../services/emailService');
@@ -12,14 +11,7 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// Create a pool of connections to the PostgreSQL database
-const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'fan_val',
-  password: 'pgadmin',
-  port: 5432,
-});
+const pool = require('../db'); // Import the db.js connection
 
 // Endpoint to register a new user
 router.post('/signup', async (req, res) => {

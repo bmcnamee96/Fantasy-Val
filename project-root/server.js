@@ -2,14 +2,15 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const http = require('http');
 const { expressjwt: expressJwt } = require('express-jwt');
+const http = require('http');
+const socketIo = require('socket.io');
+const { Pool } = require('pg');
 const { JWT_SECRET } = require('./utils/auth');
-const logger = require('./utils/logger');
+const logger = require('./utils/logger'); // Import your logger
 const startSocketIOServer = require('./socketio'); // Import the Socket.IO server setup
-const { createClient } = require('@supabase/supabase-js'); // Correct Supabase import
 
-require('dotenv').config(); // Load environment variables
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,8 +18,8 @@ const port = process.env.PORT || 3000;
 // Create an HTTP server
 const server = http.createServer(app);
 
-// Initialize Socket.IO server by passing the HTTP server
-startSocketIOServer(server);
+// Initialize Socket.IO with the HTTP server
+const io = socketIo(server);
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
@@ -42,11 +43,6 @@ app.use(expressJwt({
     '/api/val-stats/match-stats'
   ]
 }));
-
-// Supabase Client Initialization
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Middleware to extract userId from JWT
 app.use((req, res, next) => {
@@ -87,6 +83,9 @@ app.use((err, req, res, next) => {
     next(err);
   }
 });
+
+// Start the Socket.IO server
+startSocketIOServer(io);
 
 // Start the HTTP server
 server.listen(port, () => {
