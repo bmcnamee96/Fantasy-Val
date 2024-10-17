@@ -9,7 +9,7 @@ const clients = new Map();
 let draftStarted = false;
 let draftEnded = false;
 let currentTurnIndex = 0; // Index of the current turn
-let turnDuration = 3;
+let turnDuration = 5;
 let maxRounds = 7;
 let turnTimer = null;
 let currentTurnTimer = null; // Variable to store the active timer
@@ -81,6 +81,26 @@ async function getAvailablePlayers(leagueId) {
   }
 }
 
+async function getUsernameFromId(userId) {
+  try {
+    const { rows: userRows } = await pool.query(
+      `SELECT username 
+       FROM users 
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (userRows.length === 0) {
+      console.error('User not found:', userId);
+      return null; // Return null if user is not found
+    }
+
+    return userRows[0].username;
+  } catch (error) {
+    console.error('Error fetching username:', error);
+    throw error; // Propagate the error
+  }
+}
 
 async function getIdFromUsername(username) {
   try {
@@ -129,21 +149,22 @@ async function getPlayerNameFromId(playerId) {
 
 async function getTeamAbrevFromPlayerId(playerId) {
   try {
-    // Query the database for the player's name
+    // Query the database to get the player's team abbreviation
     const { rows: teamAbrevRows } = await pool.query(
-      `SELECT team_abrev 
-       FROM player 
-       WHERE player_id = $1`,
+      `SELECT t.team_abrev
+       FROM player p
+       INNER JOIN teams t ON p.team_id = t.team_id
+       WHERE p.player_id = $1`,
       [playerId]
     );
 
-    // Check if player was found
+    // Check if player/team was found
     if (teamAbrevRows.length === 0) {
-      console.error('No team_abrev found for:', playerId);
-      return null; // Return null if player is not found
+      console.error('No team_abrev found for player_id:', playerId);
+      return null; // Return null if not found
     }
 
-    // Return the player's team
+    // Return the team abbreviation
     return teamAbrevRows[0].team_abrev;
   } catch (error) {
     console.error('Error fetching team_abrev:', error);

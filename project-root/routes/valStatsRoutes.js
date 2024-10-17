@@ -13,11 +13,12 @@ router.get('/player-stats', async (req, res) => {
   try {
     const { team_abrev } = req.query;
     if (team_abrev) {
-      logger.info(`Received request for player-stats with team_abrev: ${team_abrev}`); // Log request details
+      logger.info(`Received request for player-stats with team_abrev: ${team_abrev}`);
     } else {
-      logger.info('Received request for player-stats without team_abrev'); // Log request details
+      logger.info('Received request for player-stats without team_abrev');
     }
-    
+
+    // Adjusted SQL Query with `team_id` instead of `team_abrev`
     let query = `
       WITH PlayerStats AS (
         SELECT 
@@ -35,23 +36,25 @@ router.get('/player-stats', async (req, res) => {
           ROUND(CAST(ts.total_points AS NUMERIC), 2) AS total_points
         FROM total_stats ts
         JOIN player p ON ts.player_id = p.player_id
-        JOIN teams t ON p.team_abrev = t.team_abrev
+        JOIN teams t ON p.team_id = t.team_id
       )
       SELECT * FROM PlayerStats
     `;
 
+    // Use parameterized queries to prevent SQL injection
+    const params = [];
     if (team_abrev) {
       query += ` WHERE team_abrev = $1 ORDER BY total_points DESC`;
-      const result = await pool.query(query, [team_abrev]);
-      res.json(result.rows);
+      params.push(team_abrev);
     } else {
       query += ` ORDER BY total_points DESC`;
-      const result = await pool.query(query);
-      res.json(result.rows);
     }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (err) {
-    logger.error('Error executing query for player-stats:', err.message, err.stack); // Log error details
-    res.status(500).send('Error executing query');
+    logger.error('Error executing query for player-stats:', err.message, err.stack);
+    res.status(500).json({ error: 'Error executing query', details: err.message });
   }
 });
 
@@ -59,19 +62,18 @@ router.get('/player-stats', async (req, res) => {
 router.get('/match-stats', async (req, res) => {
   try {
     const { team_abrev } = req.query;
+
     if (team_abrev) {
-      logger.info(`Received request for match-stats with team_abrev: ${team_abrev}`); // Log request details
+      logger.info(`Received request for match-stats with team_abrev: ${team_abrev}`);
     } else {
-      logger.info('Received request for match-stats without team_abrev'); // Log request details
+      logger.info('Received request for match-stats without team_abrev');
     }
 
+    // Base query to get match stats
     let query = `
       WITH SeriesStats AS (
         SELECT 
-          s.week,
-          s.split,
-          p.player_name,
-          p.team_abrev,
+          sps.player_id,
           sps.series_maps,
           sps.series_kills,
           sps.series_deaths,
@@ -81,26 +83,36 @@ router.get('/match-stats', async (req, res) => {
           sps.series_clutches,
           sps.series_aces,
           sps.avg_adr_per_series,
-          sps.adjusted_points
-        FROM series_player_stats AS sps
-        JOIN series s ON sps.series_id = s.series_id
+          sps.adjusted_points,
+          p.player_name,
+          t.team_abrev,
+          s.week,
+          s.split
+        FROM series_player_stats sps
         JOIN player p ON sps.player_id = p.player_id
-        ORDER BY s.week ASC, sps.series_id ASC, p.team_abrev ASC
+        JOIN teams t ON p.team_id = t.team_id
+        JOIN series s ON sps.series_id = s.series_id
       )
       SELECT * FROM SeriesStats
     `;
 
+    const params = [];
+
+    // Add filtering if `team_abrev` is provided
     if (team_abrev) {
-      query += ` WHERE team_abrev = $1`;
-      const result = await pool.query(query, [team_abrev]);
-      res.json(result.rows);
+      query += ` WHERE team_abrev = $1 ORDER BY week ASC, player_name ASC, team_abrev ASC`;
+      params.push(team_abrev);
     } else {
-      const result = await pool.query(query);
-      res.json(result.rows);
+      query += ` ORDER BY week ASC, player_name ASC, team_abrev ASC`;
     }
+
+    // Execute the query
+    const result = await pool.query(query, params);
+
+    res.json(result.rows);
   } catch (err) {
-    logger.error('Error executing query for match-stats:', err.message, err.stack); // Log error details
-    res.status(500).json({ error: 'Error executing query' }); // Send JSON error response
+    logger.error('Error executing query for match-stats:', err.message, err.stack);
+    res.status(500).json({ error: 'Error executing query', details: err.message });
   }
 });
 

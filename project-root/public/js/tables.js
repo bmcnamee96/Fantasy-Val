@@ -46,100 +46,100 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+       // Fetch data from the API for PlayerStats
         async function fetchPlayerStats(team_abrev = '') {
             try {
-              const response = await fetch(`/api/val-stats/player-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
-              const data = await response.json();
-          
-              if (data.error) {
-                console.error('Error fetching player stats:', data.details); // Log error message
-                return; // Stop processing if there was an error
-              }
-          
-              console.log('Fetched data:', data); // Debug log
-              populatePlayerStatsTable(data);
-            } catch (error) {
-              console.error('Error fetching player stats:', error);
+            const response = await fetch(`/api/val-stats/player-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
+            const data = await response.json();
+            console.log('Fetched data:', data); // Debug log
+        
+            if (Array.isArray(data)) {
+                populatePlayerStatsTable(data);
+            } else {
+                console.error('Unexpected data format:', data);
             }
-        }          
-
+            } catch (error) {
+            console.error('Error fetching player stats:', error);
+            }
+        }
+  
+        // Populate the Player Stats Table
         function populatePlayerStatsTable(data) {
             const tableBody = document.querySelector('#player-stats-table tbody');
             if (!tableBody) {
-                console.error('Table body not found');
-                return;
+            console.error('Table body not found');
+            return;
             }
             tableBody.innerHTML = ''; // Clear existing rows
-
+        
             data.forEach(row => {
-                const totalAdr = parseFloat(row.total_adr) || 0;
-                const totalPoints = parseFloat(row.total_points) || 0;
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.player.player_name}</td>
-                    <td>${row.team_abrev}</td>
-                    <td>${row.total_maps_played}</td>
-                    <td>${row.total_kills}</td>
-                    <td>${row.total_deaths}</td>
-                    <td>${row.total_assists}</td>
-                    <td>${row.total_fk}</td>
-                    <td>${row.total_fd}</td>
-                    <td>${row.total_clutches}</td>
-                    <td>${row.total_aces}</td>
-                    <td>${totalAdr.toFixed(2)}</td>
-                    <td>${totalPoints.toFixed(2)}</td>
-                `;
-                tableBody.appendChild(tr);
+            const totalAdr = parseFloat(row.total_adr) || 0;
+            const totalPoints = parseFloat(row.total_points) || 0;
+        
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.player_name}</td>
+                <td>${row.team_abrev}</td>
+                <td>${row.total_maps_played}</td>
+                <td>${row.total_kills}</td>
+                <td>${row.total_deaths}</td>
+                <td>${row.total_assists}</td>
+                <td>${row.total_fk}</td>
+                <td>${row.total_fd}</td>
+                <td>${row.total_clutches}</td>
+                <td>${row.total_aces}</td>
+                <td>${totalAdr.toFixed(2)}</td>
+                <td>${totalPoints.toFixed(2)}</td>
+            `;
+            tableBody.appendChild(tr);
             });
         }
-
+  
         // Fetch data from the API for MatchStats
         async function fetchMatchStats(team_abrev = '') {
             try {
-                const response = await fetch(`/api/val-stats/match-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
-                const text = await response.text(); // Get response as text first
-                console.log('Response text:', text); // Log response text
-                const data = JSON.parse(text); // Parse text as JSON
-                console.log('Fetched data:', data); // Debug log
-                populateMatchStatsTable(data);
+            const response = await fetch(`/api/val-stats/match-stats?team_abrev=${encodeURIComponent(team_abrev)}`);
+            const data = await response.json();
+            console.log('Fetched data:', data); // Debug log
+            populateMatchStatsTable(data);
             } catch (error) {
-                console.error('Error fetching match stats:', error);
+            console.error('Error fetching match stats:', error);
             }
         }
-
+        
         function populateMatchStatsTable(data) {
             const tableBody = document.querySelector('#match-stats-table tbody');
             if (!tableBody) {
-                console.error('Table body not found');
-                return;
+            console.error('Table body not found');
+            return;
             }
             tableBody.innerHTML = ''; // Clear existing rows
-
+        
             data.forEach(row => {
-                const seriesAdr = parseFloat(row.avg_adr_per_series) || 0;
-                const seriesPoints = parseFloat(row.adjusted_points) || 0;
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.week}</td>
-                    <td>${row.split}</td>
-                    <td>${row.player_name}</td>
-                    <td>${row.team_abrev}</td>
-                    <td>${row.series_maps}</td>
-                    <td>${row.series_kills}</td>
-                    <td>${row.series_deaths}</td>
-                    <td>${row.series_assists}</td>
-                    <td>${row.series_fk}</td>
-                    <td>${row.series_fd}</td>
-                    <td>${row.series_clutches}</td>
-                    <td>${row.series_aces}</td>
-                    <td>${seriesAdr.toFixed(2)}</td>
-                    <td>${seriesPoints.toFixed(2)}</td>
-                `;
-                tableBody.appendChild(tr);
+            const seriesAdr = parseFloat(row.avg_adr_per_series) || 0;
+            const seriesPoints = parseFloat(row.adjusted_points) || 0;
+        
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.week}</td>
+                <td>${row.split}</td>
+                <td>${row.player_name}</td>
+                <td>${row.team_abrev}</td>
+                <td>${row.series_maps}</td>
+                <td>${row.series_kills}</td>
+                <td>${row.series_deaths}</td>
+                <td>${row.series_assists}</td>
+                <td>${row.series_fk}</td>
+                <td>${row.series_fd}</td>
+                <td>${row.series_clutches}</td>
+                <td>${row.series_aces}</td>
+                <td>${seriesAdr.toFixed(2)}</td>
+                <td>${seriesPoints.toFixed(2)}</td>
+            `;
+            tableBody.appendChild(tr);
             });
         }
+  
 
         // Add event listeners to table headers for sorting
         document.querySelectorAll('#player-stats-table th').forEach((header, index) => {

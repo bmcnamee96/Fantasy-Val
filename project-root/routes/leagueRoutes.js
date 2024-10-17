@@ -400,13 +400,15 @@ router.get('/my-team/:leagueId', authenticateToken, async (req, res) => {
       SELECT 
           p.player_name, 
           p.role, 
-          p.team_abrev, 
+          t.team_abrev, 
           COALESCE(SUM(sps.adjusted_points), 0) AS points, 
           ltp.starter
       FROM 
           league_team_players ltp
       JOIN 
           player p ON ltp.player_id = p.player_id
+      JOIN 
+          teams t ON p.team_id = t.team_id
       LEFT JOIN 
           series_player_stats sps 
           ON p.player_id = sps.player_id 
@@ -414,7 +416,7 @@ router.get('/my-team/:leagueId', authenticateToken, async (req, res) => {
       WHERE 
           ltp.league_team_id = $1
       GROUP BY 
-          p.player_name, p.role, p.team_abrev, ltp.starter;
+          p.player_name, p.role, t.team_abrev, ltp.starter;
     `;
     const playersResult = await pool.query(playersQuery, [leagueTeamId, currentWeek]);
 
@@ -446,17 +448,25 @@ router.get('/:leagueId/available-players', authenticateToken, async (req, res) =
       return res.status(404).json({ error: 'League not found' });
     }
 
-    // Updated SQL query to only return players not assigned to any team in the given league
+    // SQL query to return players not assigned to any team in the given league
     const result = await pool.query(
-      `SELECT p.player_id, p.player_name, p.team_abrev, p.role
-       FROM player p
-       WHERE NOT EXISTS (
-         SELECT 1
-         FROM league_team_players ltp
-         JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
-         WHERE ltp.player_id = p.player_id
-           AND lt.league_id = $1
-       )`,
+      `SELECT 
+          p.player_id, 
+          p.player_name, 
+          t.team_abrev, 
+          p.role
+       FROM 
+          player p
+       JOIN 
+          teams t ON p.team_id = t.team_id
+       WHERE 
+          NOT EXISTS (
+            SELECT 1
+            FROM league_team_players ltp
+            JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
+            WHERE ltp.player_id = p.player_id
+              AND lt.league_id = $1
+          )`,
       [leagueId]
     );
 
@@ -554,29 +564,41 @@ router.post('/:leagueId/sign-player', authenticateToken, checkRosterLock, async 
 // Endpoint to get user's bench players
 router.get('/:leagueId/bench-players', authenticateToken, async (req, res) => {
   const { leagueId } = req.params;
-  const userId = req.user.userId; // Assuming user ID is available from the token
+  const userId = req.user.userId; // Extracted from the authenticated token
 
   try {
-      // Check if the league exists
-      const leagueCheck = await pool.query('SELECT 1 FROM leagues WHERE league_id = $1', [leagueId]);
-      if (leagueCheck.rowCount === 0) {
-          return res.status(404).json({ success: false, error: 'League not found.' });
-      }
+    // Check if the league exists
+    const leagueCheck = await pool.query('SELECT 1 FROM leagues WHERE league_id = $1', [leagueId]);
+    if (leagueCheck.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'League not found.' });
+    }
 
-      // Fetch bench players where starter is FALSE
-      const benchPlayers = await pool.query(
-          `SELECT p.player_id, p.player_name, p.team_abrev, p.role
-           FROM player p
-           INNER JOIN league_team_players ltp ON p.player_id = ltp.player_id
-           INNER JOIN league_teams lt ON ltp.league_team_id = lt.league_team_id
-           WHERE lt.league_id = $1 AND lt.user_id = $2`,
-          [leagueId, userId]
-      );
+    // Fetch bench players where 'starter' is FALSE
+    const benchPlayersQuery = `
+      SELECT 
+        p.player_id, 
+        p.player_name, 
+        t.team_abrev, 
+        p.role 
+      FROM 
+        league_team_players ltp
+      INNER JOIN 
+        player p ON ltp.player_id = p.player_id
+      INNER JOIN 
+        teams t ON p.team_id = t.team_id
+      INNER JOIN 
+        league_teams lt ON ltp.league_team_id = lt.league_team_id
+      WHERE 
+        lt.league_id = $1 
+        AND lt.user_id = $2 
+    `;
+    
+    const benchPlayersResult = await pool.query(benchPlayersQuery, [leagueId, userId]);
 
-      res.status(200).json({ success: true, availableBenchPlayers: benchPlayers.rows });
+    res.status(200).json({ success: true, availableBenchPlayers: benchPlayersResult.rows });
   } catch (error) {
-      logger.error('Error fetching bench players:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch bench players.' });
+    logger.error('Error fetching bench players:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch bench players.' });
   }
 });
 
@@ -684,34 +706,41 @@ router.post('/ids-to-names', async (req, res) => {
   const { playerIds } = req.body; // Get the array of player IDs from the request body
 
   if (!playerIds || !Array.isArray(playerIds)) {
-      return res.status(400).json({ error: 'Invalid input, expected an array of player IDs.' });
+    return res.status(400).json({ error: 'Invalid input, expected an array of player IDs.' });
   }
 
   try {
-      // Query the database for the player names and team abbreviations based on the provided IDs
-      const query = `
-          SELECT player_id, player_name, team_abrev, role
-          FROM player
-          WHERE player_id = ANY($1::int[])
-      `;
-      const result = await pool.query(query, [playerIds]);
+    // Query the database for player names, roles, and team abbreviations based on the provided IDs
+    const query = `
+      SELECT 
+        p.player_id, 
+        p.player_name, 
+        t.team_abrev, 
+        p.role
+      FROM 
+        player p
+      INNER JOIN 
+        teams t ON p.team_id = t.team_id
+      WHERE 
+        p.player_id = ANY($1::int[])
+    `;
+    const result = await pool.query(query, [playerIds]);
 
-      // Create a mapping of player_id to an object containing player_name and team_abrev
-      const playerMap = {};
-      result.rows.forEach(row => {
-          playerMap[row.player_id] = {
-              player_name: row.player_name,
-              team_abrev: row.team_abrev,  // Return 'Unknown' if team_abrev is null
-              role: row.role
-          };
-      });
+    // Create a mapping of player_id to an object containing player_name, team_abrev, and role
+    const playerMap = result.rows.reduce((acc, row) => {
+      acc[row.player_id] = {
+        player_name: row.player_name,
+        team_abrev: row.team_abrev || 'Unknown', // Handle case where team_abrev might be null
+        role: row.role,
+      };
+      return acc;
+    }, {});
 
-      // Return the mapping
-      return res.json(playerMap);
-
+    // Return the mapping
+    return res.json(playerMap);
   } catch (error) {
-      console.error('Error fetching player names and team abbreviations:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching player names and team abbreviations:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

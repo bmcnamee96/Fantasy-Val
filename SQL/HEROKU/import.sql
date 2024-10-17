@@ -124,6 +124,79 @@ JOIN teams ON teams.team_abrev = data.team_abrev
 WHERE player.player_name = data.player_name
   AND player.team_id = teams.team_id;
 
+-- input player roles
+UPDATE player
+SET role = CASE player_name
+    WHEN 'Apoth' THEN 'Anchor'
+    WHEN 'artzin' THEN 'Anchor'
+    WHEN 'aspas' THEN 'Fragger'
+    WHEN 'Asuna' THEN 'Fragger'
+    WHEN 'bang' THEN 'Support'
+    WHEN 'Boostio' THEN 'Anchor'
+    WHEN 'C0M' THEN 'Support'
+    WHEN 'cauanzin' THEN 'Support'
+    WHEN 'crashies' THEN 'Support'
+    WHEN 'Cryocells' THEN 'Fragger'
+    WHEN 'Derrek' THEN 'Support'
+    WHEN 'eeiu' THEN 'Support'
+    WHEN 'Ethan' THEN 'Support'
+    WHEN 'FiNESSE' THEN 'Anchor'
+    WHEN 'havoc' THEN 'Anchor'
+    WHEN 'heat' THEN 'Support'
+    WHEN 'icy' THEN 'Fragger'
+    WHEN 'jawgemo' THEN 'Fragger'
+    WHEN 'johnqt' THEN 'Anchor'
+    WHEN 'JonahP' THEN 'Support'
+    WHEN 'keznit' THEN 'Fragger'
+    WHEN 'Khalil' THEN 'Anchor'
+    WHEN 'kiNgg' THEN 'Anchor'
+    WHEN 'Klaus' THEN 'Anchor'
+    WHEN 'leaf' THEN 'Anchor'
+    WHEN 'Less' THEN 'Anchor'
+    WHEN 'liazzi' THEN 'Support'
+    WHEN 'mazin' THEN 'Support'
+    WHEN 'Mazino' THEN 'Support'
+    WHEN 'Melser' THEN 'Support'
+    WHEN 'moose' THEN 'Anchor'
+    WHEN 'mta' THEN 'Support'
+    WHEN 'mwzera' THEN 'Fragger'
+    WHEN 'NaturE' THEN 'Support'
+    WHEN 'nzr' THEN 'Support'
+    WHEN 'OXY' THEN 'Fragger'
+    WHEN 'Pa1nt' THEN 'Fragger'
+    WHEN 'Palla' THEN 'Fragger'
+    WHEN 'pANcada' THEN 'Support'
+    WHEN 'rich' THEN 'Support'
+    WHEN 'runi' THEN 'Support'
+    WHEN 's0m' THEN 'Support'
+    WHEN 'saadhak' THEN 'Support'
+    WHEN 'Sacy' THEN 'Support'
+    WHEN 'ShahZaM' THEN 'Support'
+    WHEN 'Shyy' THEN 'Anchor'
+    WHEN 'supamen' THEN 'Support'
+    WHEN 'TenZ' THEN 'Support'
+    WHEN 'tex' THEN 'Anchor'
+    WHEN 'trent' THEN 'Support'
+    WHEN 'tuyz' THEN 'Fragger'
+    WHEN 'valyn' THEN 'Support'
+    WHEN 'vanity' THEN 'Support'
+    WHEN 'Victor' THEN 'Fragger'
+    WHEN 'xand' THEN 'Support'
+    WHEN 'Xeppaa' THEN 'Support'
+    WHEN 'zekken' THEN 'Fragger'
+    WHEN 'Zellsis' THEN 'Support'
+    ELSE role  -- Keep the role unchanged if the player name doesn't match
+END
+WHERE player_name IN (
+    'Apoth', 'artzin', 'aspas', 'Asuna', 'bang', 'Boostio', 'C0M', 'cauanzin', 
+    'crashies', 'Cryocells', 'Derrek', 'eeiu', 'Ethan', 'FiNESSE', 'havoc', 'heat', 
+    'icy', 'jawgemo', 'johnqt', 'JonahP', 'keznit', 'Khalil', 'kiNgg', 'Klaus', 
+    'leaf', 'Less', 'liazzi', 'mazin', 'Mazino', 'Melser', 'moose', 'mta', 'mwzera', 
+    'NaturE', 'nzr', 'OXY', 'Pa1nt', 'Palla', 'pANcada', 'rich', 'runi', 's0m', 
+    'saadhak', 'Sacy', 'ShahZaM', 'Shyy', 'supamen', 'TenZ', 'tex', 'trent', 
+    'tuyz', 'valyn', 'vanity', 'Victor', 'xand', 'Xeppaa', 'zekken', 'Zellsis'
+);
+
 -- Populate series_player_stats using data from player_stats
 INSERT INTO series_player_stats (series_id, player_id, series_maps, series_kills, series_deaths, series_assists, series_fk, series_fd, series_clutches, series_aces, avg_adr_per_series, series_points)
 SELECT 
