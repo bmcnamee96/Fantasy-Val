@@ -974,6 +974,36 @@ body.dark-theme #message-area {
     margin-top: 10px; /* Add some spacing between the h5 and the button */
 }
 
+/* Ensure card body takes 75% of the parent container's width */
+.leagues-card-body {
+    width: 100%; /* Set the card body to 75% of the outer container */
+    margin: 0 auto; /* Center the card body horizontally */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+}
+
+#leagues-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center league cards horizontally */
+    gap: 15px; /* Add some space between the cards */
+    width: 100%;
+}
+
+#leagues-list .card {
+    width: 100%; /* Each card takes 75% of the parent container's width */
+    margin: 0 auto; /* Ensure the cards are centered horizontally */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add some shadow for better aesthetics */
+    transition: transform 0.2s; /* Optional: Add smooth hover effect */
+}
+
+#leagues-list .card:hover {
+    transform: scale(1.02); /* Optional: Slightly enlarge on hover */
+}
+
 .draft-section {
     width: 48%;
 }

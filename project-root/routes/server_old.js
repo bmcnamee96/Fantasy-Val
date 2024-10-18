@@ -10,6 +10,8 @@ const { JWT_SECRET } = require('./utils/auth');
 const logger = require('./utils/logger'); // Import your logger
 const startSocketIOServer = require('./socketio'); // Import the Socket.IO server setup
 
+require('dotenv').config();
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -57,13 +59,13 @@ app.use((req, res, next) => {
 const authRoutes = require('./routes/authRoutes');
 const valStatsRoutes = require('./routes/valStatsRoutes');
 const leagueRoutes = require('./routes/leagueRoutes');
-const draftRoutes = require('./routes/draftRoutes');
+// const draftRoutes = require('./routes/draftRoutes');
 
 // Route Mounting
 app.use('/api/users', authRoutes);
 app.use('/api/val-stats', valStatsRoutes);
 app.use('/api/leagues', leagueRoutes);
-app.use('/api/draft', draftRoutes);
+// app.use('/api/draft', draftRoutes);
 
 // Serving index.html
 app.get('/', (req, res) => {
@@ -80,15 +82,6 @@ app.use((err, req, res, next) => {
     logger.error('Server Error:', err);
     next(err);
   }
-});
-
-// Database Pool Initialization
-const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'fan_val',
-  password: 'pgadmin',
-  port: 5432,
 });
 
 // Start the Socket.IO server

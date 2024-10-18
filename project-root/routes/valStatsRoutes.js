@@ -5,20 +5,19 @@ const express = require('express');
 const logger = require('../utils/logger');
 
 const router = express.Router();
-
 const pool = require('../db'); // Import the db.js connection
 
 // API endpoint to get player stats
 router.get('/player-stats', async (req, res) => {
   try {
     const { team_abrev } = req.query;
+
     if (team_abrev) {
       logger.info(`Received request for player-stats with team_abrev: ${team_abrev}`);
     } else {
       logger.info('Received request for player-stats without team_abrev');
     }
 
-    // Adjusted SQL Query with `team_id` instead of `team_abrev`
     let query = `
       WITH PlayerStats AS (
         SELECT 
@@ -41,7 +40,6 @@ router.get('/player-stats', async (req, res) => {
       SELECT * FROM PlayerStats
     `;
 
-    // Use parameterized queries to prevent SQL injection
     const params = [];
     if (team_abrev) {
       query += ` WHERE team_abrev = $1 ORDER BY total_points DESC`;
@@ -58,18 +56,13 @@ router.get('/player-stats', async (req, res) => {
   }
 });
 
-// API endpoint to get match stats
+// API endpoint to get match stats with optional filters for team, split, and week
 router.get('/match-stats', async (req, res) => {
   try {
-    const { team_abrev } = req.query;
+    const { team_abrev, split, week } = req.query;
 
-    if (team_abrev) {
-      logger.info(`Received request for match-stats with team_abrev: ${team_abrev}`);
-    } else {
-      logger.info('Received request for match-stats without team_abrev');
-    }
+    logger.info(`Received request for match-stats with filters:`, { team_abrev, split, week });
 
-    // Base query to get match stats
     let query = `
       WITH SeriesStats AS (
         SELECT 
@@ -97,18 +90,30 @@ router.get('/match-stats', async (req, res) => {
     `;
 
     const params = [];
+    const conditions = [];
 
-    // Add filtering if `team_abrev` is provided
+    // Add filters to query
     if (team_abrev) {
-      query += ` WHERE team_abrev = $1 ORDER BY week ASC, player_name ASC, team_abrev ASC`;
+      conditions.push(`team_abrev = $${conditions.length + 1}`);
       params.push(team_abrev);
-    } else {
-      query += ` ORDER BY week ASC, player_name ASC, team_abrev ASC`;
+    }
+    if (split) {
+      conditions.push(`split = $${conditions.length + 1}`);
+      params.push(split);
+    }
+    if (week) {
+      conditions.push(`week = $${conditions.length + 1}`);
+      params.push(week);
     }
 
-    // Execute the query
-    const result = await pool.query(query, params);
+    // Add WHERE clause if there are conditions
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
 
+    query += ` ORDER BY week ASC, split ASC, player_name ASC`;
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     logger.error('Error executing query for match-stats:', err.message, err.stack);

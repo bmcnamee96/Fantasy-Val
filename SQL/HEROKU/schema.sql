@@ -25,6 +25,17 @@ $$ LANGUAGE plpgsql;
 
 -------------- USER TABLES --------------
 
+-- Refresh token table
+CREATE TABLE refresh_tokens (
+    token_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    is_valid BOOLEAN DEFAULT TRUE
+);
+
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,

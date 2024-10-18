@@ -51,24 +51,30 @@
             <a href="index.html" class="logo-section">
                 <img src="images/favicon.png" alt="FV Logo">
             </a>
-            <ul class="nav-links">
-                <li><a href="my-dashboard.html">My Dashboard</a></li>
-                <li><a href="player-stats.html">Player Stats</a></li>
-                <li><a href="feedback.html">Feedback</a></li>
-            </ul>
             
-            <div class="nav-right">
+            <!-- Menu Toggle Button for Small Screens -->
+            <button class="menu-toggle" aria-label="Toggle Navigation" onclick="toggleMenu()">☰</button>
 
-                <div id="authLinks" class="auth-buttons">
-                    <button id="signupBtn">Sign Up</button>
-                    <button id="signinBtn">Sign In</button>
-                </div>
-                <div id="welcomeMessage" class="welcome-message" style="display: none;">
-                    WELCOME&nbsp;&nbsp;<span id="usernameSpan" class="username"></span>!
-                </div>
-                <button id="signoutBtn" style="display: none;">Sign Out</button>
+            <!-- Navigation Links Container -->
+            <div class="nav-links-container" id="navLinksContainer">
+                <ul class="nav-links">
+                    <li><a href="my-dashboard.html">My Dashboard</a></li>
+                    <li><a href="player-stats.html">Player Stats</a></li>
+                    <li><a href="feedback.html">Feedback</a></li>
+                </ul>
+                
+                <div class="nav-right">
+                    <div id="authLinks" class="auth-buttons">
+                        <button id="signupBtn">Sign Up</button>
+                        <button id="signinBtn">Sign In</button>
+                    </div>
+                    <div id="welcomeMessage" class="welcome-message" style="display: none;">
+                        WELCOME&nbsp;&nbsp;<span id="usernameSpan" class="username"></span>!
+                    </div>
+                    <button id="signoutBtn" style="display: none;">Sign Out</button>
 
-                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌙</button>
+                    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌙</button>
+                </div>
             </div>
         </div>
     </nav>
@@ -192,7 +198,7 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/scripts.js"></script>
+    <script type="module" src="js/scripts.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

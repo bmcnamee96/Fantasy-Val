@@ -1,175 +1,109 @@
 // routes/leagueRoutes.js
 
-// #region Dependencies
+// Dependencies
 const express = require('express');
 const bcrypt = require('bcrypt');
 const saltRounds = 10; // Define the salt rounds for bcrypt
 const authenticateToken = require('../middleware/authMiddleware');
 const checkRosterLock = require('../middleware/checkRosterLock');
-const { isWithinRosterLockPeriod } = require('../utils/timeUtils');
+const { refreshAccessToken } = require('../utils/auth'); // Import refresh token utility
 const logger = require('../utils/logger');
 const cron = require('node-cron'); // For scheduling tasks
+const pool = require('../db'); // Import the db.js connection
 
 const router = express.Router();
 
-const pool = require('../db'); // Import the db.js connection
+// Middleware to handle expired token and refresh it
+router.use(async (req, res, next) => {
+  if (req.authError?.message === 'TokenExpiredError') {
+    try {
+      const newAccessToken = await refreshAccessToken(req.cookies.refreshToken);
+
+      if (!newAccessToken) {
+        return res.status(401).json({ error: 'Unable to refresh token, please log in again' });
+      }
+
+      // Attach the new token to the request headers for further operations
+      req.headers.authorization = `Bearer ${newAccessToken}`;
+      return next();
+    } catch (error) {
+      logger.error('Error refreshing access token:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  next();
+});
 
 // API endpoint to create a league
 router.post('/create-league', authenticateToken, async (req, res) => {
-  logger.info('API request received for create-league'); // Log when the API request is received
-  const { league_name, league_pass, description, team_name } = req.body;
-  const owner_id = req.user.userId; // Get the user ID from the JWT token
+    logger.info('API request received for create-league');
+    const { league_name, league_pass, description, team_name } = req.body;
+    const owner_id = req.user.userId; // Extract user ID from token
 
-  try {
-    // Ensure all required fields are provided
-    if (!league_name || !league_pass || !description || !owner_id || !team_name) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    try {
+        if (!league_name || !league_pass || !description || !team_name) {
+            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        }
+
+        const hashedPass = await bcrypt.hash(league_pass, 10);
+        await pool.query('BEGIN');
+
+        // Create new league
+        const newLeagueResult = await pool.query(
+            'INSERT INTO leagues (league_name, league_pass, description, owner_id) VALUES ($1, $2, $3, $4) RETURNING league_id',
+            [league_name, hashedPass, description, owner_id]
+        );
+        const league_id = newLeagueResult.rows[0].league_id;
+
+        // Add the user's team to the league
+        await pool.query(
+            'INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)',
+            [league_id, team_name, owner_id]
+        );
+
+        await pool.query('COMMIT');
+        res.status(201).json({ success: true, message: 'League created successfully', league_id });
+    } catch (error) {
+        await pool.query('ROLLBACK');
+        logger.error('Error creating league:', error);
+        res.status(500).json({ success: false, message: 'Failed to create league' });
     }
-
-    // Hash the league password
-    const hashedPass = await bcrypt.hash(league_pass, saltRounds);
-
-    // Start a transaction
-    await pool.query('BEGIN');
-
-    // Create the new league
-    const newLeagueResult = await pool.query(
-      'INSERT INTO leagues (league_name, league_pass, description, owner_id) VALUES ($1, $2, $3, $4) RETURNING league_id',
-      [league_name, hashedPass, description, owner_id]
-    );
-
-    const league_id = newLeagueResult.rows[0].league_id;
-
-    // Initialize the draft order with an empty array or default value
-    const initialDraftOrder = [];
-
-    await pool.query(
-      'INSERT INTO draft_orders (league_id, draft_order) VALUES ($1, $2)',
-      [league_id, JSON.stringify(initialDraftOrder)]
-    );
-
-    // Initialize draft status
-    const currentTurnIndex = -1;
-    const draftStarted = false;
-    const draftEnded = false;
-    
-    // Insert draft status entry
-    await pool.query(
-      'INSERT INTO draft_status (league_id, current_turn_index, draft_started, draft_ended) VALUES ($1, $2, $3, $4)', 
-      [league_id, currentTurnIndex, draftStarted, draftEnded]
-    );
-
-    // Insert team into league_teams table
-    await pool.query(
-      'INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)',
-      [league_id, team_name, owner_id]
-    );
-
-    // Commit the transaction
-    await pool.query('COMMIT');
-
-    res.status(201).json({ success: true, league: { league_id, league_name, description, owner_id }, team: { team_name, owner_id } });
-  } catch (error) {
-    // Rollback the transaction in case of error
-    await pool.query('ROLLBACK');
-    logger.error('Error creating league:', error);
-    res.status(500).json({ success: false, message: 'Failed to create league and team', error: error.message });
-  }
 });
 
-// Join League and Create Team Endpoint
+// Join League API
 router.post('/join-league', authenticateToken, async (req, res) => {
-  logger.info('API request received for join-league'); // Log when the API request is received
-  const { league_name, passcode, team_name } = req.body;
-  const user_id = req.user.userId; // Get the user ID from the JWT token
+    const { league_name, passcode, team_name } = req.body;
+    const user_id = req.user.userId;
 
-  try {
-    // Ensure all required fields are provided
-    if (!league_name || !passcode || !user_id || !team_name) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    try {
+        if (!league_name || !passcode || !team_name) {
+            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        }
+
+        const leagueResult = await pool.query(
+            'SELECT league_id, league_pass FROM leagues WHERE league_name = $1',
+            [league_name]
+        );
+        if (leagueResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'League not found' });
+        }
+
+        const league = leagueResult.rows[0];
+        const isPasscodeValid = await bcrypt.compare(passcode, league.league_pass);
+        if (!isPasscodeValid) {
+            return res.status(400).json({ success: false, message: 'Incorrect passcode' });
+        }
+
+        await pool.query(
+            'INSERT INTO user_leagues (user_id, league_id) VALUES ($1, $2)',
+            [user_id, league.league_id]
+        );
+        res.status(200).json({ success: true, message: 'Successfully joined the league' });
+    } catch (error) {
+        logger.error('Error joining league:', error);
+        res.status(500).json({ success: false, message: 'Failed to join league' });
     }
-
-    // Start a transaction
-    await pool.query('BEGIN');
-
-    // Check if the league exists and get its ID and password
-    const leagueResult = await pool.query(
-      'SELECT league_id, league_pass FROM leagues WHERE league_name = $1',
-      [league_name]
-    );
-
-    if (leagueResult.rows.length === 0) {
-      await pool.query('ROLLBACK');
-      return res.status(404).json({ success: false, message: 'League not found' });
-    }
-
-    const league = leagueResult.rows[0];
-
-    // Verify the passcode
-    const isPasscodeValid = await bcrypt.compare(passcode, league.league_pass);
-
-    if (!isPasscodeValid) {
-      await pool.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'Incorrect passcode' });
-    }
-
-    // Check if the user is already a member of the league
-    const membershipCheck = await pool.query(
-      'SELECT * FROM user_leagues WHERE league_id = $1 AND user_id = $2',
-      [league.league_id, user_id]
-    );
-
-    if (membershipCheck.rows.length > 0) {
-      await pool.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'You are already a member of this league' });
-    }
-
-    // Check if the league has reached the maximum number of users (7)
-    const userCountResult = await pool.query(
-      'SELECT COUNT(*) AS user_count FROM user_leagues WHERE league_id = $1',
-      [league.league_id]
-    );
-
-    const userCount = parseInt(userCountResult.rows[0].user_count, 10);
-
-    if (userCount >= 8) {
-      await pool.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'League has reached the maximum number of users (7)' });
-    }
-
-    // Check if the team name is unique within the league
-    const teamNameCheck = await pool.query(
-      'SELECT * FROM league_teams WHERE league_id = $1 AND LOWER(team_name) = LOWER($2)',
-      [league.league_id, team_name]
-    );
-
-    if (teamNameCheck.rows.length > 0) {
-      await pool.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'Team name already exists within this league' });
-    }
-
-    // Add the user to the league
-    await pool.query(
-      'INSERT INTO user_leagues (user_id, league_id) VALUES ($1, $2)',
-      [user_id, league.league_id]
-    );
-
-    // Create the team for the user within the league
-    await pool.query(
-      'INSERT INTO league_teams (league_id, team_name, user_id) VALUES ($1, $2, $3)',
-      [league.league_id, team_name, user_id]
-    );
-
-    // Commit the transaction
-    await pool.query('COMMIT');
-
-    res.status(200).json({ success: true, message: 'Successfully joined the league and created a team' });
-  } catch (error) {
-    // Rollback the transaction in case of error
-    await pool.query('ROLLBACK');
-    logger.error('Error joining league and creating team:', error);
-    res.status(500).json({ success: false, message: 'Failed to join league or create team', error: error.message });
-  }
 });
 
 // Leave League Endpoint
@@ -307,6 +241,26 @@ router.get('/:leagueId/users', authenticateToken, async (req, res) => {
   } catch (error) {
     logger.error('Error fetching league users:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get league details
+router.get('/league-details/:leagueId', authenticateToken, async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+      // Fetch league details
+      const result = await pool.query('SELECT * FROM leagues WHERE league_id = $1', [leagueId]);
+      const league = result.rows[0];
+
+      if (league) {
+          res.json(league);
+      } else {
+          res.status(404).json({ error: 'League not found' });
+      }
+  } catch (error) {
+      logger.error('Error fetching league details:', error);
+      res.status(500).json({ error: 'Failed to fetch league details' });
   }
 });
 

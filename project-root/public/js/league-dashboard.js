@@ -782,7 +782,7 @@ async function fetchLeagueDetails(leagueId) {
             throw new Error('Invalid league ID');
         }
 
-        const response = await fetch(`/api/draft/leagues/${leagueId}`, {
+        const response = await fetch(`/api/leagues/league-details/${leagueId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}` // Ensure the token is valid
@@ -1137,7 +1137,7 @@ async function fetchAvailablePlayers() {
     try {
         const response = await fetch(`/api/leagues/${leagueId}/available-players`, {
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming token is stored in localStorage
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         });
 

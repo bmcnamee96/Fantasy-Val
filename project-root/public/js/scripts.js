@@ -1,5 +1,7 @@
 // scripts.js
 
+import { fetchWithAuth } from './fetchWithAuth.js'; // Ensure correct path
+
 /**
  * Display a toast message.
  * @param {string} message - The message to display.
@@ -73,6 +75,7 @@ function showToast(message, type = 'success') {
 // Function to update the UI based on the login state
 function updateUI() {
     const username = localStorage.getItem('username');
+    console.log('Stored username:', localStorage.getItem('username'));
     const authLinks = document.getElementById('authLinks');
     const welcomeMessage = document.getElementById('welcomeMessage');
     const signoutBtn = document.getElementById('signoutBtn');
@@ -170,20 +173,11 @@ function showModal(message, isSuccess = false) {
     }
 }
 
-// Function to fetch and display user's leagues on dashboard page
+// Function to fetch and display user's leagues on the dashboard page
 async function fetchUserLeagues() {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No token found');
-        }
-        console.log('Token:', token);
-
-        const response = await fetch('/api/leagues/user-leagues', {
+        const response = await fetchWithAuth('/api/leagues/user-leagues', {
             method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}` // Ensure the token is valid
-            }
         });
 
         console.log('Response Status:', response.status);
@@ -205,20 +199,27 @@ async function fetchUserLeagues() {
         } else {
             leagues.forEach(league => {
                 const leagueCard = document.createElement('div');
+
+                // Add Bootstrap card class and inline width styling
                 leagueCard.className = 'card mb-3';
+                leagueCard.style.width = '75%'; // Set the width to 75% of parent container
+                leagueCard.style.margin = '0 auto'; // Center the card horizontally
 
                 // Truncate description to the first 50 characters and add "..."
-                const truncatedDescription = league.description && league.description.length > 50 
+                const truncatedDescription = league.description && league.description.length > 50
                     ? league.description.substring(0, 50) + '...'
                     : league.description || 'No description available.';
 
-                    leagueCard.innerHTML = `
+                leagueCard.innerHTML = `
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="card-title mb-1">${league.league_name}</h5>
                             <p class="card-text mb-0">${truncatedDescription}</p>
                         </div>
-                        <button class="btn btn-primary" onclick="location.href='league-dashboard.html?leagueId=${league.league_id}'">View League</button>
+                        <button class="btn btn-primary" 
+                            onclick="location.href='league-dashboard.html?leagueId=${league.league_id}'">
+                            View League
+                        </button>
                     </div>
                 `;
 
@@ -247,84 +248,6 @@ function getUserIdFromToken(token) {
     }
 }
 
-async function fetchLeagueIdFromName(leagueName) {
-    try {
-        // Check if leagueName is provided
-        if (!leagueName) {
-            throw new Error('League name is required');
-        }
-        const token = localStorage.getItem('token');
-
-        // Make a request to the API endpoint to get the league ID
-        const response = await fetch(`/api/leagues/get-league-id?leagueName=${encodeURIComponent(leagueName)}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}` // Ensure the token is valid,
-            },
-        });
-
-        // Check if the response is OK
-        if (!response.ok) {
-            throw new Error('Failed to fetch league ID');
-        }
-
-        // Parse the JSON response
-        const data = await response.json();
-
-        // Check if the league ID is provided in the response
-        if (!data.league_id) {
-            throw new Error('League not found');
-        }
-
-        const leagueId = data.league_id;
-
-        // Return the league ID
-        console.log(leagueId);
-        return leagueId;
-    } catch (error) {
-        console.error('Error fetching league ID:', error);
-        throw error; // Rethrow the error to be handled by the caller
-    }
-}
-
-// Function to create a team
-async function createTeam(leagueId, teamName) {
-    const token = localStorage.getItem('token');
-    console.log('Token', token);
-    console.log('teamName', teamName);
-    const userId = getUserIdFromToken(token);
-    console.log('userId', userId);
-    console.log('leagueId', leagueId);
-
-    if (!token || !userId || !teamName || !leagueId) {
-        throw new Error('Team name, league ID, and user ID are required');
-    }
-
-    try {
-        const response = await fetch('/api/leagues/create-team', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ team_name: teamName, league_id: leagueId, user_id: userId })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to create team');
-        }
-
-        showModal('League created successfully!', true);
-        return data;
-    } catch (error) {
-        console.error('Error creating team:', error);
-        showModal('Failed to create team: ' + error.message);
-        throw error;
-    }
-}
-
 // Function to create a league
 async function createLeague() {
     const leagueName = document.querySelector('input[name="league_name"]').value;
@@ -333,13 +256,10 @@ async function createLeague() {
     const teamName = document.querySelector('input[name="team_name"]').value;
 
     try {
-        const token = localStorage.getItem('token'); // Get JWT token from local storage
-
-        const response = await fetch('/api/leagues/create-league', {
+        const response = await fetchWithAuth('/api/leagues/create-league', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Include token in the Authorization header
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ 
                 league_name: leagueName, 
@@ -377,13 +297,10 @@ async function joinLeague() {
     }
 
     try {
-        const token = localStorage.getItem('token'); // Get JWT token from local storage
-
-        const response = await fetch('/api/leagues/join-league', {
+        const response = await fetchWithAuth('/api/leagues/join-league', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Include token in the Authorization header
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ league_name: leagueName, passcode: passcode, team_name: teamName })
         });
@@ -459,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = document.getElementById('signupEmail').value;
 
         try {
-            const response = await fetch('/api/users/signup', {
+            const response = await fetchWithAuth('/api/auth/signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -481,44 +398,54 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI(); // Call updateUI() to set initial UI state based on localStorage
 
     // Event listener for sign out button
-    document.getElementById('signoutBtn').addEventListener('click', () => {
-        localStorage.removeItem('token'); // Remove token from localStorage
-        localStorage.removeItem('username'); // Remove username from localStorage
-        updateUI(); // Update UI to reflect logged out state
-        window.location.href = '/index.html'; // Redirect to login page or home page
+    document.getElementById('signoutBtn').addEventListener('click', async () => {
+        try {
+            await fetchWithAuth('/api/auth/logout', { method: 'POST' }); // Clear refresh token cookie
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        updateUI();
+        window.location.href = '/index.html';
     });
-
+   
     // Sign-in form submission
     document.getElementById('signinForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-
+    
         const username = document.getElementById('signinUsername').value;
         const password = document.getElementById('signinPassword').value;
-
+    
         try {
-            const response = await fetch('/api/users/signin', {
+            const response = await fetch('/api/auth/signin', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Sign in successful. Data:', data); // Log data received from server
-                localStorage.setItem('token', data.token); // Store the token in local storage
-                localStorage.setItem('username', data.username);
-                showToast('Sign in successful', 'success');
-                updateUI();
-                signinModal.style.display = 'none';
-                window.location.href = '/my-dashboard.html'; // Redirect to dashboard page
-            } else {
-                console.error('Sign in failed:', response.status, response.statusText);
+    
+            if (!response.ok) {
+                console.error('Failed to log in:', await response.text());
                 showToast('Invalid username or password', 'error');
+                return;
             }
+    
+            const { accessToken, username: storedUsername } = await response.json();
+    
+            // Store the access token and username in localStorage
+            localStorage.setItem('token', accessToken);
+            localStorage.setItem('username', storedUsername);
+
+            console.log('Access token and username stored:', accessToken, storedUsername);
+    
+            showToast('Login successful!', 'success');
+            updateUI();
+    
+            // Redirect to the dashboard or another page
+            window.location.href = '/my-dashboard.html';
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Login error:', error);
+            showToast('Login failed. Please try again.', 'error');
         }
     });
 
@@ -550,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Recovery Email:', recoveryEmail); // Debugging statement
 
             try {
-                const response = await fetch('/api/users/recover-password', {
+                const response = await fetchWithAuth('/api/auth/recover-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

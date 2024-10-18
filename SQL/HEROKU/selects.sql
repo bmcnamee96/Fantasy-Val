@@ -5,6 +5,7 @@ SELECT * FROM total_stats;
 SELECT * FROM weeks;
 
 SELECT * FROM users;
+SELECT * FROM refresh_tokens;
 SELECT * FROM user_leagues;
 SELECT * FROM leagues;
 SELECT * FROM league_teams;

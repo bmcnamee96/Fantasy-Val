@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Determine who the league owner is
     let leagueOwnerId;
     try {
-        const leagueResponse = await fetch(`/api/draft/leagues/${leagueId}`, {
+        const leagueResponse = await fetch(`/api/leagues/league-details/${leagueId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const league = await leagueResponse.json();
@@ -239,7 +239,7 @@ async function userMapping() {
 async function initDraftDetails() {
     // fetchDraftOrder();
     fetchMaxTurns();
-    fetchCurrentTurn();
+    // fetchCurrentTurn();
 }  
 
 // can use this function if I come up with a way to set the draftOrder before draft starts
@@ -272,28 +272,28 @@ async function fetchMaxTurns() {
     console.log('Max turns:', maxTurns);
 }
 
-// 🚩 can probably delete
-async function fetchCurrentTurn() {
-    try {
-        const response = await fetch(`/api/draft/leagues/${leagueId}/current-turn`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+// // 🚩 can probably delete
+// async function fetchCurrentTurn() {
+//     try {
+//         const response = await fetch(`/api/draft/leagues/${leagueId}/current-turn`, {
+//             headers: {
+//                 'Authorization': `Bearer ${token}`
+//             }
+//         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+//         if (!response.ok) {
+//             throw new Error(`HTTP error! Status: ${response.status}`);
+//         }
 
-        const data = await response.json();
-        currentTurnIndex = (data.currentTurnIndex);
-        console.log('Current turn on server:', currentTurnIndex)
-        // updateCurrentTurnUI(draftOrder[currentTurnIndex]);
+//         const data = await response.json();
+//         currentTurnIndex = (data.currentTurnIndex);
+//         console.log('Current turn on server:', currentTurnIndex)
+//         // updateCurrentTurnUI(draftOrder[currentTurnIndex]);
 
-    } catch (error) {
-        console.error('Error fetching current turn:', error);
-    }
-}
+//     } catch (error) {
+//         console.error('Error fetching current turn:', error);
+//     }
+// }
 
 // -------------------------------------------------------------------------- //
 
